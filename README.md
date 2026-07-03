@@ -23,9 +23,6 @@
   * Basic Web Curling.
 * beautifulsoup4
   * Webscraping 
-* playwright
-  * Headless browser
 
 #### Commands for packages:
-* pip install requests beautifulsoup4 playwright
-* python -m playwright install
+* pip install requests beautifulsoup4
