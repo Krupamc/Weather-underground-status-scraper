@@ -21,7 +21,7 @@ password = "dpdlzimvidrstktv"
 from_email = "Save Barnegat Bay Mesonet Notifications <theunknownboss1999@gmail.com>"
 
 
-# Email Addressess
+# Email Addresses
 #global_recipients = ["krupampatel710@gmail.com", "outreach@savebarnegatbay.org"]
 global_recipients = ["krupampatel710@gmail.com"]
 
