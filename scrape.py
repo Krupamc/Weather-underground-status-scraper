@@ -40,6 +40,7 @@ def check_station(station_id):
         # Increment offlines
         data = read_json_file()
         data[station_id]["consecutive_offline"] += 1
+        data[station_id]["last_status"] = status.upper()
         data[station_id]["first_offline"] = now.isoformat()
         write_json_file(data)
 
@@ -63,6 +64,9 @@ def check_station(station_id):
         if data[station_id]["alert_sent"]:
             print(f"[RECOVERED] {station_name} ({station_id})")
 
+            recover_alert(station_id, station_name, url, now)
+
+        data[station_id]["last_status"] = status.upper()
         data[station_id]["alert_sent"] = False
         data[station_id]["consecutive_offline"] = 0
         write_json_file(data)
