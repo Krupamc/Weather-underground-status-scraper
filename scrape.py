@@ -1,4 +1,4 @@
-import config as cfg
+import config2 as cfg
 import requests
 from bs4 import BeautifulSoup as bs
 from pathlib import Path
