@@ -1,4 +1,4 @@
-import config2 as cfg
+import config as cfg
 import requests
 from bs4 import BeautifulSoup as bs
 from pathlib import Path
@@ -20,10 +20,16 @@ def check_station(station_id):
     soup = bs(r.content, "html.parser")
 
     # Get station name and status
-    station_name = soup.find("h1").get_text()
+    
     status_header = soup.find("pws-status")
 
+    station_name = cfg.stations[station_id]
     status = status_header['data-status']
+
+    if status == "offline":
+        status2 = " offline "
+    else: status2 = status
+    print(f"[{status2.upper()}]: {station_name}")
 
     # time
     utc_now = datetime.now(pytz.UTC)
@@ -40,8 +46,8 @@ def check_station(station_id):
         consec_offline = data[station_id]["consecutive_offline"]
         if consec_offline >= cfg.consecutive_offline and not data[station_id]["alert_sent"]:
             stat_name = cfg.stations[station_id]
-            stat_id = data[station_id]
-            offline_alert(stat_id, stat_name, consec_offline, now)
+            stat_id = station_id
+            offline_alert(stat_id, stat_name, consec_offline, url, now)
 
 def read_json_file():
     with open("status.json", "r", encoding="utf-8") as file:
@@ -57,13 +63,19 @@ def append_json_file(data):
         json.dump(data, file, indent=2)
 
 # Use all alert functions
-def offline_alert(stat_id, stat_name, consec_offline, now):
+def offline_alert(stat_id, stat_name, consec_offline, url, now):
 
-    recipients = list(cfg.recipients[station_id].values()) + cfg.global_recipients
+    station_recipient = cfg.recipients.get(station_id, [])
+
+    if station_recipient:
+        recipients = station_recipient + cfg.global_recipients
+    
+    else:
+        recipients = cfg.global_recipients
 
     email(
         subject = cfg.d_subject.format(station_name = stat_name, station_id = stat_id),
-        body = cfg.d_body.format(station_name = stat_name, station_id = stat_id, consecutive_offline = consec_offline, now=now),
+        body = cfg.d_body.format(station_name = stat_name, station_id = stat_id, consecutive_offline = consec_offline, url=url, now=now),
         recipients = recipients
     )
 
@@ -92,7 +104,7 @@ def write_start():
 
         data = {}
 
-        for station, station_name in cfg.stations:
+        for station, station_name in cfg.stations.items():
 
             data[station] = {
                 "station_id": station,

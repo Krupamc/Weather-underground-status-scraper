@@ -1,6 +1,7 @@
 {
   "KNJBERKE13": {
     "station_id": "KNJBERKE13",
+    "station_name": "Island Beach State Park Bathhouse #1",
     "consecutive_offline": 0,
     "first_offline": null,
     "last_status": "",
@@ -9,6 +10,7 @@
   },
   "KNJWARET3": {
     "station_id": "KNJWARET3",
+    "station_name": "Sedge Island",
     "consecutive_offline": 0,
     "first_offline": null,
     "last_status": "",
@@ -17,6 +19,7 @@
   },
   "KNJMANAH111": {
     "station_id": "KNJMANAH111",
+    "station_name": "Stafford Municipal Complex",
     "consecutive_offline": 0,
     "first_offline": null,
     "last_status": "",
@@ -25,7 +28,8 @@
   },
   "KNJMANAH7": {
     "station_id": "KNJMANAH7",
-    "consecutive_offline": 12,
+    "station_name": "MATES/Stafford",
+    "consecutive_offline": 3,
     "first_offline": null,
     "last_status": "",
     "alert_sent": false,
@@ -33,6 +37,7 @@
   },
   "KNJBAYHE18": {
     "station_id": "KNJBAYHE18",
+    "station_name": "Bayhead Fire Company #1",
     "consecutive_offline": 0,
     "first_offline": null,
     "last_status": "",
@@ -41,6 +46,7 @@
   },
   "KNJLONGB89": {
     "station_id": "KNJLONGB89",
+    "station_name": "LBT Marine Field Station",
     "consecutive_offline": 0,
     "first_offline": null,
     "last_status": "",
@@ -49,6 +55,7 @@
   },
   "KNJLONGB21": {
     "station_id": "KNJLONGB21",
+    "station_name": "LBI Foundation",
     "consecutive_offline": 0,
     "first_offline": null,
     "last_status": "",
@@ -57,7 +64,8 @@
   },
   "KNJBEACH64": {
     "station_id": "KNJBEACH64",
-    "consecutive_offline": 2,
+    "station_name": "Beachwood Yacht Club",
+    "consecutive_offline": 3,
     "first_offline": null,
     "last_status": "",
     "alert_sent": false,
@@ -65,6 +73,7 @@
   },
   "KNJOCEAN178": {
     "station_id": "KNJOCEAN178",
+    "station_name": "Ocean Gate Yacht Club",
     "consecutive_offline": 0,
     "first_offline": null,
     "last_status": "",
@@ -73,6 +82,7 @@
   },
   "KNJSEASI44": {
     "station_id": "KNJSEASI44",
+    "station_name": "Seaside Park Yacht Club",
     "consecutive_offline": 0,
     "first_offline": null,
     "last_status": "",
@@ -81,7 +91,8 @@
   },
   "Ecocenter": {
     "station_id": "Ecocenter",
-    "consecutive_offline": 2,
+    "station_name": "Ecocenter",
+    "consecutive_offline": 3,
     "first_offline": null,
     "last_status": "",
     "alert_sent": false,
