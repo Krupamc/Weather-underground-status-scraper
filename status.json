@@ -25,7 +25,7 @@
   },
   "KNJMANAH7": {
     "station_id": "KNJMANAH7",
-    "consecutive_offline": 6,
+    "consecutive_offline": 12,
     "first_offline": null,
     "last_status": "",
     "alert_sent": false,

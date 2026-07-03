@@ -39,9 +39,9 @@ def check_station(station_id):
         data = read_json_file()
         consec_offline = data[station_id]["consecutive_offline"]
         if consec_offline >= cfg.consecutive_offline and not data[station_id]["alert_sent"]:
-            station_name = cfg.stations()
-            station_id = data[station_id]
-            offline_alert(station_id, station_name, consec_offline, now)
+            stat_name = cfg.stations[station_id]
+            stat_id = data[station_id]
+            offline_alert(stat_id, stat_name, consec_offline, now)
 
 def read_json_file():
     with open("status.json", "r", encoding="utf-8") as file:
@@ -57,13 +57,13 @@ def append_json_file(data):
         json.dump(data, file, indent=2)
 
 # Use all alert functions
-def offline_alert(station_id, station_name, consec_offline, now):
+def offline_alert(stat_id, stat_name, consec_offline, now):
 
     recipients = list(cfg.recipients[station_id].values()) + cfg.global_recipients
 
     email(
-        subject = cfg.d_subject.format(station_name = station_name, station_id = station_id),
-        body = cfg.d_body.format(station_name = station_name, station_id = station_id, consecutive_offline = consec_offline, now=now),
+        subject = cfg.d_subject.format(station_name = stat_name, station_id = stat_id),
+        body = cfg.d_body.format(station_name = stat_name, station_id = stat_id, consecutive_offline = consec_offline, now=now),
         recipients = recipients
     )
 
