@@ -40,6 +40,7 @@ def check_station(station_id):
         # Increment offlines
         data = read_json_file()
         data[station_id]["consecutive_offline"] += 1
+        data[station_id]["first_offline"] = now.isoformat()
         write_json_file(data)
 
         data = read_json_file()
@@ -48,6 +49,23 @@ def check_station(station_id):
             stat_name = cfg.stations[station_id]
             stat_id = station_id
             offline_alert(stat_id, stat_name, consec_offline, url, now)
+
+            # Set these
+            data[station_id]["since_sent"] = now.isoformat()
+            data[station_id]["alert_sent"] = True
+            write_json_file(data)
+
+    elif status == "online":
+        # Open json
+        data = read_json_file()
+
+        # Recovery
+        if data[station_id]["alert_sent"]:
+            print(f"[RECOVERED] {station_name} ({station_id})")
+
+        data[station_id]["alert_sent"] = False
+        data[station_id]["consecutive_offline"] = 0
+        write_json_file(data)
 
 def read_json_file():
     with open("status.json", "r", encoding="utf-8") as file:
@@ -61,6 +79,23 @@ def write_json_file(data):
 def append_json_file(data):
     with open("status.json", "a", encoding="utf-8") as file:
         json.dump(data, file, indent=2)
+
+
+# Use all alert funcs.
+def recover_alert(stat_id, stat_name, url, now):
+    station_recipient = cfg.recipients.get(station_id, [])
+
+    if station_recipient:
+        recipients = station_recipient + cfg.global_recipients
+
+    else:
+        recipients = cfg.global_recipients
+
+    email(
+        subject =cfg.r_subject.format(station_name = stat_name, station_id = stat_id),
+        body = cfg.r_body.format(station_name = stat_name, station_id = stat_id, url=url, now=now),
+        recipients = recipients
+    )
 
 # Use all alert functions
 def offline_alert(stat_id, stat_name, consec_offline, url, now):
@@ -109,9 +144,9 @@ def write_start():
             data[station] = {
                 "station_id": station,
                 "station_name": station_name,
+                "last_status": "",
                 "consecutive_offline": 0,
                 "first_offline": None,
-                "last_status": "",
                 "alert_sent": False,
                 "since_sent": None,
             }
