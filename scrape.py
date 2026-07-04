@@ -10,12 +10,42 @@ import json
 from datetime import datetime
 import pytz
 import time
+import csv
+
+# monthly overview + maintence mode/redo notific after 7 days
 
 def check_station(station_id):
+
+    station_name = cfg.stations[station_id]
+
+    # time - error protected
+    for attempt in range(cfg.max_retries):
+        try:
+            utc_now = datetime.now(pytz.UTC)
+            eastern = pytz.timezone(cfg.pytz_timezone)
+            now = utc_now.astimezone(eastern)
+            break
+
+        except Exception as e:
+            print(f"[TIME ERROR]: Failed to get time for {station_id}. Error: {e}")
+           
+            # Write to file
+            data = read_json_file()
+            e = str(e)
+            log_data(None, station_id, station_name, "error", data[station_id]["consecutive_offline"], "Time_error", f"{e}")
+
+            # Email
+            email(
+                subject=cfg.time_e_subject,
+                body=cfg.time_e_body.format(err = e),
+                recipients=cfg.admin
+            )
+    else:
+        return
+
     for attempt in range(cfg.max_retries): # Try the scraping
         try:
             url = f"https://preview.wunderground.com/dashboard/pws/{station_id}" # Base url
-
             r = requests.get(url, timeout=10)
             r.raise_for_status()
 
@@ -25,13 +55,13 @@ def check_station(station_id):
             
             status_header = soup.find("pws-status")
 
-            station_name = cfg.stations[station_id]
-            status = status_header.get('data-status')
+            status = status_header["data-status"]
 
             if status == "offline":
                 status2 = " offline "
             else: status2 = status
             print(f"[{status2.upper()}]: {station_name}")
+            break
         
         except HTTPError as e:
             wait_time = cfg.backoff_factor ** attempt
@@ -39,8 +69,8 @@ def check_station(station_id):
             
             # Write error to file
             data = read_json_file()
-            data[station_id]["http_e"] = str(e)
-            write_json_file(data)
+            e = str(e)
+            log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "HTTP_error", f"{e}")
             
             # Email the error:
             email(
@@ -50,14 +80,15 @@ def check_station(station_id):
             )
 
             time.sleep(wait_time)
+            continue
 
         except Exception as e:
             print(f"[SCRAPING ERROR]: Failed to get data for {station_id}. Error: {e}")
             
             # Write Error to file
             data = read_json_file()
-            data[station_id]["error"] = str(e)
-            write_json_file(data)
+            e = str(e)
+            log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "Scraping_error", f"{e}")
             
             # Email it
             email(
@@ -65,35 +96,16 @@ def check_station(station_id):
                 body=cfg.time_e_body.format(err=e),
                 recipients=cfg.admin
             )
-            break
+    else:
+        return
     
-    # time - error protected
-    try:
-        utc_now = datetime.now(pytz.UTC)
-        eastern = pytz.timezone(cfg.pytz_timezone)
-        now = utc_now.astimezone(eastern)
-
-    except Exception as e:
-        print(f"[TIME ERROR]: Failed to get time for {station_id}. Error: {e}")
-
-        # Write to file
-        data = read_json_file()
-        data[station_id]["time_e"] = str(e)
-        write_json_file(data)
-
-        # Email
-        email(
-            subject=cfg.time_e_subject,
-            body=cfg.time_e_body.format(err = e),
-            recipients=cfg.admin
-        )
-
     if status == "offline":
         # Increment offlines
         data = read_json_file()
         data[station_id]["consecutive_offline"] += 1
-        data[station_id]["last_status"] = status.upper()
-        data[station_id]["first_offline"] = now.isoformat()
+        if data[station_id]["last_status"] != "OFFLINE":
+            data[station_id]["first_offline"] = now.isoformat()
+        data[station_id]["last_status"] = "OFFLINE"
         write_json_file(data)
 
         data = read_json_file()
@@ -108,37 +120,54 @@ def check_station(station_id):
                 url, 
                 now
             )
-
+        
             # Set these
             data[station_id]["since_sent"] = now.isoformat()
             data[station_id]["alert_sent"] = True
             write_json_file(data)
+            log_data(now.isoformat(), station_id, station_name, status, consec_offline, "offline_alert", "Threshold Reached, email sent")
+        
+        else:
+            log_data(now.isoformat(), station_id, station_name, status, consec_offline, "check", "ok")
 
     elif status == "online":
         # Open json
         data = read_json_file()
-        outage_start = data[station_id]["first_offline"]
-        outage_start = datetime.fromisoformat(now)
-        outage_dur = now - outage_start
+        data[station_id]["last_status"] = "ONLINE"
         
         # Recovery
         if data[station_id]["alert_sent"]:
             print(f"[RECOVERED] {station_name} ({station_id})")
+            status = "recovered"
+            outage_start = data[station_id]["first_offline"]
+            outage_start = datetime.fromisoformat(outage_start)
+            outage_dur = now - outage_start
 
             recover_alert(
                 stat_id=station_id, 
                 stat_name=station_name, 
                 url=url, 
                 start=outage_start,
-                durations=outage_dur,
+                duration=outage_dur,
                 now=now
             )
-
-        data[station_id]["last_status"] = status.upper()
-        data[station_id]["last_online"] = now.isoformat()
-        data[station_id]["alert_sent"] = False
-        data[station_id]["consecutive_offline"] = 0
-        write_json_file(data)
+            data[station_id]["last_status"] = "RECOVERED"
+            log_data(now.isoformat(), station_id, station_name, status, data[station_id]["consecutive_offline"], "recovered", "Station_recovered")
+            data[station_id]["first_offline"] = None
+            data[station_id]["last_online"] = now.isoformat()
+            data[station_id]["alert_sent"] = False
+            data[station_id]["consecutive_offline"] = 0
+            write_json_file(data)
+            
+        
+        else:
+            log_data(now.isoformat(), station_id, station_name, status, data[station_id]["consecutive_offline"], "online", "ok")
+            data[station_id]["first_offline"] = None
+            data[station_id]["last_status"] = "ONLINE"
+            data[station_id]["last_online"] = now.isoformat()
+            data[station_id]["alert_sent"] = False
+            data[station_id]["consecutive_offline"] = 0
+            write_json_file(data)
     
 
 
@@ -200,6 +229,28 @@ def email(subject: str, body: str, recipients: list[str]) -> None:
         server.login(cfg.username, cfg.password)
         server.send_message(msg)
 
+# Log the data
+def log_data(now: str, station_id, station_name, status, consec_offline, event_type: str, message: str):
+    path = Path("status_log.csv")
+    with path.open("a", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow([
+            now, station_id, station_name,
+            status, consec_offline,
+            event_type, message
+        ])
+
+# Create base csv data file
+def start_log():
+    path = Path("status_log.csv")
+    if not path.exists():
+        with path.open("w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow([
+                "timestamp", "station_id", "station_name",
+                "status", "consecutive_offline",
+                "event_type", "message"
+            ])
 
 # Create base json status file
 def write_start():
@@ -217,9 +268,9 @@ def write_start():
                 "station_name": station_name,
                 "last_status": "Not Checked",
                 "consecutive_offline": 0,
+                "alert_sent": False,
                 "last_online": None,
                 "first_offline": None,
-                "alert_sent": False,
                 "since_sent": None,
                 "http_e": None,
                 "time_e": None,
@@ -232,16 +283,15 @@ def write_start():
 # Program
 
 write_start()
+start_log()
 
 for station in cfg.stations:
     check_station(station)
 
 print(f"\n\n\nSUMMARY:\n")
-print("Disconnected:")
 data = read_json_file()
-for station in cfg.stations:
+for station, station_names in cfg.stations.items():
     if data[station]["last_status"] == "OFFLINE":
-        print(f"[OFFLINE]: {station}")
-
-
-
+        print(f"[OFFLINE]: {station_names} ({station})")
+    if data[station]["last_status"] == "RECOVERED":
+        print(f"[RECOVERED]: {station_names} ({station})")
