@@ -12,7 +12,7 @@ import pytz
 import time
 import csv
 
-# monthly overview + maintence mode/redo notific after 7 days
+# monthly overview  + maintence mode/redo notific after 7 days
 
 def check_station(station_id):
 
@@ -56,7 +56,7 @@ def check_station(station_id):
             status_header = soup.find("pws-status")
 
             status = status_header["data-status"]
-
+            
             if status == "offline":
                 status2 = " offline "
             else: status2 = status
@@ -125,15 +125,15 @@ def check_station(station_id):
             data[station_id]["since_sent"] = now.isoformat()
             data[station_id]["alert_sent"] = True
             write_json_file(data)
-            log_data(now.isoformat(), station_id, station_name, status, consec_offline, "offline_alert", "Threshold Reached, email sent")
+            log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "offline_alert", "Threshold Reached, email sent")
         
         else:
-            log_data(now.isoformat(), station_id, station_name, status, consec_offline, "check", "ok")
+            log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "check", "ok")
 
-    elif status == "online":
+    elif status == "connected":
         # Open json
         data = read_json_file()
-        data[station_id]["last_status"] = "ONLINE"
+        data[station_id]["last_status"] = "CONNECTED"
         
         # Recovery
         if data[station_id]["alert_sent"]:
@@ -152,22 +152,25 @@ def check_station(station_id):
                 now=now
             )
             data[station_id]["last_status"] = "RECOVERED"
-            log_data(now.isoformat(), station_id, station_name, status, data[station_id]["consecutive_offline"], "recovered", "Station_recovered")
+            log_data(now.isoformat(), station_id, station_name, "RECOVERED", data[station_id]["consecutive_offline"], "recovered", "Station_recovered")
             data[station_id]["first_offline"] = None
-            data[station_id]["last_online"] = now.isoformat()
+            data[station_id]["last_connected"] = now.isoformat()
             data[station_id]["alert_sent"] = False
             data[station_id]["consecutive_offline"] = 0
             write_json_file(data)
             
         
         else:
-            log_data(now.isoformat(), station_id, station_name, status, data[station_id]["consecutive_offline"], "online", "ok")
+            log_data(now.isoformat(), station_id, station_name, "CONNECTED", data[station_id]["consecutive_offline"], "check", "ok")
             data[station_id]["first_offline"] = None
-            data[station_id]["last_status"] = "ONLINE"
-            data[station_id]["last_online"] = now.isoformat()
+            data[station_id]["last_status"] = "CONNECTED"
+            data[station_id]["last_connected"] = now.isoformat()
             data[station_id]["alert_sent"] = False
             data[station_id]["consecutive_offline"] = 0
             write_json_file(data)
+    
+    # Check if monthly report is needed
+    check_if_first(now)
     
 
 
@@ -252,6 +255,14 @@ def start_log():
                 "event_type", "message"
             ])
 
+# Send Monthly report
+def check_if_first(now: datetime):
+    # Email send on the first of the month at 8 AM
+    if now.day == cfg.monthly_email_day:
+        if now.hour == cfg.monthly_email_hour:
+            pass
+
+
 # Create base json status file
 def write_start():
 
@@ -269,7 +280,7 @@ def write_start():
                 "last_status": "Not Checked",
                 "consecutive_offline": 0,
                 "alert_sent": False,
-                "last_online": None,
+                "last_connected": None,
                 "first_offline": None,
                 "since_sent": None,
                 "http_e": None,
@@ -280,13 +291,19 @@ def write_start():
         write_json_file(data)
         print(f"\nJson Status File Made\n")
 
-# Program
+#---Program---
 
+# Intializers
 write_start()
 start_log()
 
+# Scrape/email/save loop
 for station in cfg.stations:
     check_station(station)
+
+# Monthy Report
+
+# Check date
 
 print(f"\n\n\nSUMMARY:\n")
 data = read_json_file()
