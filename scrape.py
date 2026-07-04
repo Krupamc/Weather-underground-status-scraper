@@ -7,7 +7,7 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import time
 import csv
@@ -110,6 +110,8 @@ def check_station(station_id):
 
         data = read_json_file()
         consec_offline = data[station_id]["consecutive_offline"]
+
+        # First Alert email
         if consec_offline >= cfg.consecutive_offline and not data[station_id]["alert_sent"]:
             stat_name = cfg.stations[station_id]
             stat_id = station_id
@@ -122,11 +124,23 @@ def check_station(station_id):
             )
         
             # Set these
-            data[station_id]["since_sent"] = now.isoformat()
+            data[station_id]["since_first_alert"] = now.isoformat()
             data[station_id]["alert_sent"] = True
             write_json_file(data)
             log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "offline_alert", "Threshold Reached, email sent")
         
+        # Reminder Emails
+        elif data[station_id]["alert_send"] and should_send_reminder(data[station_id], now):
+            offline_remind(
+                stat_id=station_id,
+                stat_name=station_name,
+                consec_offline=data[station_id]["consecutive_offline"],
+                url=url,
+                now=now
+            )
+            
+            data[station_id]["last_reminder_sent"] = now.isoformat()
+
         else:
             log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "check", "ok")
 
@@ -153,6 +167,7 @@ def check_station(station_id):
             )
             data[station_id]["last_status"] = "RECOVERED"
             log_data(now.isoformat(), station_id, station_name, "RECOVERED", data[station_id]["consecutive_offline"], "recovered", "Station_recovered")
+            data[station_id]["last_reminder_sent"] = None
             data[station_id]["first_offline"] = None
             data[station_id]["last_connected"] = now.isoformat()
             data[station_id]["alert_sent"] = False
@@ -198,6 +213,22 @@ def recover_alert(stat_id, stat_name, url, start, duration, now):
         subject =cfg.r_subject.format(station_name=stat_name, station_id=stat_id),
         body = cfg.r_body.format(station_name=stat_name, station_id=stat_id, url=url, outage_start=start, outage_duration=duration, now=now),
         recipients = recipients
+    )
+
+# Use alert functions
+def offline_remind(stat_id, stat_name, consec_offline, url, now):
+    station_recipient = cfg.recipient.get(stat_id, [])
+
+    if station_recipient:
+        recipients = station_recipient + cfg.global_recipients
+
+    else:
+        recipients = cfg.global_recipients
+    
+    email(
+        subject = cfg.o_body.format(station_name = stat_name, station_id = stat_id),
+        body = cfg.o_body.format(days = cfg.days_before_remind, station_name = stat_name, station_id = stat_id, consecutive_offline = consec_offline, url=url, now=now),
+        recipients=recipients
     )
 
 # Use all alert functions
@@ -255,14 +286,6 @@ def start_log():
                 "event_type", "message"
             ])
 
-# Send Monthly report
-def check_if_first(now: datetime):
-    # Email send on the first of the month at 8 AM
-    if now.day == cfg.monthly_email_day:
-        if now.hour == cfg.monthly_email_hour:
-            pass
-
-
 # Create base json status file
 def write_start():
 
@@ -282,7 +305,8 @@ def write_start():
                 "alert_sent": False,
                 "last_connected": None,
                 "first_offline": None,
-                "since_sent": None,
+                "since_first_alert": None,
+                "last_reminder_sent": None,
                 "http_e": None,
                 "time_e": None,
                 "error": None,
@@ -290,6 +314,34 @@ def write_start():
 
         write_json_file(data)
         print(f"\nJson Status File Made\n")
+
+# Check if we should send a reminder
+def should_send_reminder(station, now):
+    last_reminder = station["last_reminder_sent"]
+
+    if not station["alert_sent"]:
+        return False
+
+    if station["last_status"] != "OFFLINE":
+        return False
+
+    if last_reminder is None:
+        return True
+
+    last_reminder = datetime.fromisoformat(last_reminder)
+    if (now - last_reminder) >= timedelta(days=cfg.days_before_remind):
+        return True
+    
+    else:
+        return False
+
+
+# Send Monthly report
+def check_if_first(now: datetime):
+    # Email send on the first of the month at 8 AM
+    if now.day == cfg.monthly_email_day:
+        if now.hour == cfg.monthly_email_hour:
+            
 
 #---Program---
 
