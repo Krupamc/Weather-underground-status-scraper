@@ -18,30 +18,7 @@ def check_station(station_id):
 
     station_name = cfg.stations[station_id]
 
-    # time - error protected
-    for attempt in range(cfg.max_retries):
-        try:
-            utc_now = datetime.now(pytz.UTC)
-            eastern = pytz.timezone(cfg.pytz_timezone)
-            now = utc_now.astimezone(eastern)
-            break
-
-        except Exception as e:
-            print(f"[TIME ERROR]: Failed to get time for {station_id}. Error: {e}")
-           
-            # Write to file
-            data = read_json_file()
-            e = str(e)
-            log_data(None, station_id, station_name, "error", data[station_id]["consecutive_offline"], "Time_error", f"{e}")
-
-            # Email
-            email(
-                subject=cfg.time_e_subject,
-                body=cfg.time_e_body.format(err = e),
-                recipients=cfg.admin
-            )
-    else:
-        return
+    now = get_time(station_id, station_name)
 
     for attempt in range(cfg.max_retries): # Try the scraping
         try:
@@ -73,11 +50,12 @@ def check_station(station_id):
             log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "HTTP_error", f"{e}")
             
             # Email the error:
-            email(
-                subject=cfg.http_e_subject,
-                body=cfg.e_body.format(err=e),
-                recipients=cfg.admin
-            )
+            if not is_in_maintenance(station_id):
+                email(
+                    subject=cfg.http_e_subject,
+                    body=cfg.e_body.format(err=e),
+                    recipients=cfg.admin
+                )
 
             time.sleep(wait_time)
             continue
@@ -91,11 +69,12 @@ def check_station(station_id):
             log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "Scraping_error", f"{e}")
             
             # Email it
-            email(
-                subject=cfg.scrape_e_subject,
-                body=cfg.time_e_body.format(err=e),
-                recipients=cfg.admin
-            )
+            if not is_in_maintenance(station_id):
+                email(
+                    subject=cfg.scrape_e_subject,
+                    body=cfg.time_e_body.format(err=e),
+                    recipients=cfg.admin
+                )
     else:
         return
     
@@ -110,9 +89,9 @@ def check_station(station_id):
 
         data = read_json_file()
         consec_offline = data[station_id]["consecutive_offline"]
-
+    
         # First Alert email
-        if consec_offline >= cfg.consecutive_offline and not data[station_id]["alert_sent"]:
+        if consec_offline >= cfg.consecutive_offline and not data[station_id]["alert_sent"] and not is_in_maintenance(station_id):
             stat_name = cfg.stations[station_id]
             stat_id = station_id
             offline_alert(
@@ -130,7 +109,7 @@ def check_station(station_id):
             log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "offline_alert", "Threshold Reached, email sent")
         
         # Reminder Emails
-        elif data[station_id]["alert_send"] and should_send_reminder(data[station_id], now):
+        elif data[station_id]["alert_sent"] and should_send_reminder(data[station_id], now) and not is_in_maintenance(station_id):
             offline_remind(
                 stat_id=station_id,
                 stat_name=station_name,
@@ -138,8 +117,9 @@ def check_station(station_id):
                 url=url,
                 now=now
             )
-            
+
             data[station_id]["last_reminder_sent"] = now.isoformat()
+            write_json_file()
 
         else:
             log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "check", "ok")
@@ -150,12 +130,18 @@ def check_station(station_id):
         data[station_id]["last_status"] = "CONNECTED"
         
         # Recovery
-        if data[station_id]["alert_sent"]:
+        if data[station_id]["alert_sent"] and not is_in_maintenance(station_id):
             print(f"[RECOVERED] {station_name} ({station_id})")
             status = "recovered"
-            outage_start = data[station_id]["first_offline"]
-            outage_start = datetime.fromisoformat(outage_start)
-            outage_dur = now - outage_start
+            outage_start_str = data[station_id]["first_offline"]
+
+            if outage_start_str:
+                outage_start = datetime.fromisoformat(outage_start_str)
+                outage_dur = now - outage_start
+            
+            else:
+                outage_start = None
+                outage_dur = None
 
             recover_alert(
                 stat_id=station_id, 
@@ -183,21 +169,34 @@ def check_station(station_id):
             data[station_id]["alert_sent"] = False
             data[station_id]["consecutive_offline"] = 0
             write_json_file(data)
+ 
+# time - error protected
+def get_time(station_id, station_name):
+    for attempt in range(cfg.max_retries):
+        try:
+            utc_now = datetime.now(pytz.UTC)
+            eastern = pytz.timezone(cfg.pytz_timezone)
+            now = utc_now.astimezone(eastern)
+            break
+
+        except Exception as e:
+            print(f"[TIME ERROR]: Failed to get time for {station_id}. Error: {e}")
+           
+            # Write to file
+            data = read_json_file()
+            e = str(e)
+            log_data(None, station_id, station_name, "error", data[station_id]["consecutive_offline"], "Time_error", f"{e}")
+
+            # Email
+            if not is_in_maintenance(station_id):
+                email(
+                    subject=cfg.time_e_subject,
+                    body=cfg.time_e_body.format(err = e),
+                    recipients=cfg.admin
+                )
+    else:
+        return
     
-    # Check if monthly report is needed
-    check_if_first(now)
-    
-
-
-def read_json_file():
-    with open("status.json", "r", encoding="utf-8") as file:
-         data = json.load(file)
-    return data
-
-def write_json_file(data):
-    with open("status.json", "w", encoding="utf-8") as file:
-        json.dump(data, file, indent = 2)
-
 # Use all alert funcs.
 def recover_alert(stat_id, stat_name, url, start, duration, now):
 
@@ -217,7 +216,7 @@ def recover_alert(stat_id, stat_name, url, start, duration, now):
 
 # Use alert functions
 def offline_remind(stat_id, stat_name, consec_offline, url, now):
-    station_recipient = cfg.recipient.get(stat_id, [])
+    station_recipient = cfg.recipients.get(stat_id, [])
 
     if station_recipient:
         recipients = station_recipient + cfg.global_recipients
@@ -226,7 +225,7 @@ def offline_remind(stat_id, stat_name, consec_offline, url, now):
         recipients = cfg.global_recipients
     
     email(
-        subject = cfg.o_body.format(station_name = stat_name, station_id = stat_id),
+        subject = cfg.o_subject.format(station_name = stat_name, station_id = stat_id),
         body = cfg.o_body.format(days = cfg.days_before_remind, station_name = stat_name, station_id = stat_id, consecutive_offline = consec_offline, url=url, now=now),
         recipients=recipients
     )
@@ -246,6 +245,11 @@ def offline_alert(stat_id, stat_name, consec_offline, url, now):
         subject = cfg.d_subject.format(station_name = stat_name, station_id = stat_id),
         body = cfg.d_body.format(station_name = stat_name, station_id = stat_id, consecutive_offline = consec_offline, url=url, now=now),
         recipients = recipients
+    )
+
+def send_report():
+    email(
+        subject = cfg
     )
 
 # Send an email
@@ -274,6 +278,33 @@ def log_data(now: str, station_id, station_name, status, consec_offline, event_t
             event_type, message
         ])
 
+def read_json_file():
+    with open("status.json", "r", encoding="utf-8") as file:
+         data = json.load(file)
+    return data
+
+def write_json_file(data):
+    with open("status.json", "w", encoding="utf-8") as file:
+        json.dump(data, file, indent = 2)
+
+def read_maintenance_file():
+    with open("maintenance.json", "r", encoding="utf-8") as file:
+        data = json.load(file)
+    return data
+
+def write_maintenance_file(data):
+    with open("maintenance.json", "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=2)
+
+def is_in_maintenance(station_id):
+    data = read_maintenance_file()
+
+    if data[station_id]["enabled"]:
+        return True
+    
+    else:
+        return False
+
 # Create base csv data file
 def start_log():
     path = Path("status_log.csv")
@@ -285,6 +316,7 @@ def start_log():
                 "status", "consecutive_offline",
                 "event_type", "message"
             ])
+    print(f"\nCSV Log Created\n")
 
 # Create base json status file
 def write_start():
@@ -307,13 +339,32 @@ def write_start():
                 "first_offline": None,
                 "since_first_alert": None,
                 "last_reminder_sent": None,
+                "last_monthly_report": None,
                 "http_e": None,
                 "time_e": None,
                 "error": None,
             }
 
         write_json_file(data)
-        print(f"\nJson Status File Made\n")
+        print(f"\nJson Status File Created\n")
+
+# Create maintence json status file:
+def maintenance_write_start():
+    maintenance_json_file = Path("maintenance.json")
+
+    if not maintenance_json_file.exists():
+
+        data = {}
+
+        for station, station_name in cfg.stations.items():
+            data[station] = {
+                "station_id": station,
+                "station_name": station_name,
+                "enabled": False,
+                "changed_at": None
+            }
+        write_maintenance_file(data)
+    print(f"\nMaintenance File Created\n")
 
 # Check if we should send a reminder
 def should_send_reminder(station, now):
@@ -336,16 +387,20 @@ def should_send_reminder(station, now):
         return False
 
 
-# Send Monthly report
-def check_if_first(now: datetime):
+# Check if it it 
+def check_if_report_day(now: datetime):
     # Email send on the first of the month at 8 AM
     if now.day == cfg.monthly_email_day:
         if now.hour == cfg.monthly_email_hour:
+            return True
+    else:
+        return True
             
 
 #---Program---
 
 # Intializers
+maintenance_write_start()
 write_start()
 start_log()
 
@@ -354,7 +409,9 @@ for station in cfg.stations:
     check_station(station)
 
 # Monthy Report
-
+now = get_time()
+if check_if_report_day(now):
+    send_report(now)
 # Check date
 
 print(f"\n\n\nSUMMARY:\n")
