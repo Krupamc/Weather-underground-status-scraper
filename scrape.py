@@ -19,6 +19,8 @@ def check_station(station_id):
     station_name = cfg.stations[station_id]
 
     now = get_time(station_id, station_name)
+    if now is None:
+        return
 
     for attempt in range(cfg.max_retries): # Try the scraping
         try:
@@ -119,7 +121,7 @@ def check_station(station_id):
             )
 
             data[station_id]["last_reminder_sent"] = now.isoformat()
-            write_json_file()
+            write_json_file(data)
 
         else:
             log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "check", "ok")
@@ -171,13 +173,13 @@ def check_station(station_id):
             write_json_file(data)
  
 # time - error protected
-def get_time(station_id, station_name):
+def get_time(station_id, station_name) -> datetime:
     for attempt in range(cfg.max_retries):
         try:
             utc_now = datetime.now(pytz.UTC)
             eastern = pytz.timezone(cfg.pytz_timezone)
             now = utc_now.astimezone(eastern)
-            break
+            return now
 
         except Exception as e:
             print(f"[TIME ERROR]: Failed to get time for {station_id}. Error: {e}")
@@ -247,11 +249,32 @@ def offline_alert(stat_id, stat_name, consec_offline, url, now):
         recipients = recipients
     )
 
-def send_report():
+# Report/stats
+
+def send_report(now: datetime, period_start, period_end):
+    report = read_report_file()
+    data = read_json_file()
+    recipients=cfg.report_users
+
     email(
-        subject = cfg
+        subject = cfg.m_subject.format(month = now.month),
+        body = cfg.m_body.format(last_report=period_start, period_end=period_end, stations_num=len(data), ),
+        recipients=recipients
     )
 
+def write_report(now: datetime):
+    period_start, period_end = get_previous_month_period(now)
+    
+
+    send_report(now, period_start, period_end)
+def get_previous_month_period(now: datetime):
+    first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_end = first_this_month - timedelta(seconds=1)
+
+    period_end = last_month_end
+    period_start = last_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    return period_start, period_end
 # Send an email
 def email(subject: str, body: str, recipients: list[str]) -> None:
     
@@ -294,6 +317,15 @@ def read_maintenance_file():
 
 def write_maintenance_file(data):
     with open("maintenance.json", "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=2)
+
+def read_report_file():
+    with open("report.json", "r", encoding="utf-8") as file:
+        data = json.load(file)
+    return data
+
+def write_report_file(data):
+    with open("report.json", "w", encoding="utf-8") as file:
         json.dump(data, file, indent=2)
 
 def is_in_maintenance(station_id):
@@ -339,7 +371,6 @@ def write_start():
                 "first_offline": None,
                 "since_first_alert": None,
                 "last_reminder_sent": None,
-                "last_monthly_report": None,
                 "http_e": None,
                 "time_e": None,
                 "error": None,
@@ -347,6 +378,19 @@ def write_start():
 
         write_json_file(data)
         print(f"\nJson Status File Created\n")
+
+# Create Report json file:
+def report_write_start(now: datetime):
+    report_json = Path("report.json")
+
+    if not report_json.exists():
+        
+        data = {
+            "last_report": now.isoformat()
+        }
+        
+        write_report_file(data)
+    print(f"\nReport File Created\n")
 
 # Create maintence json status file:
 def maintenance_write_start():
@@ -394,7 +438,7 @@ def check_if_report_day(now: datetime):
         if now.hour == cfg.monthly_email_hour:
             return True
     else:
-        return True
+        return False
             
 
 #---Program---
@@ -407,12 +451,13 @@ start_log()
 # Scrape/email/save loop
 for station in cfg.stations:
     check_station(station)
-
 # Monthy Report
-now = get_time()
+now = get_time("Report", "Report")
+
+report_write_start(now.isoformat())
 if check_if_report_day(now):
-    send_report(now)
-# Check date
+    write_report(now)
+
 
 print(f"\n\n\nSUMMARY:\n")
 data = read_json_file()
@@ -421,3 +466,4 @@ for station, station_names in cfg.stations.items():
         print(f"[OFFLINE]: {station_names} ({station})")
     if data[station]["last_status"] == "RECOVERED":
         print(f"[RECOVERED]: {station_names} ({station})")
+print(len(data))
