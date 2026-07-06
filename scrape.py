@@ -12,8 +12,7 @@ import pytz
 import time
 import csv
 
-# monthly overview  + maintence mode/redo notific after 7 days
-
+# Main scraping loop
 def check_station(station_id):
 
     station_name = cfg.stations[station_id]
@@ -22,7 +21,7 @@ def check_station(station_id):
     if now is None:
         return
 
-    for attempt in range(cfg.max_retries): # Try the scraping
+    for attempt in range(cfg.max_retries): # Try the scraping for configered 
         try:
             url = f"https://preview.wunderground.com/dashboard/pws/{station_id}" # Base url
             r = requests.get(url, timeout=10)
@@ -42,6 +41,7 @@ def check_station(station_id):
             print(f"[{status2.upper()}]: {station_name}")
             break
         
+        # If there HTTP Error, save and email
         except HTTPError as e:
             wait_time = cfg.backoff_factor ** attempt
             print(f"[HTTP ERROR]: {e}\nRetrying in {wait_time} seconds")
@@ -61,7 +61,8 @@ def check_station(station_id):
 
             time.sleep(wait_time)
             continue
-
+        
+        # If there is another other error, save and email
         except Exception as e:
             print(f"[SCRAPING ERROR]: Failed to get data for {station_id}. Error: {e}")
             
@@ -80,6 +81,7 @@ def check_station(station_id):
     else:
         return
     
+    # Logic for if a station is offline
     if status == "offline":
         # Increment offlines
         data = read_json_file()
@@ -126,6 +128,7 @@ def check_station(station_id):
         else:
             log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "check", "ok")
 
+    # Logic for if a station is connected
     elif status == "connected":
         # Open json
         data = read_json_file()
@@ -162,7 +165,7 @@ def check_station(station_id):
             data[station_id]["consecutive_offline"] = 0
             write_json_file(data)
             
-        
+        # If not a recovered station: 
         else:
             log_data(now.isoformat(), station_id, station_name, "CONNECTED", data[station_id]["consecutive_offline"], "check", "ok")
             data[station_id]["first_offline"] = None
@@ -181,6 +184,7 @@ def get_time(station_id, station_name) -> datetime:
             now = utc_now.astimezone(eastern)
             return now
 
+        # If there is a error, log and send email
         except Exception as e:
             print(f"[TIME ERROR]: Failed to get time for {station_id}. Error: {e}")
            
@@ -216,6 +220,8 @@ def recover_alert(stat_id, stat_name, url, start, duration, now):
         recipients = recipients
     )
 
+    # Other alert method
+
 # Use alert functions
 def offline_remind(stat_id, stat_name, consec_offline, url, now):
     station_recipient = cfg.recipients.get(stat_id, [])
@@ -231,6 +237,8 @@ def offline_remind(stat_id, stat_name, consec_offline, url, now):
         body = cfg.o_body.format(days = cfg.days_before_remind, station_name = stat_name, station_id = stat_id, consecutive_offline = consec_offline, url=url, now=now),
         recipients=recipients
     )
+
+    # Other alert methods
 
 # Use all alert functions
 def offline_alert(stat_id, stat_name, consec_offline, url, now):
@@ -249,7 +257,9 @@ def offline_alert(stat_id, stat_name, consec_offline, url, now):
         recipients = recipients
     )
 
-# Report/stats
+    # Other alert methods
+
+#---Report/stats---
 
 def send_report(now: datetime, period_start, period_end):
     report = read_report_file()
@@ -258,15 +268,17 @@ def send_report(now: datetime, period_start, period_end):
 
     email(
         subject = cfg.m_subject.format(month = now.month),
-        body = cfg.m_body.format(last_report=period_start, period_end=period_end, stations_num=len(data), ),
+        body = cfg.m_body.format(period_start=period_start, period_end=period_end, stations_num=len(data), ),
         recipients=recipients
     )
 
 def write_report(now: datetime):
     period_start, period_end = get_previous_month_period(now)
-    
+    stats = compute_monthly_stats(period_start, period_end)
+    stations_with_outages = sum(1)
 
     send_report(now, period_start, period_end)
+
 def get_previous_month_period(now: datetime):
     first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     last_month_end = first_this_month - timedelta(seconds=1)
@@ -275,6 +287,87 @@ def get_previous_month_period(now: datetime):
     period_start = last_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
     return period_start, period_end
+
+def compute_monthly_stats(period_start: datetime, period_end: datetime):
+    stats = {}
+
+    # per station
+    for station_id, station_name in cfg.stations.itmes():
+        stats[station_id] = {
+            "station_id": station_id,
+            "station_name": station_name,
+            "outages": [],
+            "total_downtime": timedelta(0),
+            "lougest_outage": timedelta(0),
+            "outage_count": 0,
+        }
+
+        path = Path("status_log.csv")
+        if not path.exists():
+            return stats
+        
+        with path.open("r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            current_outage = {sid: None for sid in cfg.station.key()}
+
+            for row in reader:
+                ts_str = row["timestamp"]
+                station_id = row["station_id"]
+                status = row["status"]
+
+                if not ts_str or station_id not in stats:
+                    continue
+
+                ts = datetime.fromisoformat(ts_str)
+                if ts < period_start or ts > period_end:
+                    continue
+
+                # If there is offline, start outage
+                if status == "OFFLINE":
+                    if current_outage[station_id] is None:
+                        current_outage[station_id] = ts
+                
+                # End outage on recovered or connected
+                elif status in ("RECOVERED", "CONNECTED"):
+                    start_ts = current_outage[station_id]
+                    if start_ts is not None:
+                        end_ts = ts
+                        duration = end_ts - start_ts
+                        stats[station_id]["outages"].append({
+                            "start": start_ts,
+                            "end": end_ts,
+                            "duration": duration,
+                        })
+                        stats[station_id]["outage_count"] += 1
+                        stats[station_id]["total_downtime"] += duration
+                        if duration > stats[station_id]["longest_outage"]:
+                            stats[station_id]["longest_outage"] = duration
+                        current_outage[station_id] = None
+                
+                for station_id, start_ts in current_outage.items():
+                    if start_ts is not None and start_ts <= period_end:
+                        end_ts = period_end
+                        duration = end_ts - start_ts
+                        stats[station_id]["outages"].append({
+                            "start": start_ts,
+                            "end": end_ts,
+                            "duration": duration,
+                        })
+                        stats[station_id]["outage_count"] += 1
+                        stats[station_id]["total_downtime"] += duration
+                        if duration > stats[station_id]["longest_outage"]:
+                            stats[station_id]["longest_outage"] = duration
+        total_period = period_end - period_start
+        for station_id, s in stats.items():
+            downtime_hours = s["total_downtime"].total_second() / 3600.0
+            total_hours = total_period.total_seconds() / 3600.0
+            if total_hours > 0:
+                uptime_pct = 100.0 * (total_hours - downtime_hours) / total_hours
+            else:
+                uptime_pct = 100.0
+            s["uptime_pct"] = round(uptime_pct, 3)
+    return stats
+
 # Send an email
 def email(subject: str, body: str, recipients: list[str]) -> None:
     
@@ -300,6 +393,8 @@ def log_data(now: str, station_id, station_name, status, consec_offline, event_t
             status, consec_offline,
             event_type, message
         ])
+
+# Read/write to file
 
 def read_json_file():
     with open("status.json", "r", encoding="utf-8") as file:
@@ -328,6 +423,7 @@ def write_report_file(data):
     with open("report.json", "w", encoding="utf-8") as file:
         json.dump(data, file, indent=2)
 
+# Check if a station is in maintenance
 def is_in_maintenance(station_id):
     data = read_maintenance_file()
 
@@ -458,7 +554,7 @@ report_write_start(now.isoformat())
 if check_if_report_day(now):
     write_report(now)
 
-
+# Print everything
 print(f"\n\n\nSUMMARY:\n")
 data = read_json_file()
 for station, station_names in cfg.stations.items():
