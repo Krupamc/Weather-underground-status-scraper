@@ -18,10 +18,10 @@
 ---
 ## Emails:
 ### Recipients:
-Admin: Email(s) configured to recieve only system error emails
-Global Recipients: Email(s) configured to receive all emails sent by system concering status.
-Report Recipients: Email(s) configured to reveive monthly emails. E.g. Mesonet maintainers
-Station Recipients: Email(s) configured seperatly for each station. E.g. station owners.
+- Admin: Email(s) configured to recieve only system error emails
+- Global Recipients: Email(s) configured to receive all emails sent by system concering status.
+- Report Recipients: Email(s) configured to reveive monthly emails. E.g. Mesonet maintainers
+- Station Recipients: Email(s) configured seperatly for each station. E.g. station owners.
 
 ### Types:
 - Offline: Sent after a station is recorded off `3` (default) times in a row.
