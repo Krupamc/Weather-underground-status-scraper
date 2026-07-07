@@ -1,6 +1,6 @@
 import config as cfg
 import requests
-from requests.exceptions import HTTPError
+from requests.exceptions import HTTPError, RequestException
 from bs4 import BeautifulSoup as bs
 from pathlib import Path
 import smtplib
@@ -45,42 +45,36 @@ def check_station(station_id):
         
         # If there HTTP Error, save and email
         except HTTPError as e:
+            last_error = f"HTTP error: {e}"
             wait_time = cfg.backoff_factor ** attempt
             print(f"[HTTP ERROR]: {e}\nRetrying in {wait_time} seconds")
             
-            # Write error to file
-            data = read_json_file()
-            e = str(e)
-            log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "HTTP_error", f"{e}")
-            
-            # Email the error:
-            if not is_in_maintenance(station_id):
-                email(
-                    subject=cfg.http_e_subject,
-                    body=cfg.e_body.format(err=e),
-                    recipients=cfg.admin
-                )
-
             time.sleep(wait_time)
             continue
         
+        except RequestException as e:
+            last_error = f"Request error {e}"
+            wait_time = cfg.backoff_factor ** attempt
+
+            print(f"[REQUEST ERROR]: {e}\nRetrying in {wait_time} seconds")
+            time.sleep(wait_time)
+        
         # If there is another other error, save and email
         except Exception as e:
+            last_error = f"Scraping error: {e}"
             print(f"[SCRAPING ERROR]: Failed to get data for {station_id}. Error: {e}")
-            
-            # Write Error to file
-            data = read_json_file()
-            e = str(e)
-            log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "Scraping_error", f"{e}")
-            
-            # Email it
-            if not is_in_maintenance(station_id):
-                email(
-                    subject=cfg.scrape_e_subject,
-                    body=cfg.time_e_body.format(err=e),
-                    recipients=cfg.admin
-                )
+            break
     else:
+        data = read_json_file
+        log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "request_error", last_error)
+
+        if not is_in_maintenance(station_id):
+            email(
+                subject=cfg.scrape_e_subject,
+                body=cfg.scrape_e_body.format(err=last_error),
+                recipients=cfg.admin
+            )
+        
         return
     
     # Logic for if a station is offline
@@ -217,7 +211,7 @@ def recover_alert(stat_id, stat_name, url, start, duration, now):
         recipients = cfg.global_recipients
 
     email(
-        subject =cfg.r_subject.format(station_name=stat_name, station_id=stat_id),
+        subject =cfg.r_subject.format(station_name=stat_name, station_id=stat_id, now=now),
         body = cfg.r_body.format(station_name=stat_name, station_id=stat_id, url=url, outage_start=start, outage_duration=duration, now=now),
         recipients = recipients
     )
@@ -269,7 +263,7 @@ def send_report(now: datetime, period_start, period_end, stations_with_outages, 
     stations_num = len(cfg.stations)
 
     email(
-        subject = cfg.m_subject.format(month = now.month),
+        subject = cfg.m_subject.format(month = now.strftime("%B")),
         body = cfg.m_body.format(
             period_start=period_start,
             period_end=period_end, 
@@ -306,7 +300,7 @@ def write_report(now: datetime):
 
 
 
-    send_report(now, period_start, period_end, stations_with_outages, longest_station_name, longest_hour, station_summary)
+    send_report(now, period_start.date(), period_end.date(), stations_with_outages, longest_station_name, longest_hour, station_summary)
 
 def get_previous_month_period(now: datetime):
     first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -487,7 +481,7 @@ def start_log():
                 "status", "consecutive_offline",
                 "event_type", "message"
             ])
-    print(f"\nCSV Log Created\n")
+        print(f"\nCSV Log Created\n")
 
 # Create base json status file
 def write_start():
@@ -514,9 +508,9 @@ def write_start():
                 "time_e": None,
                 "error": None,
             }
-
-        write_json_file(data)
         print(f"\nJson Status File Created\n")
+        write_json_file(data)
+        
 
 # Create Report json file:
 def report_write_start(now: datetime):
@@ -607,16 +601,17 @@ def should_send_report(now: datetime):
 maintenance_write_start()
 write_start()
 start_log()
+now = get_time("Report", "Report")
+if now is not None:
+    report_write_start(now)
+
 
 # Scrape/email/save loop
 for station in cfg.stations:
     check_station(station)
 # Monthy Report
-now = get_time("Report", "Report")
-if now is not None:
-    report_write_start(now)
-    if should_send_report(now):
-        write_report(now)
+if should_send_report(now):
+    write_report(now)
 
 # Print everything
 print(f"\n\n\nSUMMARY:\n")
@@ -626,4 +621,5 @@ for station, station_names in cfg.stations.items():
         print(f"[OFFLINE]: {station_names} ({station})")
     if data[station]["last_status"] == "RECOVERED":
         print(f"[RECOVERED]: {station_names} ({station})")
-print(len(data))
+
+write_report(now)

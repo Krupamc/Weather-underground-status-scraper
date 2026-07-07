@@ -32,3 +32,135 @@ timestamp,station_id,station_name,status,consecutive_offline,event_type,message
 2026-07-04T18:07:02.258339-04:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
 2026-07-04T18:07:02.777664-04:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
 2026-07-04T18:07:03.218429-04:00,Ecocenter,Ecocenter,OFFLINE,3,offline_alert,"Threshold Reached, email sent"
+2026-07-06T20:13:05.321245-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-07-06T20:13:06.324070-04:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-07-06T20:13:06.935782-04:00,KNJMANAH111,Stafford Municipal Complex,OFFLINE,1,check,ok
+2026-07-06T20:13:09.051956-04:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-07-06T20:13:09.639325-04:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-07-06T20:13:10.149782-04:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-07-06T20:13:39.205326-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-07-06T20:13:39.794758-04:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-07-06T20:13:40.476202-04:00,KNJMANAH111,Stafford Municipal Complex,OFFLINE,2,check,ok
+2026-07-06T20:13:40.944811-04:00,KNJMANAH7,MATES/Stafford,OFFLINE,5,check,ok
+2026-07-06T20:13:41.329093-04:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-07-06T20:13:41.971897-04:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-07-06T20:13:42.434787-04:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-07-06T20:18:19.916001-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-07-06T20:18:20.795345-04:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-07-06T20:18:21.328103-04:00,KNJMANAH111,Stafford Municipal Complex,OFFLINE,3,offline_alert,"Threshold Reached, email sent"
+2026-07-06T20:18:22.998372-04:00,KNJMANAH7,MATES/Stafford,OFFLINE,6,check,ok
+2026-07-06T20:18:23.459253-04:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-07-06T20:18:23.927932-04:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-07-06T20:18:24.344119-04:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-07-06T20:18:24.841951-04:00,KNJBEACH64,Beachwood Yacht Club,RECOVERED,3,recovered,Station_recovered
+2026-07-06T20:18:26.288803-04:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:18:26.750270-04:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:19:24.609082-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:24.609082-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:24.609082-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:24.609082-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:24.609082-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:30.418039-04:00,KNJWARET3,Sedge Island,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:30.418039-04:00,KNJWARET3,Sedge Island,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:30.418039-04:00,KNJWARET3,Sedge Island,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:30.418039-04:00,KNJWARET3,Sedge Island,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:30.418039-04:00,KNJWARET3,Sedge Island,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:36.181367-04:00,KNJMANAH111,Stafford Municipal Complex,error,3,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:36.181367-04:00,KNJMANAH111,Stafford Municipal Complex,error,3,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:36.181367-04:00,KNJMANAH111,Stafford Municipal Complex,error,3,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:36.181367-04:00,KNJMANAH111,Stafford Municipal Complex,error,3,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:36.181367-04:00,KNJMANAH111,Stafford Municipal Complex,error,3,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:41.348558-04:00,KNJMANAH7,MATES/Stafford,error,6,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:41.348558-04:00,KNJMANAH7,MATES/Stafford,error,6,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:41.348558-04:00,KNJMANAH7,MATES/Stafford,error,6,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:41.348558-04:00,KNJMANAH7,MATES/Stafford,error,6,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:41.348558-04:00,KNJMANAH7,MATES/Stafford,error,6,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:47.093561-04:00,KNJBAYHE18,Bayhead Fire Company #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:47.093561-04:00,KNJBAYHE18,Bayhead Fire Company #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:47.093561-04:00,KNJBAYHE18,Bayhead Fire Company #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:47.093561-04:00,KNJBAYHE18,Bayhead Fire Company #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:47.093561-04:00,KNJBAYHE18,Bayhead Fire Company #1,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:52.671827-04:00,KNJLONGB89,LBT Marine Field Station,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:52.671827-04:00,KNJLONGB89,LBT Marine Field Station,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:52.671827-04:00,KNJLONGB89,LBT Marine Field Station,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:52.671827-04:00,KNJLONGB89,LBT Marine Field Station,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:52.671827-04:00,KNJLONGB89,LBT Marine Field Station,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:58.277254-04:00,KNJLONGB21,LBI Foundation,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:58.277254-04:00,KNJLONGB21,LBI Foundation,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:58.277254-04:00,KNJLONGB21,LBI Foundation,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:58.277254-04:00,KNJLONGB21,LBI Foundation,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:19:58.277254-04:00,KNJLONGB21,LBI Foundation,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:04.447556-04:00,KNJBEACH64,Beachwood Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:04.447556-04:00,KNJBEACH64,Beachwood Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:04.447556-04:00,KNJBEACH64,Beachwood Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:04.447556-04:00,KNJBEACH64,Beachwood Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:04.447556-04:00,KNJBEACH64,Beachwood Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:10.070618-04:00,KNJOCEAN178,Ocean Gate Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:10.070618-04:00,KNJOCEAN178,Ocean Gate Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:10.070618-04:00,KNJOCEAN178,Ocean Gate Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:10.070618-04:00,KNJOCEAN178,Ocean Gate Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:10.070618-04:00,KNJOCEAN178,Ocean Gate Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:15.487916-04:00,KNJSEASI44,Seaside Park Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:15.487916-04:00,KNJSEASI44,Seaside Park Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:15.487916-04:00,KNJSEASI44,Seaside Park Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:15.487916-04:00,KNJSEASI44,Seaside Park Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:15.487916-04:00,KNJSEASI44,Seaside Park Yacht Club,error,0,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:21.410401-04:00,Ecocenter,Ecocenter,error,4,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:21.410401-04:00,Ecocenter,Ecocenter,error,4,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:21.410401-04:00,Ecocenter,Ecocenter,error,4,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:21.410401-04:00,Ecocenter,Ecocenter,error,4,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:20:21.410401-04:00,Ecocenter,Ecocenter,error,4,Scraping_error,"Failed to parse: 'preview.wunderground..com', label empty or too long"
+2026-07-06T20:33:10.228770-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-07-06T20:33:10.762994-04:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-07-06T20:33:12.872179-04:00,KNJMANAH7,MATES/Stafford,OFFLINE,7,check,ok
+2026-07-06T20:33:13.655815-04:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-07-06T20:33:14.412531-04:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-07-06T20:33:14.889260-04:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-07-06T20:33:15.573009-04:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:33:16.022431-04:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:33:16.509566-04:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:33:17.036331-04:00,Ecocenter,Ecocenter,OFFLINE,5,check,ok
+2026-07-06T20:33:56.717472-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-07-06T20:33:57.619121-04:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-07-06T20:33:58.121421-04:00,KNJMANAH111,Stafford Municipal Complex,OFFLINE,5,check,ok
+2026-07-06T20:33:58.750440-04:00,KNJMANAH7,MATES/Stafford,OFFLINE,8,check,ok
+2026-07-06T20:33:59.124767-04:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-07-06T20:33:59.787558-04:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-07-06T20:34:00.193294-04:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-07-06T20:34:00.765603-04:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:34:01.282332-04:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:34:01.806203-04:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:34:02.289389-04:00,Ecocenter,Ecocenter,OFFLINE,6,check,ok
+2026-07-06T20:36:47.828758-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-07-06T20:36:48.402868-04:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-07-06T20:36:48.765761-04:00,KNJMANAH111,Stafford Municipal Complex,OFFLINE,6,check,ok
+2026-07-06T20:36:49.201674-04:00,KNJMANAH7,MATES/Stafford,OFFLINE,9,check,ok
+2026-07-06T20:36:49.659226-04:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-07-06T20:36:50.072111-04:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-07-06T20:36:50.544157-04:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-07-06T20:36:50.963697-04:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:36:51.335922-04:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:36:51.948768-04:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:36:52.370007-04:00,Ecocenter,Ecocenter,OFFLINE,7,check,ok
+2026-07-06T20:37:59.808698-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-07-06T20:38:00.266481-04:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-07-06T20:38:00.792804-04:00,KNJMANAH111,Stafford Municipal Complex,OFFLINE,7,check,ok
+2026-07-06T20:38:01.227457-04:00,KNJMANAH7,MATES/Stafford,OFFLINE,10,check,ok
+2026-07-06T20:38:01.650459-04:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-07-06T20:38:02.177376-04:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-07-06T20:38:02.813887-04:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-07-06T20:38:03.384332-04:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:38:03.902555-04:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:38:04.294997-04:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:38:04.802564-04:00,Ecocenter,Ecocenter,OFFLINE,8,check,ok
+2026-07-06T20:43:21.967942-04:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-07-06T20:43:22.438164-04:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-07-06T20:43:22.950253-04:00,KNJMANAH111,Stafford Municipal Complex,OFFLINE,8,check,ok
+2026-07-06T20:43:23.441055-04:00,KNJMANAH7,MATES/Stafford,OFFLINE,11,check,ok
+2026-07-06T20:43:23.866143-04:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-07-06T20:43:24.485787-04:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-07-06T20:43:25.081008-04:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-07-06T20:43:25.700290-04:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:43:26.149478-04:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:43:26.553353-04:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-07-06T20:43:27.030837-04:00,Ecocenter,Ecocenter,OFFLINE,9,check,ok
