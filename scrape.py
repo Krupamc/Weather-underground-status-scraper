@@ -621,5 +621,3 @@ for station, station_names in cfg.stations.items():
         print(f"[OFFLINE]: {station_names} ({station})")
     if data[station]["last_status"] == "RECOVERED":
         print(f"[RECOVERED]: {station_names} ({station})")
-
-write_report(now)

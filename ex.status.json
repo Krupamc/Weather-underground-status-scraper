@@ -1,0 +1,16 @@
+{
+  "KNJEXAMPLE1": {
+    "station_id": "KNJEXAMPLE1",
+    "station_name": "Example Station",
+    "last_status": "CONNECTED",
+    "consecutive_offline": 0,
+    "alert_sent": false,
+    "last_connected": "2026-07-06T20:47:08.265004-04:00",
+    "first_offline": null,
+    "since_first_alert": null,
+    "last_reminder_sent": null,
+    "http_e": null,
+    "time_e": null,
+    "error": null
+  }
+}
