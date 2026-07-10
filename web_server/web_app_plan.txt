@@ -1,0 +1,50 @@
+
+Fastapi Backend, html frontend, backgroundata refresh
+Jinja2? Htmx? Session login/cookies
+
+user views:
+Admin/station staff - log in, view assigned (or all) stations, toggle maintenance and see detailed stations
+public - no login, public dashboard with uptime and current weather stats
+
+in backgroun, refresh syays/uptime
+
+sql models:
+
+users:
+- id
+- username
+- password_hash
+- role (admin, station staff, etc)
+
+user_station_access
+- user_id
+- station_id
+- can_view
+- can_toggle_maintenance
+
+stations:
+- id
+- station_id
+- is_in_maintenance
+- is_public
+
+station_status
+- station_id
+- last_status
+- consec_offline
+- first_offline
+- last_conected
+- alert_sent
+
+station_current_weather
+- temp
+- dew
+- humd
+- wind_speed
+- wind_gust
+- wind_dir
+- pressure
+- precip_rate
+- precip_accum
+- uv
+- solar

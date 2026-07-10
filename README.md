@@ -15,6 +15,7 @@
 - Automatic report and email systems.
 - Persistant per-station state in JSON
 - HTTP, scraping, and general error handling.
+- Database.db will autogenerate
 ---
 ## Emails:
 ### Recipients:
