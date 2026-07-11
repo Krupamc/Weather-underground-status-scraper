@@ -13,3 +13,8 @@ stations = {
 }
 
 timezone = "US/Eastern"
+
+# Security
+secret_key = "ABC1234"
+access_token_expire_minuites = 30
+algorithm = "HS256"

@@ -28,6 +28,7 @@ class StationBase(SQLModel):
     station_id: str = Field(index=True, unique=True)
     station_name: str = Field(index=True)
     is_in_maintenance: bool = Field(default=False)
+    is_public: bool = Field(default=False)
 
 # Model For Database (Table Model):
 class Station(StationBase, table=True):
@@ -43,6 +44,7 @@ class StationCreate(StationBase):
 class StationUpdate(SQLModel):
     station_name: str | None = None
     is_in_maintenance: bool | None = None
+    is_public: bool | None = None
 
 # ---Status---
 class StatusBase(SQLModel):
@@ -154,6 +156,10 @@ class UserPublic(UserBase):
 class UserCreate(SQLModel):
     username: str
     password: str
+    role: str
+
+class UserUpdate(SQLModel):
+    password: str | None = None
     role: str
 
 # ---User Access---
