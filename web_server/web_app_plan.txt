@@ -10,7 +10,7 @@ in backgroun, refresh syays/uptime
 
 sql models:
 
-users:
+users: (DONE)
 - id
 - username
 - password_hash
@@ -22,13 +22,13 @@ user_station_access
 - can_view
 - can_toggle_maintenance
 
-stations:
+stations: (DONE)
 - id
 - station_id
 - is_in_maintenance
 - is_public
 
-station_status
+station_status (DONE)
 - station_id
 - last_status
 - consec_offline
@@ -36,7 +36,7 @@ station_status
 - last_conected
 - alert_sent
 
-station_current_weather
+station_current_weather (DONE)
 - temp
 - dew
 - humd

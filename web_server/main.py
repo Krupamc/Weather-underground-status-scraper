@@ -5,17 +5,21 @@ from typing import Annotated
 from sqlmodel import select
 import database as db
 import model as m
-import config as cfg
+import web_config as cfg
 
 app = FastAPI(title="SBB Mesonet Notification System")
 
 # Make sure only stations in the config are in server:
 def seed_stations(): # perhaps add auto delete if not in dict?
     with db.Session(db.engine) as session:
-        existing_ids = session.exec(select(m.Station.station_id)).all()
-
+        db_station = session.exec(select(m.Station)).all()
+        
+        db_ids = {station.station_id for station in db_station}
+        config_ids = set(cfg.stations.keys())
+        
+        # If a station is in the config but not the db, add it
         for station_id, station_name in cfg.stations.items():
-            if station_id not in existing_ids:
+            if station_id not in db_ids:
                 session.add(
                     m.Station(
                         station_id=station_id,
@@ -23,6 +27,13 @@ def seed_stations(): # perhaps add auto delete if not in dict?
                         is_in_maintenance=False
                     )
                 )
+        
+        # If there is a extra station in the db, delete it
+        for station in db_station:
+            if station.station_id not in config_ids:
+                session.delete(station)
+                # make it delet its other models...
+
         session.commit()
 
 # Actual Web App:

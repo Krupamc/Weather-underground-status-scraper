@@ -176,8 +176,8 @@ def get_time(station_id, station_name) -> datetime:
     for attempt in range(cfg.max_retries):
         try:
             utc_now = datetime.now(pytz.UTC)
-            eastern = pytz.timezone(cfg.pytz_timezone)
-            now = utc_now.astimezone(eastern)
+            timezone = pytz.timezone(cfg.pytz_timezone)
+            now = utc_now.astimezone(timezone)
             return now
 
         # If there is a error, log and send email
