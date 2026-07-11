@@ -65,9 +65,27 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], session: db.
     return user
 
 def require_admin(current_user: Annotated[m.User, Depends(get_current_user)]):
-    if current_user != "admin":
+    if current_user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not Enough Permissions")
     return current_user
+
+def require_station_access(station_id: str, current_user: Annotated[m.User, Depends(get_current_user)], session: db.SessionDep):
+    
+    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    
+    if not station:
+        raise HTTPException(status_code=404, detail="Station Does Not Exist")
+
+    # Admin override
+    if current_user.role == "admin":
+        return station
+    
+    access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.station_id == station_id, m.UserAccess.can_view == True)).first()
+
+    if not access:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not Enough Permissions")
+    
+    return station
 
 # Actual Web App:
 
@@ -121,6 +139,62 @@ def register(username: str, password: str, role: str, session: db.SessionDep, cu
 def read_users_me(current_user: Annotated[m.User, Depends(get_current_user)]):
     return current_user
 
+@app.get("/users/")
+def read_users(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], current_user: Annotated[m.User, Depends(require_admin)], limit: Annotated[int, Query(gt=0, le=100)] = 100,):
+   users = session.exec(select(m.User).offset(offset).limit(limit)).all()
+   return users
+ 
+# Access
+
+# Give User Access to a station
+@app.post("/users/{user_id}/stations/{station_id}")
+def grant_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    if not station:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+    id = session.exec(select(m.User).where(m.User.id == user_id)).first()
+    if not id:
+        raise HTTPException(status_code=404, detail="User Not Found")
+
+    existing = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id, m.UserAccess.station_id == station_id)).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Access already exists")
+    
+    access = m.UserAccess(user_id=user_id, station_id=station_id, can_view=True)
+    session.add(access)
+    session.commit()
+    return {"Ok": True}
+
+# Delete Access
+@app.delete("/users/{user_id}/station/{station_id}")
+def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    if not station:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+    id = session.exec(select(m.User).where(m.UserAccess.user_id == user_id)).first()
+    if not id:
+        raise HTTPException(status_code=404, detail="User Not Found")
+    
+    access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id, m.UserAccess.station_id == station_id)).first()
+
+    session.delete(access)
+    session.commit()
+    return {"ok": True}
+
+# Update access
+@app.patch("/users/{user_id}/stations/{station_id}")
+def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    user_db = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id, m.UserAccess.station_id == station_id)).first()
+    if not user_db:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+    user_data = user.model_dump(exclude_unset=True)
+    user_db.sqlmodel_update(user_data)
+    session.commit()
+    session.refresh(user_db)
+    return user_db
+
+
+
 # Create Station Rows in DB:
 @app.post("/stations/", response_model=m.StationPublic)
 def create_station(station: m.StationCreate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
@@ -138,11 +212,17 @@ def read_all_stations(session: db.SessionDep, offset: Annotated[int, Query(ge=0)
 
 # Read station by ID:
 @app.get("/stations/{station_id}", response_model=m.StationPublic)
-def read_one_station(station_id: str, session: db.SessionDep):
+def read_one_station(station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_station_access)]):
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         raise HTTPException(status_code=404, detail="Station Does not Exist")
     return station
+
+# Double check all stations in config are in database   
+@app.get("/seed")
+def seed(current_user: Annotated[m.User, Depends(require_admin)]):
+    seed_stations()
+    return {"message": "Stations seeded"}
 
 # Delete station
 @app.delete("/stations/{station_id}")

@@ -182,3 +182,8 @@ class UserAccessPublic(UserAccessBase):
 
 class UserAccessCreate(UserAccessBase):
     pass
+
+class UserAccessUpdate(SQLModel):
+    station_id: str | None = None
+    can_view: bool = Field(default=True)
+    can_toggle_maintenance: bool = Field(default=True)
