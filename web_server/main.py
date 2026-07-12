@@ -1,7 +1,10 @@
 # Web Deployment using sqlite:
 
-from fastapi import FastAPI, HTTPException, Query, Depends, status
+from fastapi import FastAPI, HTTPException, Query, Depends, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from typing import Annotated
 from sqlmodel import select
 import database as db
@@ -12,6 +15,10 @@ import jwt
 from jwt import InvalidTokenError
 
 app = FastAPI(title="SBB Mesonet Notification System")
+
+# Static and Templates
+templates = Jinja2Templates(directory="web_server/templates")
+app.mount("/web_server/static", StaticFiles(directory="/web_server/static"), name="static")
 
 # Security using JWT
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -93,6 +100,12 @@ def require_station_access(station_id: str, current_user: Annotated[m.User, Depe
 def on_startup():
     db.create_db_table()
     seed_stations()
+
+
+# Homepage
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    return templates.TemplateResponse(request, "layout.html", {"request": request})
 
 # Login
 
@@ -193,7 +206,7 @@ def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdat
     session.refresh(user_db)
     return user_db
 
-
+# Stations
 
 # Create Station Rows in DB:
 @app.post("/stations/", response_model=m.StationPublic)

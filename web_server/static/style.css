@@ -1,0 +1,11 @@
+
+/* Main Windows */
+.top_bar {
+    position: absolute; 
+    top: 0%; 
+    justify-content: space-between; 
+    width: 100%; 
+    display: flow; 
+    align-items: center; 
+    background-color: #ffffff;
+}
