@@ -32,7 +32,7 @@ def seed_stations(): # perhaps add auto delete if not in dict?
         config_ids = set(cfg.stations.keys())
         
         # If a station is in the config but not the db, add it
-        for station_id, station_name in cfg.stations.items():
+        for station_id, station_name in sorted(cfg.stations.items(), key=lambda item: item[1].lower()):
             if station_id not in db_ids:
                 session.add(
                     m.Station(
@@ -105,7 +105,14 @@ def on_startup():
 # Homepage
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse(request, "layout.html", {"request": request})
+    return templates.TemplateResponse(request, "home.html", {"request": request})
+
+# List of Stations
+@app.get("/stations", response_class=HTMLResponse)
+def stations(request: Request):
+    with db.Session(db.engine) as session:
+        stations = session.exec(select(m.Station)).all()
+    return templates.TemplateResponse(request, "stations.html", context={"request": request, "title": "Weather Stations", "active_page": "stations", "stations": stations})
 
 # Login
 
@@ -128,16 +135,16 @@ def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 # Page for people
-@app.get("/login/")
-def load_login():
-    return {"message": "Login"}
+@app.get("/login", response_class=HTMLResponse)
+def load_login(request: Request):
+    return templates.TemplateResponse(request, "login.html", context={"request": request, "title": "login"})
 
 @app.get("/register")
 def load_register():
     return {"message": "Register Man"}
 
 @app.post("/register/")
-def register(username: str, password: str, role: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+def register(username: str, password: str, role: str, session: db.SessionDep): #make this require admin later
     db_user = m.User(
         username=username,
         role=role,
@@ -209,7 +216,7 @@ def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdat
 # Stations
 
 # Create Station Rows in DB:
-@app.post("/stations/", response_model=m.StationPublic)
+@app.post("/stations/create", response_model=m.StationPublic)
 def create_station(station: m.StationCreate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
     db_station = m.Station.model_validate(station)
     session.add(db_station)
@@ -218,13 +225,13 @@ def create_station(station: m.StationCreate, session: db.SessionDep, current_use
     return db_station
 
 # Read all stations:
-@app.get("/stations/", response_model=list[m.StationPublic])
+@app.get("/read/stations/", response_model=list[m.StationPublic])
 def read_all_stations(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=100)] = 100,):
     stations = session.exec(select(m.Station).offset(offset).limit(limit)).all()
     return stations
 
 # Read station by ID:
-@app.get("/stations/{station_id}", response_model=m.StationPublic)
+@app.get("/read/stations/{station_id}", response_model=m.StationPublic)
 def read_one_station(station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_station_access)]):
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:

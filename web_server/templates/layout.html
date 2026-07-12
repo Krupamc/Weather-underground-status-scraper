@@ -4,15 +4,22 @@
 
 <html>
     <head>
-
+        
         <!-- Preconnect for fonts and style -->
-        <link rel="stylesheet" type="text/css" href="static/style.css">
+        <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
         <!-- Custom Font -->
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap">
-        
+        <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap"> -->
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+
+        <style>
+            body {
+                font-family: "Roboto", sans-serif
+            }
+        </style>
+
         <!-- Meta data... -->
         <meta name="description" content="SBB Mesonet System">
         <meta name="author" content="Krupam Patel">
@@ -43,17 +50,45 @@
         <!-- <link rel="manifest" href="/static/site.webmanifest"> -->
 
         <!-- Content Security Policy. Add any external libraries to it -->
-        <meta http-equiv="Content-Security-Policy" content=" default-src 'self'; script-src 'self' code.jquery.com; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' images.examplecdn.com; ">
+        <!--<meta http-equiv="Content-Security-Policy" content=" default-src 'self'; script-src 'self' code.jquery.com; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' images.examplecdn.com; "> -->
         
-        {% if title %}
-            SBB Mesonet Notification System - {{ title }}
-        {% else %}
-            SBB Mesonet Notification System
-        {% endif %}
+        
     </head>
     <body>
-        <div id="top" class="top">
-            <p>DIE</p>
+        
+        <!-- Red Bar on top with title-->
+        <div id="top-red-bar" class="top_red_bar" >
+            <span id="top-red-bar-text" class="top_red_bar_text">
+                {% if title %}
+                    SBB Mesonet System - {{ title }}
+                {% else %}
+                    SBB Mesonet System
+                {% endif %}
+            </span>
         </div>
+
+        <div id="top-menu-bar" class="top_menu_bar">
+
+            <nav class="menu_bar">
+                
+                <!-- Menu Bar -->
+                <div class="nav_links">
+                    <!-- Logo link -->
+                    <a href="/" class="logo_link">
+                    <img src="/static/icons/logo.png" alt="Save Barnegat Bay" width="225" class="logo_link">
+                    </a>
+
+                    <a href="/stations" class="nav_item {% if active_page == 'stations' %}active{% endif %}">WEATHER STATIONS ▼</a>
+                    <a href="/login" class="nav_item {% if active_page == 'login' %}active{% endif %}">LOGIN ▼</a>
+                </div>
+            </nav>
+        </div>
+
+        <div>
+            {% block content %}
+            {% endblock %}
+        </div>
+        
+
     </body>
 </html>

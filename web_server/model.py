@@ -28,7 +28,7 @@ class StationBase(SQLModel):
     station_id: str = Field(index=True, unique=True)
     station_name: str = Field(index=True)
     is_in_maintenance: bool = Field(default=False)
-    is_public: bool = Field(default=False)
+    is_public: bool = Field(default=True)
 
 # Model For Database (Table Model):
 class Station(StationBase, table=True):
