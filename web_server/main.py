@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI, HTTPException, Query, Depends, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import Annotated
@@ -116,7 +116,7 @@ def stations(request: Request):
 
 # Login
 
-# Real login
+# Gives direct token
 @app.post("/token")
 def login_for_access_token(
     session: db.SessionDep,
@@ -137,7 +137,19 @@ def login_for_access_token(
 # Page for people
 @app.get("/login", response_class=HTMLResponse)
 def load_login(request: Request):
-    return templates.TemplateResponse(request, "login.html", context={"request": request, "title": "login"})
+    return templates.TemplateResponse(request, "login.html", context={"request": request, "title": "Login", "active_page": "login"})
+
+@app.post("/login")
+def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
+    user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
+
+    if not user or not s.verify_password(form_data.password, user.password_hash):
+        return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login", "error": "Invalid Credentials"}, status_code=401)
+    
+    access_token = s.create_access_token(data={"sub": user.username}) 
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True)
+    return response
 
 @app.get("/register")
 def load_register():

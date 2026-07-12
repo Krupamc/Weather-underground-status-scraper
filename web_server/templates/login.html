@@ -1,1 +1,24 @@
 {% extends "layout.html" %}
+
+{% block content %}
+    <div class="login_page">
+        <div class="login_card">
+            <h1>Log In</h1>
+
+            <!-- If there is error, say it-->
+            {% if error %}
+                <p class="login_error">{{ error }}</p>
+            {% endif %}
+
+            <form action="/login" method="post" class="login_form">
+                <label for="username">Username:</label>
+                <input type="text" placeholder="Enter Username" id="username" name="username" required>
+
+                <label for="password">Password:</label>
+                <input type="password" placeholder="Enter Password" id="password" name="password" required>
+                <button type="submit">Log In!</button>
+                <span >Forgot your <a href="/forgot_login">password?</a></span>
+            </form>
+        </div>
+    </div>
+{% endblock %}
