@@ -18,7 +18,7 @@ app = FastAPI(title="SBB Mesonet Notification System")
 
 # Static and Templates
 templates = Jinja2Templates(directory="web_server/templates")
-app.mount("/web_server/static", StaticFiles(directory="/web_server/static"), name="static")
+app.mount("/static", StaticFiles(directory="web_server/static"), name="static")
 
 # Security using JWT
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

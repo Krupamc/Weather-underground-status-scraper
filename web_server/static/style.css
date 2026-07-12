@@ -1,11 +1,13 @@
 
 /* Main Windows */
-.top_bar {
+.top {
     position: absolute; 
-    top: 0%; 
+    top: 0%;
+    left: 0%;
     justify-content: space-between; 
     width: 100%; 
-    display: flow; 
+    height: 15%;
+    display: flex; 
     align-items: center; 
-    background-color: #ffffff;
+    background-color: #088009;
 }

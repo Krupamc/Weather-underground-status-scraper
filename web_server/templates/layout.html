@@ -4,19 +4,56 @@
 
 <html>
     <head>
-        <title>
-            <link rel="stylesheet" type="text/css" href="static/style.css">
-            <!--Meta data...-->
-            {% if title %}
-                SBB Mesonet Notification System - {{ title }}
-            {% else %}
-                SBB Mesonet Notification System
-            {% endif %}
-        </title>
+
+        <!-- Preconnect for fonts and style -->
+        <link rel="stylesheet" type="text/css" href="static/style.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+        <!-- Custom Font -->
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap">
+        
+        <!-- Meta data... -->
+        <meta name="description" content="SBB Mesonet System">
+        <meta name="author" content="Krupam Patel">
+        
+        <!-- Title of page for social media. CVan match title tag or be more descriptive -->
+        <meta property="og:title" content="SBB Mesonet System">
+
+        <!-- Set for website for static sites or article for content-heavy -->
+        <meta property="og:type" content="website">
+
+        <!-- URL of the page -->
+        <meta property="og:url" content="">
+
+        <!-- Url of an image that represents the page -->
+        <meta property="og:image" content="">
+
+        <!-- Alternate text for the image -->
+        <meta property="og:image:alt" content="">
+
+        <!-- Favicon (Small image for browser preview ICO)-->
+        <!-- <link rel="icon" href="/static/icons/favicon.ico" sizes="any">
+        <link rel="icon" href="/static/isons/icon.svf" type="image/svg+xml"> -->
+
+        <!-- Apple touch icon -->
+        <!-- <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon.png"> -->
+
+        <!-- Web App Manifest-->
+        <!-- <link rel="manifest" href="/static/site.webmanifest"> -->
+
+        <!-- Content Security Policy. Add any external libraries to it -->
+        <meta http-equiv="Content-Security-Policy" content=" default-src 'self'; script-src 'self' code.jquery.com; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' images.examplecdn.com; ">
+        
+        {% if title %}
+            SBB Mesonet Notification System - {{ title }}
+        {% else %}
+            SBB Mesonet Notification System
+        {% endif %}
     </head>
     <body>
-        <div id="top" class="top-bar">
-            <p>Hi</p>
+        <div id="top" class="top">
+            <p>DIE</p>
         </div>
     </body>
 </html>
