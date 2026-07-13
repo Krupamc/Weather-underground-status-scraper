@@ -1,26 +1,29 @@
 {% extends "layout.html" %}
 
 {% block content %}
-    <div class="login_page">
-        <div class="login_card">
-            <h1>Login!</h1>
-            <h3>Log in to gain access to Station Dashboard<br>with more detailed infomation.</h3>
 
-            <!-- If there is error, say it-->
+    <div class="login_page">
+
+        
+        <div class="login_card">
+            <h1>Would you like to register?</h1>
+            <h3>If you are a a station owner, please create a account<br>and then reach out to example@example.com to get dashboard access.</h3>
+
+            <!-- If there is any error, mention it-->
             {% if error %}
                 <p class="login_error">{{ error }}</p>
             {% endif %}
 
-            <form action="/login" method="post" class="login_form">
+            <form action="/register" method="post" class="login_form">
                 <label for="username">Username:</label>
                 <input type="text" placeholder="Enter Username" id="username" name="username" required>
 
                 <label for="password">Password:</label>
                 <input type="password" placeholder="Enter Password" id="password" name="password" required>
-                <button type="submit">Log In!</button>
-                <span>Forgot your <a href="/forgot_login">password?</a></span>
-                <span>Did you mean to <a href="/register">register?</a></span>
+                <button type="submit">Register</button>
+                <span>Did you mean to <a href="/login">log in?</a></span>
             </form>
         </div>
     </div>
+
 {% endblock %}

@@ -1,6 +1,6 @@
 # Web Deployment using sqlite:
 
-from fastapi import FastAPI, HTTPException, Query, Depends, status, Request
+from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -51,17 +51,20 @@ def seed_stations(): # perhaps add auto delete if not in dict?
         session.commit()
 
 # Check what user
-def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], session: db.SessionDep):
+def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(default=None)):
     
-    # Make Exception
-    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
-
-    try: # When username != right, raise exception
-        payload = jwt.decode(token, cfg.secret_key, algorithms=[cfg.algorithm])
+    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated; login")
+    
+    if access_token is None:
+        raise credentials_exception
+    
+    try:
+        payload = jwt.decode(access_token, s.secret_key, algorithms=[s.algorithm],)
         username = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except InvalidTokenError:
+    
+    except Exception:
         raise credentials_exception
     
     user = session.exec(select(m.User).where(m.User.username == username)).first()
@@ -70,6 +73,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], session: db.
         raise credentials_exception
     
     return user
+    
 
 def require_admin(current_user: Annotated[m.User, Depends(get_current_user)]):
     if current_user.role != "admin":
@@ -147,13 +151,17 @@ def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth
         return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login", "error": "Invalid Credentials"}, status_code=401)
     
     access_token = s.create_access_token(data={"sub": user.username}) 
-    response = RedirectResponse(url="/", status_code=303)
-    response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True)
+    response = RedirectResponse(url="/users", status_code=303)
+    response.set_cookie(key="access_token", value=access_token, httponly=True)
     return response
 
-@app.get("/register")
-def load_register():
-    return {"message": "Register Man"}
+@app.get("/register/no")
+def load_register_no():
+    return {"message": "Please Register Man or Woman. Or person. Or Apache attack helicopter. If you are not one of those I give up. Computers don't judge"}
+
+@app.get("/register/", response_class=HTMLResponse)
+def load_register(request: Request):
+    return templates.TemplateResponse(request, "register.html", {"request": request, "title": "Register", "active_page": "register"})
 
 @app.post("/register/")
 def register(username: str, password: str, role: str, session: db.SessionDep): #make this require admin later
