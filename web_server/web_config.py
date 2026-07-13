@@ -14,7 +14,12 @@ stations = {
 
 timezone = "US/Eastern"
 
+
+# Status History Query
+default_history = 20
+limit_history = 1000
 # Security
 secret_key = "ABC1234"
+scraper_api_key = "test"
 access_token_expire_minuites = 30
 algorithm = "HS256"

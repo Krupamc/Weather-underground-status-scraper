@@ -1,9 +1,11 @@
 # Config for the Status checker
 
+api_post_url = "http://127.0.0.1:8000/status/stations"
 consecutive_offline = 3
 max_retries = 5
 backoff_factor = 3
 pytz_timezone = "US/Eastern"
+api_key = "test"
 
 # Monthly Email Time/Day
 monthly_email_day = 1
@@ -51,6 +53,7 @@ m_body = "Reliability Report:\n{period_start} to {period_end}\n\nOverview:\n- St
 http_e_subject = "Krupamc WU Checker HTTP Error:"
 scrape_e_subject = "Krupamc WU Checker Scrape Error:"
 time_e_subject = "Krupamc WU CHecker Time Error"
+post_e_subject = "SBB WU Checker DB POST Error"
 
 e_body = "Error: {err}"
 time_e_body = "Error (perhaps wifi issue?): {err}"

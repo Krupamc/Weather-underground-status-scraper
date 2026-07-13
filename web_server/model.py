@@ -1,5 +1,6 @@
 from sqlmodel import Field, SQLModel
 from sqlalchemy import UniqueConstraint
+from pydantic import BaseModel
 from datetime import datetime
 import web_config as cfg
 import pytz
@@ -16,10 +17,14 @@ def parse_iso_to_zone(iso_str: str, tz_name: str = cfg.timezone) -> datetime:
     timezone = pytz.timezone(tz_name)
     return dt.astimezone(timezone)
 
-def zoned_now(tz_name: str = cfg.timezone) -> datetime:
-    utc_now = datetime.now(pytz.UTC)
-    timezone = pytz.timezone(tz_name)
-    return utc_now.astimezone(timezone)
+def utc_now() -> datetime:
+    return datetime.now(pytz.UTC)
+
+def to_eastern(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=pytz.UTC)
+    return dt.astimezone(pytz.timezone(cfg.timezone))
+    
 
 # ---Station---
 
@@ -47,9 +52,19 @@ class StationUpdate(SQLModel):
     is_public: bool | None = None
 
 # ---Status---
+
+class StatusIn(BaseModel):
+    station_id: str
+    time_of_status: datetime
+    last_status: str
+    consecutive_offline: int
+    first_offline: datetime | None = None
+    last_connected: datetime | None = None
+    alert_sent: bool
+
 class StatusBase(SQLModel):
     station_id: str = Field(index=True, unique=True, foreign_key="station.station_id")
-    time_of_status: datetime = Field(index=True, default_factory=zoned_now)
+    time_of_status: datetime = Field(index=True, default_factory=utc_now)
     last_status: str = Field(default="UNKNOWN")
     consecutive_offline: int = Field(default=0)
     first_offline: datetime | None = Field(default=None)
@@ -70,7 +85,7 @@ class StatusCreate(StatusBase):
 class StatusHistoryBase(SQLModel):
     station_id: str = Field(index=True, foreign_key="station.station_id")
     # Name? Most likely not neccesary
-    time_of_status: datetime = Field(index=True, default_factory=zoned_now)  # Convert from iso 8601 to datetime
+    time_of_status: datetime = Field(index=True, default_factory=utc_now)  # Convert from iso 8601 to datetime
     last_status: str = Field(default="UNKNOWN")
     consecutive_offline: int = Field(default=0)
     first_offline: datetime | None = Field(default=None)
@@ -89,7 +104,7 @@ class StatusHistoryCreate(StatusHistoryBase):
 # ---Weather---
 class WeatherBase(SQLModel):
     station_id: str = Field(index=True, unique=True, foreign_key="station.station_id")
-    observed_at: datetime = Field(index=True, default_factory=zoned_now)
+    observed_at: datetime = Field(index=True, default_factory=utc_now)
     temp: float | None = None
     dewpoint: float | None = None
     humidity: float | None = None
@@ -115,7 +130,7 @@ class WeatherCreate(WeatherBase):
 
 class WeatherHistoryBase(SQLModel):
     station_id: str = Field(index=True, foreign_key="station.station_id")
-    observed_at: datetime = Field(index = True, default_factory=zoned_now)
+    observed_at: datetime = Field(index = True, default_factory=utc_now)
     # Name prob ain't needed
     temp: float | None = None
     dewpoint: float | None = None

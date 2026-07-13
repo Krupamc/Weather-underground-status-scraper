@@ -6,7 +6,7 @@
             <!-- List every station if public and not in maintenance -->
             {% for station in stations %}
                 {% if station.is_public and not station.is_in_maintenance %}
-                <a href="/stations/{{station.station_id}}" class="station_card">
+                <a href="/stations/public/{{station.station_id}}" class="station_card">
                     <h2>{{ station.station_name }}</h2>
                     <h3>{{ station.station_id }}</h3> <!-- List id as well-->
                 </a>

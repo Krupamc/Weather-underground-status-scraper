@@ -1,6 +1,6 @@
 # Web Deployment using sqlite:
 
-from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request
+from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -13,6 +13,7 @@ import web_config as cfg
 import security as s
 import jwt
 from jwt import InvalidTokenError
+from datetime import datetime
 
 app = FastAPI(title="SBB Mesonet Notification System")
 
@@ -21,7 +22,7 @@ templates = Jinja2Templates(directory="web_server/templates")
 app.mount("/static", StaticFiles(directory="web_server/static"), name="static")
 
 # Security using JWT
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Make sure only stations in the config are in server:
 def seed_stations(): # perhaps add auto delete if not in dict?
@@ -63,8 +64,7 @@ def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(d
         username = payload.get("sub")
         if username is None:
             raise credentials_exception
-    
-    except Exception:
+    except InvalidTokenError:
         raise credentials_exception
     
     user = session.exec(select(m.User).where(m.User.username == username)).first()
@@ -98,7 +98,7 @@ def require_station_access(station_id: str, current_user: Annotated[m.User, Depe
     
     return station
 
-# Actual Web App:
+#----Actual Web App-----
 
 @app.on_event("startup")
 def on_startup():
@@ -118,7 +118,7 @@ def stations(request: Request):
         stations = session.exec(select(m.Station)).all()
     return templates.TemplateResponse(request, "stations.html", context={"request": request, "title": "Weather Stations", "active_page": "stations", "stations": stations})
 
-# Login
+#---Login---
 
 # Gives direct token
 @app.post("/token")
@@ -184,7 +184,7 @@ def read_users(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], curr
    users = session.exec(select(m.User).offset(offset).limit(limit)).all()
    return users
  
-# Access
+#---Access---
 
 # Give User Access to a station
 @app.post("/users/{user_id}/stations/{station_id}")
@@ -211,7 +211,7 @@ def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep,
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         raise HTTPException(status_code=404, detail="Station Not Found")
-    id = session.exec(select(m.User).where(m.UserAccess.user_id == user_id)).first()
+    id = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id)).first()
     if not id:
         raise HTTPException(status_code=404, detail="User Not Found")
     
@@ -233,7 +233,13 @@ def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdat
     session.refresh(user_db)
     return user_db
 
-# Stations
+#---Stations---
+
+# Public dashboard for the station:
+@app.get("/stations/public/{station_id}")
+def public_station():
+    return {"message": "ok"}
+
 
 # Create Station Rows in DB:
 @app.post("/stations/create", response_model=m.StationPublic)
@@ -252,10 +258,10 @@ def read_all_stations(session: db.SessionDep, offset: Annotated[int, Query(ge=0)
 
 # Read station by ID:
 @app.get("/read/stations/{station_id}", response_model=m.StationPublic)
-def read_one_station(station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_station_access)]):
+def read_one_station(station_id: str, session: db.SessionDep, station: Annotated[m.User, Depends(require_station_access)]):
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
-        raise HTTPException(status_code=404, detail="Station Does not Exist")
+        raise HTTPException(status_code=404, detail="Station Not Found")
     return station
 
 # Double check all stations in config are in database   
@@ -285,3 +291,207 @@ def update_station(station_id: str, station: m.StationUpdate, session: db.Sessio
     session.commit()
     session.refresh(station_db)
     return station_db
+
+#---Status---
+
+# Add Current/History Status
+@app.post("/status/stations", response_model=m.StatusPublic)
+def post_status(session: db.SessionDep, status_in: m.StatusIn, x_api_key: Annotated[str, Header()]):
+    
+    if x_api_key != cfg.scraper_api_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    current = session.exec(select(m.Status).where(m.Status.station_id == status_in.station_id)).first()
+    
+    # On first post
+    if current is None:
+        current = m.Status(
+            station_id=status_in.station_id,
+            time_of_status=status_in.time_of_status,
+            last_status=status_in.last_status,
+            consecutive_offline=status_in.consecutive_offline,
+            first_offline=status_in.first_offline,
+            last_connected=status_in.last_connected,
+            alert_sent=status_in.alert_sent
+        )
+        session.add(current)
+
+        history = m.StatusHistory(
+            station_id=status_in.station_id,
+            time_of_status=status_in.time_of_status,
+            last_status=status_in.last_status,
+            consecutive_offline=status_in.consecutive_offline,
+            first_offline=status_in.first_offline,
+            last_connected=status_in.last_connected,
+            alert_sent=status_in.alert_sent
+        )
+        session.add(history)
+
+        session.commit()
+        session.refresh(current)
+        return current
+    
+    # Check for changes, if so append history.
+    changed = any([
+        current.last_status != status_in.last_status,
+        current.consecutive_offline != status_in.consecutive_offline,
+        current.first_offline != status_in.first_offline,
+        current.last_connected != status_in.last_connected,
+        current.alert_sent != status_in.alert_sent,
+    ])
+
+    if changed:
+        history = m.StatusHistory(
+            station_id=status_in.station_id,
+            time_of_status=status_in.time_of_status,
+            last_status=status_in.last_status,
+            consecutive_offline=status_in.consecutive_offline,
+            first_offline=status_in.first_offline,
+            last_connected=status_in.last_connected,
+            alert_sent=status_in.alert_sent
+        )
+        session.add(history)
+
+    # Update Current
+    current.time_of_status = status_in.time_of_status
+    current.last_status = status_in.last_status
+    current.consecutive_offline = status_in.consecutive_offline
+    current.first_offline = status_in.first_offline
+    current.last_connected = status_in.last_connected
+    current.alert_sent = status_in.alert_sent
+
+    session.add(current)
+
+    session.commit()
+    session.refresh(current)
+    return current
+
+# Read Current by Station
+@app.get("/read/status/stations/{station_id}", response_model=m.StatusPublic)
+def read_current_status(session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(require_station_access)]):
+    status = session.exec(select(m.Status).where(m.Status.station_id == station_id)).first()
+    if not status:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+    return status
+
+# Read History by Station
+@app.get("/read/status-history/stations/{station_id}", response_model=list[m.StatusHistoryPublic])
+def read_status_history(session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(require_station_access)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=cfg.limit_history)] = cfg.default_history):
+    history = session.exec(select(m.StatusHistory).where(m.StatusHistory.station_id == station_id).offset(offset).limit(limit)).all()
+    return history 
+
+#---Weather---
+
+# Add Current/History Weather
+@app.post("/weather/stations", response_model=m.WeatherPublic)
+def post_weather(
+    session: db.SessionDep, 
+    station_id: str,
+    observed_at: datetime, 
+    temp: float | None = None, 
+    dewpoint: float | None = None, 
+    humidity: float | None = None, 
+    wind_speed: float | None = None,
+    wind_gust: float | None = None, 
+    wind_dir: float | None = None, 
+    pressure: float | None = None, 
+    precip_rate: float | None = None, 
+    precip_accum: float | None = None, 
+    uv: float | None = None, 
+    solar: float | None = None
+):
+    current = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
+
+    # On first post
+    if current is None:
+        current = m.Weather(
+            station_id=station_id,
+            observed_at=observed_at,
+            temp=temp,
+            dewpoint=dewpoint,
+            humidity=humidity,
+            wind_speed=wind_speed,
+            wind_gust=wind_gust,
+            wind_dir=wind_dir,
+            pressure=pressure,
+            precip_rate=precip_rate,
+            precip_accum=precip_accum,
+            uv=uv,
+            solar=solar
+        )
+        session.add(current)
+        
+        history = m.WeatherHistory(
+            station_id=station_id,
+            observed_at=observed_at,
+            temp=temp,
+            dewpoint=dewpoint,
+            humidity=humidity,
+            wind_speed=wind_speed,
+            wind_gust=wind_gust,
+            wind_dir=wind_dir,
+            pressure=pressure,
+            precip_rate=precip_rate,
+            precip_accum=precip_accum,
+            uv=uv,
+            solar=solar
+        )
+        session.add(history)
+
+        session.commit()
+        session.refresh(current)
+        return current
+    
+    # Add to current
+    current.observed_at = observed_at
+    current.temp = temp
+    current.dewpoint = dewpoint
+    current.humidity = humidity
+    current.wind_speed = wind_speed
+    current.wind_gust = wind_gust
+    current.wind_dir = wind_dir
+    current.pressure = pressure
+    current.precip_rate = precip_rate
+    current.precip_accum = precip_accum
+    current.uv = uv
+    current.solar = solar
+    session.add(current)
+
+    # Add to history
+    history = m.WeatherHistory(
+        station_id=station_id,
+        observed_at=observed_at,
+        temp=temp,
+        dewpoint=dewpoint,
+        humidity=humidity,
+        wind_speed=wind_speed,
+        wind_gust=wind_gust,
+        wind_dir=wind_dir,
+        pressure=pressure,
+        precip_rate=precip_rate,
+        precip_accum=precip_accum,
+        uv=uv,
+        solar=solar
+    )
+    session.add(history)
+
+    session.commit()
+    session.refresh(current)
+    return current
+
+# Read Current by Station
+@app.get("/read/weather/stations/{station_id}", response_model=m.WeatherPublic)
+def read_current_weather(session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(require_station_access)]):
+    current = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
+    if not current:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+    return current
+
+# Read History by Station
+@app.get("/read/weather-history/stations/{station_id}", response_model=list[m.WeatherHistoryPublic])
+def read_history_weather(session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(require_station_access)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=cfg.default_history)] = cfg.limit_history):
+    history = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id).offset(offset).limit(limit)).all()
+    if not history:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+    return history
+    

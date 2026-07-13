@@ -65,13 +65,13 @@ def check_station(station_id):
             print(f"[SCRAPING ERROR]: Failed to get data for {station_id}. Error: {e}")
             break
     else:
-        data = read_json_file
+        data = read_json_file()
         log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "request_error", last_error)
 
         if not is_in_maintenance(station_id):
             email(
                 subject=cfg.scrape_e_subject,
-                body=cfg.scrape_e_body.format(err=last_error),
+                body=cfg.e_body.format(err=last_error),
                 recipients=cfg.admin
             )
         
@@ -124,6 +124,21 @@ def check_station(station_id):
         else:
             log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "check", "ok")
 
+        # Send data to API
+        data = read_json_file()
+        r = post_status_to_api(
+            station_id=station_id,
+            station_name=station_name,
+            now=now,
+            last_status=data[station]["last_status"],
+            consecutive_offline=data[station]["consecutive_offline"],
+            first_offline=data[station]["first_offline"],
+            last_connected=data[station]["last_connected"],
+            alert_sent=data[station]["alert_sent"] 
+        ) 
+        if r is not None:
+            print(f"[POSTED]: {station_id}: {r.status_code}")
+
     # Logic for if a station is connected
     elif status == "connected":
         # Open json
@@ -170,14 +185,27 @@ def check_station(station_id):
             data[station_id]["alert_sent"] = False
             data[station_id]["consecutive_offline"] = 0
             write_json_file(data)
+        
+        # Send data to API
+        data = read_json_file()
+        r = post_status_to_api(
+            station_id=station_id,
+            station_name=station_name,
+            now=now,
+            last_status=data[station]["last_status"],
+            consecutive_offline=data[station]["consecutive_offline"],
+            first_offline=data[station]["first_offline"],
+            last_connected=data[station]["last_connected"],
+            alert_sent=data[station]["alert_sent"] 
+        )
+        if r is not None:
+            print(f"[POSTED]: {station_id}: {r.status_code}")
  
 # time - error protected
 def get_time(station_id, station_name) -> datetime:
     for attempt in range(cfg.max_retries):
         try:
-            utc_now = datetime.now(pytz.UTC)
-            timezone = pytz.timezone(cfg.pytz_timezone)
-            now = utc_now.astimezone(timezone)
+            now = datetime.now(pytz.UTC)
             return now
 
         # If there is a error, log and send email
@@ -431,6 +459,7 @@ def log_data(now: str, station_id, station_name, status, consec_offline, event_t
             event_type, message
         ])
 
+
 # Read/write to file
 
 def read_json_file():
@@ -470,6 +499,58 @@ def is_in_maintenance(station_id):
     else:
         return False
 
+# Send JSON over Post
+def post_status_to_api(station_id: str, station_name: str, now: datetime, last_status, consecutive_offline, first_offline, last_connected, alert_sent):
+    for attempt in range(cfg.max_retries):
+        try:
+            # Create payload:
+            payload = {
+                "station_id": station_id,
+                "time_of_status": now.isoformat(),
+                "last_status": last_status,
+                "consecutive_offline": consecutive_offline,
+                "first_offline": first_offline,
+                "last_connected": last_connected,
+                "alert_sent": alert_sent
+            }
+
+            r = requests.post(cfg.api_post_url, json=payload, headers={"x-api-key": cfg.api_key}, timeout=10)
+
+            r.raise_for_status()
+
+            return r
+
+        except HTTPError as e:
+            last_error = f"POST error: {e}"
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[POST ERROR]: {e}\nRetrying in {wait_time} seconds")
+            time.sleep(wait_time)
+            continue
+
+        except RequestException as e:
+            last_error = f"POST Request Error: {e}"
+            wait_time = cfg.backoff_factor ** attempt
+
+            print(f"[POST REQUEST ERROR]: {e}\nRetrying in {wait_time} seconds")
+            time.sleep(wait_time)
+        
+        except Exception as e:
+            last_error = f"Post error {e}"
+            print(f"[POSTING ERROR]: Failed to post data for {station_id}. Error {e}")
+            break
+    else:
+        data = read_json_file()
+        log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "post_error", last_error)
+
+        if not is_in_maintenance(station_id):
+            email(
+                subject=cfg.post_e_subject,
+                body=cfg.e_body.format(err=last_error),
+                recipients=cfg.admin
+            )
+        
+        return
+    
 # Create base csv data file
 def start_log():
     path = Path("status_log.csv")
@@ -523,7 +604,7 @@ def report_write_start(now: datetime):
         }
         
         write_report_file(data)
-    print(f"\nReport File Created\n")
+        print(f"\nReport File Created\n")
 
 # Create maintence json status file:
 def maintenance_write_start():
@@ -541,7 +622,7 @@ def maintenance_write_start():
                 "changed_at": None
             }
         write_maintenance_file(data)
-    print(f"\nMaintenance File Created\n")
+        print(f"\nMaintenance File Created\n")
 
 # Check if we should send a reminder
 def should_send_reminder(station, now):
@@ -572,7 +653,6 @@ def check_if_report_day(now: datetime):
             return True
         else:
             return False
-        
     else:
         return False
             
@@ -605,13 +685,16 @@ now = get_time("Report", "Report")
 if now is not None:
     report_write_start(now)
 
+print("Start of Status Check")
 
-# Scrape/email/save loop
+# Scrape/email/save loop/POST
 for station in cfg.stations:
     check_station(station)
+    
 # Monthy Report
 if should_send_report(now):
     write_report(now)
+
 
 # Print everything
 print(f"\n\n\nSUMMARY:\n")
@@ -621,3 +704,8 @@ for station, station_names in cfg.stations.items():
         print(f"[OFFLINE]: {station_names} ({station})")
     if data[station]["last_status"] == "RECOVERED":
         print(f"[RECOVERED]: {station_names} ({station})")
+
+
+print(now)
+print(now.tzinfo)
+print(now.isoformat())
