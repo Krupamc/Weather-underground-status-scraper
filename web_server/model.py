@@ -190,6 +190,7 @@ class UserCreate(SQLModel):
     role: str
 
 class UserUpdate(SQLModel):
+    username: str
     password: str | None = None
     role: str
 

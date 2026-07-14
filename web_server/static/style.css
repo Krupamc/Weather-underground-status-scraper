@@ -128,14 +128,20 @@
 }
 
 /* 404 Page */
-.error-page {
-    padding-bottom: 30%; 
+.error_page {
     text-align: center;
+    background-color: red;
+    border-radius: 16px;
+    z-index: 2000;
 }
 
 .error_page h1 {
     margin: 0;
 
+}
+
+.error_page a {
+    background-color: green;
 }
 
 /* Login Page */

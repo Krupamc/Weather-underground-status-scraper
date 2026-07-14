@@ -8,6 +8,9 @@ public - no login, public dashboard with uptime and current weather stats
 
 in backgroun, refresh syays/uptime
 
+
+
+
 sql models:
 
 users: (DONE)

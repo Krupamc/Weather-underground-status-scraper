@@ -3,6 +3,8 @@
 from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse, RedirectResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import Annotated
@@ -111,14 +113,23 @@ def on_startup():
 def home(request: Request):
     return templates.TemplateResponse(request, "home.html", {"request": request})
 
+# Manually go to 404 error
 @app.get("/404", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse(request, "404.html", {"request": request, "title": "404"})
 
-@app.exception_handler(HTTPException)
-async def not_found(request: Request, exc: HTTPException):
+# For any http error, send them to a specific error page
+@app.exception_handler(StarletteHTTPException)
+async def not_found(request: Request, exc: StarletteHTTPException):
     if exc.status_code == 404:
         return templates.TemplateResponse(request, "404.html", {"request": request, "title": "404"})
+    elif exc.status_code == 403:
+        return templates.TemplateResponse(request, "403.html", {"request": request, "title": "403"})
+    elif exc.status_code == 401:
+        return templates.TemplateResponse(request, "401.html", {"request": request, "title": "401"})
+    
+    return await http_exception_handler(request, exc)
+    
 
 # List of Stations
 @app.get("/stations", response_class=HTMLResponse)
@@ -173,10 +184,10 @@ def load_register(request: Request):
     return templates.TemplateResponse(request, "register.html", {"request": request, "title": "Register", "active_page": "register"})
 
 @app.post("/register/")
-def register(username: str, password: str, role: str, session: db.SessionDep): #make this require admin later
+def register(username: str, password: str, session: db.SessionDep): #make this require admin later
     db_user = m.User(
         username=username,
-        role=role,
+        role="public",
         password_hash=s.hash_password(password),
     )
     session.add(db_user)
@@ -242,6 +253,22 @@ def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdat
     session.refresh(user_db)
     return user_db
 
+# Update User
+@app.patch("/users/{user_id}")
+def update_user(user_id: int, user: m.UserUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    user_db = session.exec(select(m.User).where(m.User.id == user_id)).first()
+    if not user_db:
+        raise HTTPException(status_code=404, detail="No User Exists")
+    user_data = user.model_dump(exclude_unset=True)
+
+    if "password" in user_data:
+        user_db.password_hash = s.hash_password(user_data.pop("password"))
+
+    user_db.sqlmodel_update(user_data)
+    session.add(user_db)
+    session.commit()
+    session.refresh(user_db)
+    return user_db
 #---Stations---
 
 # Public dashboard for the station:
