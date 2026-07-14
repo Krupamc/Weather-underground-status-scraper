@@ -102,6 +102,22 @@ class StatusHistoryCreate(StatusHistoryBase):
     pass
 
 # ---Weather---
+
+class WeatherIn(BaseModel):
+    station_id: str
+    observed_at: datetime
+    temp: float | None = None
+    dewpoint: float | None = None
+    humidity: float | None = None
+    wind_speed: float | None = None
+    wind_gust: float | None = None
+    wind_dir: float | None = None
+    pressure: float | None = None
+    precip_rate: float | None = None
+    precip_accum: float | None = None
+    uv: float | None = None
+    solar: float | None = None
+
 class WeatherBase(SQLModel):
     station_id: str = Field(index=True, unique=True, foreign_key="station.station_id")
     observed_at: datetime = Field(index=True, default_factory=utc_now)

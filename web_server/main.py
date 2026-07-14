@@ -111,6 +111,15 @@ def on_startup():
 def home(request: Request):
     return templates.TemplateResponse(request, "home.html", {"request": request})
 
+@app.get("/404", response_class=HTMLResponse)
+def home(request: Request):
+    return templates.TemplateResponse(request, "404.html", {"request": request, "title": "404"})
+
+@app.exception_handler(HTTPException)
+async def not_found(request: Request, exc: HTTPException):
+    if exc.status_code == 404:
+        return templates.TemplateResponse(request, "404.html", {"request": request, "title": "404"})
+
 # List of Stations
 @app.get("/stations", response_class=HTMLResponse)
 def stations(request: Request):
@@ -385,56 +394,46 @@ def read_status_history(session: db.SessionDep, station_id: str, current_user: A
 # Add Current/History Weather
 @app.post("/weather/stations", response_model=m.WeatherPublic)
 def post_weather(
-    session: db.SessionDep, 
-    station_id: str,
-    observed_at: datetime, 
-    temp: float | None = None, 
-    dewpoint: float | None = None, 
-    humidity: float | None = None, 
-    wind_speed: float | None = None,
-    wind_gust: float | None = None, 
-    wind_dir: float | None = None, 
-    pressure: float | None = None, 
-    precip_rate: float | None = None, 
-    precip_accum: float | None = None, 
-    uv: float | None = None, 
-    solar: float | None = None
+    session: db.SessionDep,
+    x_api_key: Annotated[str, Header()], 
+    w_in: m.WeatherIn,
+    
 ):
-    current = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
+    current = session.exec(select(m.Weather).where(m.Weather.station_id == w_in.station_id)).first()
 
     # On first post
     if current is None:
         current = m.Weather(
-            station_id=station_id,
-            observed_at=observed_at,
-            temp=temp,
-            dewpoint=dewpoint,
-            humidity=humidity,
-            wind_speed=wind_speed,
-            wind_gust=wind_gust,
-            wind_dir=wind_dir,
-            pressure=pressure,
-            precip_rate=precip_rate,
-            precip_accum=precip_accum,
-            uv=uv,
-            solar=solar
+            station_id=w_in.station_id,
+            observed_at=w_in.observed_at,
+            temp=w_in.temp,
+            dewpoint=w_in.dewpoint,
+            humidity=w_in.humidity,
+            wind_speed=w_in.wind_speed,
+            wind_gust=w_in.wind_gust,
+            wind_dir=w_in.wind_dir,
+            pressure=w_in.pressure,
+            precip_rate=w_in.precip_rate,
+            precip_accum=w_in.precip_accum,
+            uv=w_in.uv,
+            solar=w_in.solar
         )
         session.add(current)
         
         history = m.WeatherHistory(
-            station_id=station_id,
-            observed_at=observed_at,
-            temp=temp,
-            dewpoint=dewpoint,
-            humidity=humidity,
-            wind_speed=wind_speed,
-            wind_gust=wind_gust,
-            wind_dir=wind_dir,
-            pressure=pressure,
-            precip_rate=precip_rate,
-            precip_accum=precip_accum,
-            uv=uv,
-            solar=solar
+            station_id=w_in.station_id,
+            observed_at=w_in.observed_at,
+            temp=w_in.temp,
+            dewpoint=w_in.dewpoint,
+            humidity=w_in.humidity,
+            wind_speed=w_in.wind_speed,
+            wind_gust=w_in.wind_gust,
+            wind_dir=w_in.wind_dir,
+            pressure=w_in.pressure,
+            precip_rate=w_in.precip_rate,
+            precip_accum=w_in.precip_accum,
+            uv=w_in.uv,
+            solar=w_in.solar
         )
         session.add(history)
 
@@ -443,35 +442,35 @@ def post_weather(
         return current
     
     # Add to current
-    current.observed_at = observed_at
-    current.temp = temp
-    current.dewpoint = dewpoint
-    current.humidity = humidity
-    current.wind_speed = wind_speed
-    current.wind_gust = wind_gust
-    current.wind_dir = wind_dir
-    current.pressure = pressure
-    current.precip_rate = precip_rate
-    current.precip_accum = precip_accum
-    current.uv = uv
-    current.solar = solar
+    current.observed_at = w_in.observed_at
+    current.temp = w_in.temp
+    current.dewpoint = w_in.dewpoint
+    current.humidity = w_in.humidity
+    current.wind_speed = w_in.wind_speed
+    current.wind_gust = w_in.wind_gust
+    current.wind_dir = w_in.wind_dir
+    current.pressure = w_in.pressure
+    current.precip_rate = w_in.precip_rate
+    current.precip_accum = w_in.precip_accum
+    current.uv = w_in.uv
+    current.solar = w_in.solar
     session.add(current)
 
     # Add to history
     history = m.WeatherHistory(
-        station_id=station_id,
-        observed_at=observed_at,
-        temp=temp,
-        dewpoint=dewpoint,
-        humidity=humidity,
-        wind_speed=wind_speed,
-        wind_gust=wind_gust,
-        wind_dir=wind_dir,
-        pressure=pressure,
-        precip_rate=precip_rate,
-        precip_accum=precip_accum,
-        uv=uv,
-        solar=solar
+        station_id=w_in.station_id,
+        observed_at=w_in.observed_at,
+        temp=w_in.temp,
+        dewpoint=w_in.dewpoint,
+        humidity=w_in.humidity,
+        wind_speed=w_in.wind_speed,
+        wind_gust=w_in.wind_gust,
+        wind_dir=w_in.wind_dir,
+        pressure=w_in.pressure,
+        precip_rate=w_in.precip_rate,
+        precip_accum=w_in.precip_accum,
+        uv=w_in.uv,
+        solar=w_in.solar
     )
     session.add(history)
 
@@ -489,7 +488,7 @@ def read_current_weather(session: db.SessionDep, station_id: str, current_user: 
 
 # Read History by Station
 @app.get("/read/weather-history/stations/{station_id}", response_model=list[m.WeatherHistoryPublic])
-def read_history_weather(session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(require_station_access)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=cfg.default_history)] = cfg.limit_history):
+def read_history_weather(session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(require_station_access)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=cfg.limit_history)] = cfg.default_history):
     history = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id).offset(offset).limit(limit)).all()
     if not history:
         raise HTTPException(status_code=404, detail="Station Not Found")

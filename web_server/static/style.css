@@ -127,6 +127,17 @@
     height: 700px;
 }
 
+/* 404 Page */
+.error-page {
+    padding-bottom: 30%; 
+    text-align: center;
+}
+
+.error_page h1 {
+    margin: 0;
+
+}
+
 /* Login Page */
 .login_page {
     padding-top: 180px;

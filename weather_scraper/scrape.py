@@ -7,7 +7,7 @@ import convert_metric as cv
 from pathlib import Path
 import csv
 from datetime import datetime
-import config as cfg
+import weather_config as cfg
 import pytz
 import time
 
@@ -231,9 +231,10 @@ for station in cfg.stations:
     if results is None:
         continue
 
-    print("Saving data...")
+    print(f"\nSaving data...{results["station_id"]}")
     save_data(results, now=results["observed_at"])
 
-    print("Sending data...")
+    print(f"Sending data...{results["station_id"]}\n")
     requests.post(cfg.URL, json=results, headers=api_header)
-    print(results)
+
+print("Scraping Complete! All data Saved")
