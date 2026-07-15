@@ -75,12 +75,18 @@
                 <div class="nav_links">
                     <!-- Logo link -->
                     <a href="/" class="logo_link">
-                    <img src="/static/icons/logo.png" alt="Save Barnegat Bay" width="225" class="logo_link">
+                        <img src="/static/icons/logo.png" alt="Save Barnegat Bay" width="225" class="logo_link">
                     </a>
-
                     <a href="/stations" class="nav_item {% if active_page == 'stations' %}active{% endif %}">WEATHER STATIONS ▼</a>
-                    <a href="/login" class="nav_item {% if active_page == 'login' %}active{% endif %}">LOGIN ▼</a>
-                    <a href="/register" class="nav_item {% if active_page == 'register' %}active{% endif %}">REGISTER ▼</a>
+                    <!-- If user is signed in-->
+                    {% if current_user%}
+                        <a href="logout" class="nav_item">LOGOUT ▼</a>
+
+                        <!-- Public -->
+                        {% else %}
+                            <a href="/login" class="nav_item {% if active_page == 'login' %}active{% endif %}">LOGIN ▼</a>
+                            <a href="/register" class="nav_item {% if active_page == 'register' %}active{% endif %}">REGISTER ▼</a>
+                        {% endif %}
                 </div>
             </nav>
         </div>

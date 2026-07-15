@@ -1,6 +1,6 @@
 # Web Deployment using sqlite:
 
-from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header
+from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -18,10 +18,6 @@ from jwt import InvalidTokenError
 from datetime import datetime
 
 app = FastAPI(title="SBB Mesonet Notification System")
-
-# Static and Templates
-templates = Jinja2Templates(directory="web_server/templates")
-app.mount("/static", StaticFiles(directory="web_server/static"), name="static")
 
 # Security using JWT
 #oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -53,6 +49,24 @@ def seed_stations(): # perhaps add auto delete if not in dict?
 
         session.commit()
 
+# Passes user into each template
+def template_context(request: Request):
+    access_token = request.cookies.get("access_token")
+    current_user = None
+
+    if access_token:
+        try:
+            payload = jwt.decode(access_token, s.secret_key, algorithms=[s.algorithm])
+            username = payload.get("sub")
+
+            if username:
+                with db.Session(db.engine) as session:
+                    current_user = session.exec(select(m.User).where(m.User.username == username)).first()
+        except InvalidTokenError:
+            curent_user = None
+
+    return {"current_user": current_user}
+
 # Check what user
 def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(default=None)):
     
@@ -76,6 +90,25 @@ def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(d
     
     return user
     
+# Check if someone is signed in, NOT REQUIRED
+def get_current_user_op(session: db.SessionDep, access_token: str | None = Cookie(default=None)):
+    if access_token is None:
+        return None
+    
+    try: 
+        # Decode key
+        payload = jwt.decode(access_token, s.secret_key, algorithms=[s.algorithm])
+        username = payload.get("sub")
+        if username is None:
+            return None
+    except InvalidTokenError:
+        return None
+    
+    return session.exec(select(m.User).where(m.User.username == username)).first()
+
+# Static and Templates
+templates = Jinja2Templates(directory="web_server/templates", context_processors=[template_context])
+app.mount("/static", StaticFiles(directory="web_server/static"), name="static")
 
 def require_admin(current_user: Annotated[m.User, Depends(get_current_user)]):
     if current_user.role != "admin":
@@ -138,6 +171,14 @@ def stations(request: Request):
         stations = session.exec(select(m.Station)).all()
     return templates.TemplateResponse(request, "stations.html", context={"request": request, "title": "Weather Stations", "active_page": "stations", "stations": stations})
 
+# Public dashboard for the station:
+@app.get("/stations/public/{station_id}", response_class=HTMLResponse)
+def public_station(request: Request, session: db.SessionDep, station_id: str):
+    status = session.exec(select(m.StatusPublic).where(m.StatusPublic.station_id == station_id)).first()
+    weather = session.exec(select(m.WeatherPublic).where(m.WeatherPublic.station_id == station_id)).first()
+    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    return templates.TemplateResponse(request, "public_dash.html", context={"request": request, "title": f"{station.station_name} Station Dashboard", "active_page": "stations", "station": station, "weather": weather, "status": status})
+
 #---Login---
 
 # Gives direct token
@@ -163,6 +204,7 @@ def login_for_access_token(
 def load_login(request: Request):
     return templates.TemplateResponse(request, "login.html", context={"request": request, "title": "Login", "active_page": "login"})
 
+# From Response with creds.
 @app.post("/login")
 def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
     user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
@@ -175,16 +217,23 @@ def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth
     response.set_cookie(key="access_token", value=access_token, httponly=True)
     return response
 
+@app.get("/logout")
+def logout():
+    response = RedirectResponse("/", status_code=303)
+    response.delete_cookie(key="access_token", path="/")
+    return response
+
 @app.get("/register/no")
 def load_register_no():
     return {"message": "Please Register Man or Woman. Or person. Or Apache attack helicopter. If you are not one of those I give up. Computers don't judge"}
 
-@app.get("/register/", response_class=HTMLResponse)
+@app.get("/register", response_class=HTMLResponse)
 def load_register(request: Request):
     return templates.TemplateResponse(request, "register.html", {"request": request, "title": "Register", "active_page": "register"})
 
-@app.post("/register/")
-def register(username: str, password: str, session: db.SessionDep): #make this require admin later
+# Form Response for register
+@app.post("/register")
+def register(session: db.SessionDep, username: str = Form(), password: str = Form()): #make this require admin later
     db_user = m.User(
         username=username,
         role="public",
@@ -270,12 +319,6 @@ def update_user(user_id: int, user: m.UserUpdate, session: db.SessionDep, curren
     session.refresh(user_db)
     return user_db
 #---Stations---
-
-# Public dashboard for the station:
-@app.get("/stations/public/{station_id}")
-def public_station():
-    return {"message": "ok"}
-
 
 # Create Station Rows in DB:
 @app.post("/stations/create", response_model=m.StationPublic)

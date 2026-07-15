@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block content %}
+    <!-- If the station is no public, provide no data -->
+    {% if not station.is_public %}
+        <h1 style="padding-top: 200px">Station not Available</h1>
+
+    <!-- Else continue dashboard-->
+    {% else %}
+
+    {% endif%}
+{% endblock %}
