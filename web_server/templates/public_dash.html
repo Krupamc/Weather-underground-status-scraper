@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+
 {% block content %}
     <!-- If the station is no public, provide no data -->
     {% if not station.is_public %}
@@ -7,5 +8,83 @@
     <!-- Else continue dashboard-->
     {% else %}
 
-    {% endif%}
+    <!-- Time -->
+    <div class="p_time_bar">
+        <h1>{{ date }}: {{ time }}</h1>
+    </div>
+
+    <div class="p_station_content" style="padding-top: 260px; padding-left: 30px;">
+        <!-- Temperature -->
+        <div class="p_station_card p_temp_card">
+            <!-- Temp Widget -->
+            <div thermo_widget>
+                <div class="p_thermo_tube">
+                    <div class="p_thermo_fill" style="height: 62%;"></div>
+                </div>
+            </div>
+            
+            <!-- Text -->
+            <div class="p_thermo_value">
+                {{ weather.temp }} °F
+            </div>
+        </div>
+
+        <!-- Humidity & Dew point-->
+        <div class="p_station_card">
+
+            <!-- Water Drop Image-->
+            <img src="{{ url_for('static', path='/icons/water_drop.png')}}" alt="Water Drop" class="p_solar_img">
+            <div class="p_dash_text">
+                <h1>Dew Point:</h1>
+                <h3>{{ weather.dewpoint }}</h3>
+
+                <h1>Humidity:</h1>
+                <h3>{{ weather.humidity }}%</h3>
+            </div>
+        </div>
+
+        <!-- Precipitation -->
+        <div class="p_station_card">
+
+            <!-- Cloud Image -->
+            <img src="{{ url_for('static', path='/icons/cloud.png')}}" alt="Rainy Cloud" class="p_solar_img">
+            <!-- Text -->
+            <div class="p_dash_text">
+                <h1>Precipitation Rate:</h1>
+                <h3>{{ weather.precip_rate }}</h3>
+
+                <h1>Precipitation Accumulation</h1>
+                <h3>{{ weather.precip_accum }}</h3>
+            </div>
+        </div>
+
+        <!-- Uv/Solar-->
+        <div class="p_station_card p_solar_card">
+            <!-- Sun Image (here comes the sun....)-->
+            <img src="{{ url_for('static', path='/icons/sun.png')}}" alt="Solar" class="p_solar_img">
+            <!-- Text -->
+            <div class="p_dash_text">
+                <h1>UV Index:</h1>
+                <h3>{{ weather.uv }}</h3>
+
+                <h1>Solar Radiation: </h1>
+                <h3>{{ weather.solar }} (watts/m²)</h3>
+            </div>
+        </div>
+
+        <!-- Wind :D -->
+        <div class="p_station_card">
+            <div class="p_dash_text">
+                <h1>Wind Speed:</h1>
+                <h3>{{ weather.wind_speed }} knots</h3>
+
+                <h1>Wind Gust:</h1>
+                <h3>{{ weather.wind_gust }} knots</h3>
+
+                <h1>Wind Direction:</h1>
+                <h3>{{ weather.wind_dir }}° / {{ wind_label }}</h3>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 {% endblock %}

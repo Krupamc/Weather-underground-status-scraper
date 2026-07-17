@@ -133,6 +133,22 @@ def require_station_access(station_id: str, current_user: Annotated[m.User, Depe
     
     return station
 
+def degree_to_label(degree: int | None) -> str | None:
+    if degree is None:
+        return None
+    
+    map = [
+        "N", "NNE", "NE", "ENE"
+        "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW",
+        "W", "WNW", "NW", "NNW"
+    ]
+
+    degree = degree % 360
+    index = round(degree / 22.5) % 16
+
+    return map[index]
+
 #----Actual Web App-----
 
 @app.on_event("startup")
@@ -174,10 +190,20 @@ def stations(request: Request):
 # Public dashboard for the station:
 @app.get("/stations/public/{station_id}", response_class=HTMLResponse)
 def public_station(request: Request, session: db.SessionDep, station_id: str):
-    status = session.exec(select(m.StatusPublic).where(m.StatusPublic.station_id == station_id)).first()
-    weather = session.exec(select(m.WeatherPublic).where(m.WeatherPublic.station_id == station_id)).first()
+    # Open DB tables
+    status = session.exec(select(m.Status).where(m.Status.station_id == station_id)).first()
+    weather = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
-    return templates.TemplateResponse(request, "public_dash.html", context={"request": request, "title": f"{station.station_name} Station Dashboard", "active_page": "stations", "station": station, "weather": weather, "status": status})
+
+    # Time Expressions
+    time = m.to_eastern(weather.observed_at)
+    date = datetime.strftime(time, "%B %d, %Y")
+    time = datetime.strftime(time, "%I:%M %p")
+
+    # Wind dir label
+    wind_label = degree_to_label(weather.wind_dir)
+
+    return templates.TemplateResponse(request, "public_dash.html", context={"request": request, "title": f"{station.station_name} Station Dashboard", "active_page": "stations", "station": station, "weather": weather, "status": status, "date": date, "time": time, "wind_label": wind_label})
 
 #---Login---
 
