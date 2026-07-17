@@ -184,7 +184,11 @@
 
 .p_station_content {
     padding-top: 200px;
-    padding-left: 30px
+    padding-left: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
 }
 
 /* Cards */
@@ -203,13 +207,14 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 24px;
+    gap: 18px;
+    width: fit-content
 }
 
 .thermo_widget {
     position: relative;
     width: 60px;
-    height: 220px;
+    height: 175px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -218,8 +223,8 @@
 
 .thermo_tube {
     position: relative;
-    width: 22px;
-    height: 160;
+    width: 16px;
+    height: 160px;
     border: 3px solid #333;
     border-radius: 20px;
     background: white;
@@ -230,7 +235,28 @@
 
 .thermo_fill {
     width: 100%;
-    background: linear-gradient(to top, #d63c45)
+    background: linear-gradient(to top, #d63c45, #ff6b6b);
+    border-radius: 0 0 14px 14px;
+}
+
+.thermo_bulb {
+    width: 36px;
+    height: 40px;
+    border-radius: 50%;
+    background: #d63c45;
+    border: 3px solid #333;
+    z-index: 1001;
+    margin-top: -16px;
+}
+
+
+.temp_text h1,
+.temp_text h2 {
+    margin: 0
+}
+
+.temp_text h2{
+    margin-top: 12px
 }
 
 /* 404 Page */

@@ -17,15 +17,17 @@
         <!-- Temperature -->
         <div class="p_station_card p_temp_card">
             <!-- Temp Widget -->
-            <div thermo_widget>
-                <div class="p_thermo_tube">
-                    <div class="p_thermo_fill" style="height: 62%;"></div>
+            <div class=thermo_widget>
+                <div class="thermo_tube">
+                    <div class="thermo_fill" style="height: 62%;"></div>
                 </div>
+                <div class="thermo_bulb"></div>
             </div>
-            
+
             <!-- Text -->
-            <div class="p_thermo_value">
-                {{ weather.temp }} °F
+            <div class="temp_text">
+                <h1>Temperature:</h1>
+                <h2>{{ weather.temp }} °F</h2>
             </div>
         </div>
 
@@ -51,10 +53,10 @@
             <!-- Text -->
             <div class="p_dash_text">
                 <h1>Precipitation Rate:</h1>
-                <h3>{{ weather.precip_rate }}</h3>
+                <h3>{{ weather.precip_rate }} in/hr</h3>
 
                 <h1>Precipitation Accumulation</h1>
-                <h3>{{ weather.precip_accum }}</h3>
+                <h3>{{ weather.precip_accum }} in<Inp></Inp></h3>
             </div>
         </div>
 
