@@ -179,12 +179,11 @@ def scrape(station_id):
                 solar = cv.make_float(solar)
 
                 # Convert into metric
-                if air['data-unit'] != "m":
-                    temp = cv.f_to_c(temp)
-                    dew = cv.f_to_c(dew)
+                temp = cv.f_to_c(temp)
+                dew = cv.f_to_c(dew)
 
-                    wind_speed = cv.mph_to_knots(wind_speed)
-                    wind_gust = cv.mph_to_knots(wind_gust)
+                wind_speed = cv.mph_to_knots(wind_speed)
+                wind_gust = cv.mph_to_knots(wind_gust)
                 
                 # Return a dict to be turned into json later
                 return {

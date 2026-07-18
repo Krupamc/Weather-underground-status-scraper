@@ -138,14 +138,14 @@ def degree_to_label(degree: int | None) -> str | None:
         return None
     
     map = [
-        "N", "NNE", "NE", "ENE"
+        "N", "NNE", "NE", "ENE",
         "E", "ESE", "SE", "SSE",
         "S", "SSW", "SW", "WSW",
-        "W", "WNW", "NW", "NNW"
+        "W", "WNW", "NW", "NNW",
     ]
 
-    degree = degree % 360
-    index = round(degree / 22.5) % 16
+    degree2 = degree % 360
+    index = round(degree2 / 22.5) % 16
 
     return map[index]
 
@@ -202,7 +202,6 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
     time = m.to_eastern(weather.observed_at)
     date = datetime.strftime(time, "%B %d, %Y")
     time = datetime.strftime(time, "%I:%M %p")
-    print(status.last_status)
     # Wind dir label
     wind_label = degree_to_label(weather.wind_dir)
 
@@ -214,11 +213,10 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
 
     # Pressure dial
     pressure_angle = 180
-    if weather and weather.temp is not None:
-        pressure_min = 29.12
-        pressure_angle = ((weather.pressure - pressure_min) / (cfg.pressure_max - pressure_min)) * (cfg.angle_max - cfg.angle_min)
-        pressure_angle = max(cfg.angle_min, min(cfg.angle_max, pressure_angle))
-
+    if weather and weather.pressure is not None:
+        pressure_angle_1 = ((weather.pressure - cfg.pressure_min) / (cfg.pressure_max - cfg.pressure_min)) * (cfg.angle_max - cfg.angle_min) + cfg.angle_min
+        pressure_angle = round(max(cfg.angle_min, min(cfg.angle_max, pressure_angle_1)), 2)
+        
 
 
     return templates.TemplateResponse(request, "public_dash.html", context={"request": request, "title": f"{station.station_name} Station Dashboard", "active_page": "stations", "station": station, "weather": weather, "status": status, "date": date, "time": time, "wind_label": wind_label, "temp_pct": temp_pct, "pressure_angle": pressure_angle})

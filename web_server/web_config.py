@@ -24,10 +24,10 @@ temp_max = 120 # F
 temp_min = -10
 
 # Pressure Widget:
-pressure_min: 29.12
+pressure_min = 29.12
 pressure_max = 30.72
-angle_max = 90
-angle_min = -90
+angle_max = 120
+angle_min = -120
 
 # Security
 secret_key = "ABC1234"

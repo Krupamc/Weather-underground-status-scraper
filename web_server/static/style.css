@@ -204,6 +204,11 @@
     flex: 1
 }
 
+.p_dash_text h1 {
+    margin: 0 0 6px 0;
+    font-size: 24px;
+}
+
 .p_station_card h1,
 .p_station_card h3 {
     margin: 0;
@@ -230,11 +235,13 @@
 .p_station_card {
     display: inline-flex;
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     border: 3px solid #d3cfcf;
+    background: white;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
     border-radius: 16px;
     padding: 20px 18px;
-    gap: 20px;
+    gap: 28px;
 }
 
 .p_temp_card {
@@ -323,7 +330,7 @@
     position: absolute;
     bottom: 50%;
     left: 50%;
-    width: 3px;
+    width: 4px;
     height: 42px;
     background: #d63c45;
     border-radius: 4px;
@@ -368,7 +375,7 @@
     left: 50%;
     width: 3px;
     height: 8px;
-    background: black;
+    background: #666;
     border-radius: 2px;
     transform-origin: 50% 39px;
 }
@@ -395,6 +402,194 @@
 .tick3 { transform: translateX(-50%) rotate(0deg);}
 .tick4 { transform: translateX(-50%) rotate(60deg);}
 .tick5 { transform: translateX(-50%) rotate(120deg);}
+
+.wind_card {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+    width: fit-content;
+}
+
+.wind_widget {
+    width: 200px;
+    height: 190px;
+    margin: 4px;
+    display: flex;
+    align-items: center;
+    justify-items: center;
+}
+
+.wind_compass {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #333;
+    overflow: visible;
+}
+
+.wind_arrow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform-origin: 100% 50%;
+}
+
+.wind_arrow_tail {
+    position: absolute;
+    width: 48px;
+    height: 12px;
+    background: #14a8e5;
+    top: 50%;
+    left: 28px;
+    border-radius: 10px;
+    transform: translateY(-50%)
+}
+
+.wind_arrow_head {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-right: 34px solid #13a8e5;
+    border-radius: 8px;
+    transform: translateY(-50%);
+}
+
+.wind_center {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #333;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%)
+}
+
+.compass_label {
+    position: absolute;
+    font-size: 24px;
+    font-weight: 800px;
+    color: black;
+}
+
+.compass_label_s {
+    position: absolute;
+    font-size: 20px;
+    font-weight: 700px;
+    color: #444;
+}
+
+.north {
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%)
+}
+
+.ne {
+    top: -0px;
+    right: -15px;
+    transform: translateX(-50%)
+}
+
+.east {
+    top: 50%;
+    right: -19px;
+    transform: TranslateY(-50%)
+}
+
+.se {
+    bottom: -0px;
+    right: -13px;
+    transform: translateX(-50%)
+}
+
+.south {
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%)
+}
+
+.sw {
+    bottom: 0px;
+    left: 8px;
+    transform: translateX(-50%);
+}
+
+.west {
+    top: 50%;
+    left: -25px;
+    transform: translateY(-50%);
+}
+
+
+.nw {
+    top: -2px;
+    left: 10px;
+    transform: translateX(-50%) 
+}
+
+.wind_tick {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 3px;
+    height: 24px;
+    background: #333;
+    border-radius: 2px;
+    transform-origin: 50% 74px;
+}
+
+.wind_tick_s {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 3px;
+    height: 18px;
+    background: #666;
+    border-radius: 2px;
+    transform-origin: 50% 74px;
+}
+
+.wind_tick_ss {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 3px;
+    height: 12px;
+    background: #888;
+    border-radius: 2px;
+    transform-origin: 50% 74px;
+}
+
+.wind_tick_n { transform: translateX(-50%) rotate(0deg); }
+.wind_tick_nne { transform: translateX(-50%) rotate(22.5deg); }
+.wind_tick_ne { transform: translateX(-50%) rotate(45deg); }
+.wind_tick_ene { transform: translateX(-50%) rotate(67.5deg); }
+
+.wind_tick_e { transform: translateX(-50%) rotate(90deg); }
+.wind_tick_ese { transform: translateX(-50%) rotate(112.5deg);}
+.wind_tick_se { transform: translateX(-50%) rotate(135deg); }
+.wind_tick_sse { transform: translateX(-50%) rotate(157.5deg); }
+
+.wind_tick_south { transform: translateX(-50%) rotate(180deg); }
+.wind_tick_ssw { transform: translateX(-50%) rotate(202.5deg); }
+.wind_tick_sw { transform: translateX(-50%) rotate(225deg); }
+.wind_tick_wsw { transform: translateX(-50%) rotate(247.5deg)}
+
+.wind_tick_w { transform: translateX(-50%) rotate(270deg); }
+.wind_tick_wnw { transform: translateX(-50%) rotate(292.5deg)}
+.wind_tick_nw { transform: translateX(-50%) rotate(315deg)}
+.wind_tick_nnw { transform: translateX(-50%) rotate(337.5deg)}
+
 /* 404 Page */
 
 .error_page {
