@@ -18,6 +18,17 @@ timezone = "US/Eastern"
 # Status History Query
 default_history = 20
 limit_history = 1000
+
+# Temperature Widget:
+temp_max = 120 # F
+temp_min = -10
+
+# Pressure Widget:
+pressure_min: 29.12
+pressure_max = 30.72
+angle_max = 90
+angle_min = -90
+
 # Security
 secret_key = "ABC1234"
 scraper_api_key = "test"

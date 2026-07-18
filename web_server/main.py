@@ -195,15 +195,33 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
     weather = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
 
+    if not status:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+
     # Time Expressions
     time = m.to_eastern(weather.observed_at)
     date = datetime.strftime(time, "%B %d, %Y")
     time = datetime.strftime(time, "%I:%M %p")
-
+    print(status.last_status)
     # Wind dir label
     wind_label = degree_to_label(weather.wind_dir)
 
-    return templates.TemplateResponse(request, "public_dash.html", context={"request": request, "title": f"{station.station_name} Station Dashboard", "active_page": "stations", "station": station, "weather": weather, "status": status, "date": date, "time": time, "wind_label": wind_label})
+    # Thermometer percent fill
+    temp_pct = 0
+    if weather and weather.temp is not None:
+        temp_pct = ((weather.temp - cfg.temp_min) / (cfg.temp_max - cfg.temp_min)) * 100
+        temp_pct = max(0, min(100, temp_pct))
+
+    # Pressure dial
+    pressure_angle = 180
+    if weather and weather.temp is not None:
+        pressure_min = 29.12
+        pressure_angle = ((weather.pressure - pressure_min) / (cfg.pressure_max - pressure_min)) * (cfg.angle_max - cfg.angle_min)
+        pressure_angle = max(cfg.angle_min, min(cfg.angle_max, pressure_angle))
+
+
+
+    return templates.TemplateResponse(request, "public_dash.html", context={"request": request, "title": f"{station.station_name} Station Dashboard", "active_page": "stations", "station": station, "weather": weather, "status": status, "date": date, "time": time, "wind_label": wind_label, "temp_pct": temp_pct, "pressure_angle": pressure_angle})
 
 #---Login---
 

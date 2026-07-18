@@ -3,7 +3,7 @@
 {% block content %}
     <!-- If the station is no public, provide no data -->
     {% if not station.is_public %}
-        <h1 style="padding-top: 200px">Station not Available</h1>
+        <h1 style="padding-top: 270px">Station not Available</h1>
 
     <!-- Else continue dashboard-->
     {% else %}
@@ -13,13 +13,27 @@
         <h1>{{ date }}: {{ time }}</h1>
     </div>
 
-    <div class="p_station_content" style="padding-top: 260px; padding-left: 30px;">
+    <!-- Online-->
+    {% if status.last_status == "CONNECTED" %}
+        <div class="status_bar">
+            <span class="online_dot"></span>
+            <span class="p_status_text">Online</span>
+        </div>
+    {% else %}
+        <div class="status_bar">
+            <span class="offline_dot"></span>
+            <span class="p_status_text">Offline</span>
+        </div>
+    {% endif %}
+
+    <div class="p_station_content" style="padding-top: 270px; padding-left: 30px;">
+        
         <!-- Temperature -->
         <div class="p_station_card p_temp_card">
             <!-- Temp Widget -->
             <div class=thermo_widget>
                 <div class="thermo_tube">
-                    <div class="thermo_fill" style="height: 62%;"></div>
+                    <div class="thermo_fill" style="height: {{ temp_pct }}%;"></div> <!-- The Error is intentional; ignore it-->
                 </div>
                 <div class="thermo_bulb"></div>
             </div>
@@ -27,7 +41,7 @@
             <!-- Text -->
             <div class="temp_text">
                 <h1>Temperature:</h1>
-                <h2>{{ weather.temp }} °F</h2>
+                <h2>{{ weather.temp }} °C</h2>
             </div>
         </div>
 
@@ -38,7 +52,7 @@
             <img src="{{ url_for('static', path='/icons/water_drop.png')}}" alt="Water Drop" class="p_solar_img">
             <div class="p_dash_text">
                 <h1>Dew Point:</h1>
-                <h3>{{ weather.dewpoint }}</h3>
+                <h3>{{ weather.dewpoint }} °C</h3>
 
                 <h1>Humidity:</h1>
                 <h3>{{ weather.humidity }}%</h3>
@@ -74,6 +88,36 @@
             </div>
         </div>
 
+        <!-- Pressure -->
+        <div class="p_station_card">
+            <!-- Pressure Widget -->
+            <div class="pressure_widget">
+                <div class="pressure_circle">
+                    
+                    <!-- Units -->
+                    <div class="tick tick1"></div> <!-- Very Low Pressure-->
+                    <div class="tick_label tick_label1">29.12</div>
+                    <div class="tick_small tick2"></div>
+                    <div class="tick tick3"></div> <!-- Average Pressure -->
+                    <div class="tick_label tick_label2">29.92</div>
+                    <div class="tick_small tick4"></div>
+                    <div class="tick tick5"></div> <!-- Very High Pressure-->
+                    <div class="tick_label tick_label3">30.72</div>
+
+                    <!-- Needle angle-->
+                    <div class="pressure_needle" style="transform: translateX(-50%) rotate({{ pressure_angle }}deg);"></div>
+                    <div class="pressure_center"></div>
+                </div>
+            </div>
+
+
+            <!-- Text -->
+             <div class="temp_text">
+                <h1>Pressure:</h1>
+                <h3>{{ weather.pressure }} inHg</h3>
+             </div>
+        </div>
+
         <!-- Wind :D -->
         <div class="p_station_card">
             <div class="p_dash_text">
@@ -85,6 +129,8 @@
 
                 <h1>Wind Direction:</h1>
                 <h3>{{ weather.wind_dir }}° / {{ wind_label }}</h3>
+
+                <!-- Make wind widget, then a current status one-->
             </div>
         </div>
     </div>

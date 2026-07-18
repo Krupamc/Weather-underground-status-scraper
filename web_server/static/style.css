@@ -131,6 +131,40 @@
 
 /*---Public Dashboard---*/
 
+.status_bar {
+    position: fixed;
+    display: flex;
+    top: 230px;
+    left: 0;
+    width: 100%;
+    height: 35px;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+    z-index: 1003;
+    background-color: white;
+    color: black;
+    font-weight: 600;
+}
+
+.online_dot,
+.offline_dot {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    border: 2px solid #333;
+    display: inline-block;
+}
+
+.online_dot {
+    background-color: #18a558;
+}
+
+.offline_dot {
+    background-color: #d63c45;
+}
+
 .p_time_bar {
     position: fixed;
     display: flex;
@@ -259,6 +293,108 @@
     margin-top: 12px
 }
 
+.pressure_card {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+    width: fit-content;
+}
+
+.pressure_widget {
+    width: 90px;
+    height: 90px;
+    margin: 4px;
+    display: flex;
+    align-items: center;
+    justify-items: center;
+}
+
+.pressure_circle {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #333;
+}
+
+.pressure_needle {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    width: 3px;
+    height: 42px;
+    background: #d63c45;
+    border-radius: 4px;
+    transform-origin: bottom center;
+    transform: translateX(-50%) rotate(deg);
+    
+}
+
+.pressure_center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background: black;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+
+}
+
+.tick_label {
+    position: absolute;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.tick {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 3px;
+    height: 12px;
+    background: #333;
+    border-radius: 2px;
+    transform-origin: 50% 39px;
+}
+
+.tick_small {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 3px;
+    height: 8px;
+    background: black;
+    border-radius: 2px;
+    transform-origin: 50% 39px;
+}
+
+.tick_label1 {
+    left: -24px;
+    bottom: 10px;
+    transform: rotate(60deg);
+}
+
+.tick_label2 {
+    left: 23px;
+    top: -18px;
+}
+
+.tick_label3 {
+    left: 73px;
+    bottom: 10px;
+    transform: rotate(-60deg)
+}
+
+.tick1 { transform: translateX(-50%) rotate(-120deg);}
+.tick2 { transform: translateX(-50%) rotate(-60deg);}
+.tick3 { transform: translateX(-50%) rotate(0deg);}
+.tick4 { transform: translateX(-50%) rotate(60deg);}
+.tick5 { transform: translateX(-50%) rotate(120deg);}
 /* 404 Page */
 
 .error_page {
