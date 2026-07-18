@@ -2,7 +2,7 @@
 
 {% block content %}
     <!-- If the station is no public, provide no data -->
-    {% if not station.is_public %}
+    {% if not station.is_public or station.last_status =="OFFLINE"%}
         <h1 style="padding-top: 270px">Station not Available</h1>
 
     <!-- Else continue dashboard-->
@@ -18,6 +18,10 @@
         <div class="status_bar">
             <span class="online_dot"></span>
             <span class="p_status_text">Online</span>
+            <div class="unit_toggle" style="padding-top: 20px">
+                <a href="?units=imperial" class="{% if units == 'imperial' %}active_unit{% endif %}">Imperial</a>
+                <a href="?units=metric" class="{% if units == 'metric' %}active_unit{% endif%}">Metric</a>
+            </div>
         </div>
     {% else %}
         <div class="status_bar">
@@ -41,7 +45,7 @@
             <!-- Text -->
             <div class="p_dash_text">
                 <h1>Temperature:</h1>
-                <h3>{{ weather.temp }} °C</h3>
+                <h3>{{ converted.temp }} {{ w_units.temp }}</h3>
             </div>
         </div>
 
@@ -52,7 +56,7 @@
             <img src="{{ url_for('static', path='/icons/water_drop.png')}}" alt="Water Drop" class="p_solar_img">
             <div class="p_dash_text">
                 <h1>Dew Point:</h1>
-                <h3>{{ weather.dewpoint }} °C</h3>
+                <h3>{{ converted.dew_p }} {{ w_units.temp }}</h3>
 
                 <h1>Humidity:</h1>
                 <h3>{{ weather.humidity }}%</h3>
@@ -67,10 +71,10 @@
             <!-- Text -->
             <div class="p_dash_text">
                 <h1>Precipitation Rate:</h1>
-                <h3>{{ weather.precip_rate }} in/hr</h3>
+                <h3>{{ converted.precip_r }} {{ w_units.precip_r }}</h3>
 
                 <h1>Precipitation Accumulation</h1>
-                <h3>{{ weather.precip_accum }} in<Inp></Inp></h3>
+                <h3>{{ converted.precip_a }} {{ w_units.precip_a }}<Inp></Inp></h3>
             </div>
         </div>
 
@@ -96,13 +100,13 @@
                     
                     <!-- Units -->
                     <div class="tick tick1"></div> <!-- Very Low Pressure-->
-                    <div class="tick_label tick_label1">29.12</div>
+                    <div class="tick_label tick_label1">{{ pressure_labels.low }}</div>
                     <div class="tick_small tick2"></div>
                     <div class="tick tick3"></div> <!-- Average Pressure -->
-                    <div class="tick_label tick_label2">29.92</div>
+                    <div class="tick_label tick_label2">{{ pressure_labels.mid }}</div>
                     <div class="tick_small tick4"></div>
                     <div class="tick tick5"></div> <!-- Very High Pressure-->
-                    <div class="tick_label tick_label3">30.72</div>
+                    <div class="tick_label tick_label3">{{ pressure_labels.high }}</div>
 
                     <!-- Needle angle-->
                     <div class="pressure_needle" style="transform: translateX(-50%) rotate({{ pressure_angle }}deg);"></div>
@@ -114,7 +118,7 @@
             <!-- Text -->
              <div class="p_dash_text">
                 <h1>Pressure:</h1>
-                <h3>{{ weather.pressure }} inHg</h3>
+                <h3>{{ converted.pressure }} {{ w_units.pressure }}</h3>
              </div>
         </div>
 
@@ -124,12 +128,15 @@
             <!-- Wind Compass Widget -->
             <div class="wind_widget" style="padding-left: 20px;">
                 <div class="wind_compass">
-                    <!-- Arrow ({{ weather.wind_dir - 90}}) -->
-                    <div class="wind_arrow" style="z-index: 1005; transform: translate(-50%, -50%) rotate({{ weather.wind_dir - 90}}deg)">
-                        <div class="wind_arrow_head"></div>
-                        <div class="wind_arrow_tail"></div>
-                    </div>
-                    
+                    {% if weather.wind_dir%}
+                        <!-- Arrow ({{ weather.wind_dir - 90}}) -->
+                        <div class="wind_arrow" style="z-index: 1005; transform: translate(-50%, -50%) rotate({{ weather.wind_dir - 90}}deg)">
+                            <div class="wind_arrow_head"></div>
+                            <div class="wind_arrow_tail"></div>
+                        </div>
+                    {% else %}
+                        <div style="padding-left: 34px; padding-top: 83px">No Wind data</div>
+                    {% endif %}
                     <!-- Center Dot -->
                     <div class="wind_center"></div>
 
@@ -176,10 +183,10 @@
             <!-- Text -->
             <div class="p_dash_text">
                 <h1>Wind Speed:</h1>
-                <h3>{{ weather.wind_speed }} knots</h3>
+                <h3>{{ converted.wind_speed }} {{ w_units.wind }}</h3>
 
                 <h1>Wind Gust:</h1>
-                <h3>{{ weather.wind_gust }} knots</h3>
+                <h3>{{ converted.wind_gust }} {{ w_units.wind }}</h3>
 
                 <h1>Wind Direction:</h1>
                 <h3>{{ weather.wind_dir }}° / {{ wind_label }}</h3>

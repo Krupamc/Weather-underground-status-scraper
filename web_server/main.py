@@ -16,6 +16,7 @@ import security as s
 import jwt
 from jwt import InvalidTokenError
 from datetime import datetime
+import convert_metric as cv
 
 app = FastAPI(title="SBB Mesonet Notification System")
 
@@ -190,36 +191,140 @@ def stations(request: Request):
 # Public dashboard for the station:
 @app.get("/stations/public/{station_id}", response_class=HTMLResponse)
 def public_station(request: Request, session: db.SessionDep, station_id: str):
+    # Check units:
+    units = request.query_params.get("units", "imperial")
     # Open DB tables
     status = session.exec(select(m.Status).where(m.Status.station_id == station_id)).first()
     weather = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
 
-    if not status:
+    if not status or not station or not weather:
         raise HTTPException(status_code=404, detail="Station Not Found")
 
     # Time Expressions
-    time = m.to_eastern(weather.observed_at)
-    date = datetime.strftime(time, "%B %d, %Y")
-    time = datetime.strftime(time, "%I:%M %p")
-    # Wind dir label
-    wind_label = degree_to_label(weather.wind_dir)
+    if weather is not None:
+        time = m.to_eastern(weather.observed_at)
+        date = datetime.strftime(time, "%B %d, %Y")
+        time = datetime.strftime(time, "%I:%M %p")
 
-    # Thermometer percent fill
-    temp_pct = 0
-    if weather and weather.temp is not None:
-        temp_pct = ((weather.temp - cfg.temp_min) / (cfg.temp_max - cfg.temp_min)) * 100
-        temp_pct = max(0, min(100, temp_pct))
+        # Wind dir label
+        wind_label = degree_to_label(weather.wind_dir)
 
-    # Pressure dial
-    pressure_angle = 180
-    if weather and weather.pressure is not None:
-        pressure_angle_1 = ((weather.pressure - cfg.pressure_min) / (cfg.pressure_max - cfg.pressure_min)) * (cfg.angle_max - cfg.angle_min) + cfg.angle_min
-        pressure_angle = round(max(cfg.angle_min, min(cfg.angle_max, pressure_angle_1)), 2)
+
+    # Imperial
+    if units == "metric":
         
+        # Temp Percent fill
+        temp_pct = 0
+        if weather and weather.temp is not None:
+            temp_pct = ((weather.temp - cfg.m_temp_min) / (cfg.m_temp_max - cfg.m_temp_min)) * 100
+            temp_pct = max(0, min(100, temp_pct)) 
+
+        # Pressure dial
+        pressure_angle = 180
+        if weather and weather.pressure is not None:
+
+            pressure = cv.inhg_to_hpa(weather.pressure)
+            pressure_min = cv.inhg_to_hpa(cfg.pressure_min)
+            pressure_mid = cv.inhg_to_hpa(cfg.pressure_mid)
+            pressure_max = cv.inhg_to_hpa(cfg.pressure_max)
 
 
-    return templates.TemplateResponse(request, "public_dash.html", context={"request": request, "title": f"{station.station_name} Station Dashboard", "active_page": "stations", "station": station, "weather": weather, "status": status, "date": date, "time": time, "wind_label": wind_label, "temp_pct": temp_pct, "pressure_angle": pressure_angle})
+            pressure_angle_1 = ((pressure - pressure_min) / (pressure_max - pressure_min)) * (cfg.angle_max - cfg.angle_min) + cfg.angle_min
+            pressure_angle = round(max(cfg.angle_min, min(cfg.angle_max, pressure_angle_1)), 2)
+        
+        # Precip
+        precip_r = cv.in_to_mm(weather.precip_rate)
+        precip_a = cv.in_to_mm(weather.precip_accum)
+
+
+        pressure_labels = {
+            "low": pressure_min,
+            "mid": pressure_mid,
+            "high": pressure_max
+        }
+
+        w_units = {
+            "temp": "°C",
+            "precip_r": "mm/hr",
+            "precip_a": "mm",
+            "wind": "knots",
+            "pressure": "hPa"
+        }
+
+        converted = {
+            "pressure": pressure,
+            "precip_r": precip_r,
+            "precip_a": precip_a,
+            "temp": weather.temp,
+            "dew_p": weather.dewpoint,
+            "wind_speed": weather.wind_speed,
+            "wind_gust": weather.wind_gust
+        }
+
+    else:
+
+        # Thermometer percent fill
+        temp = cv.c_to_f(weather.temp)
+        dew_p = cv.c_to_f(weather.dewpoint)
+
+        temp_pct = 0
+        if weather and weather.temp is not None:
+            temp_pct = ((temp - cfg.temp_min) / (cfg.temp_max - cfg.temp_min)) * 100
+            temp_pct = max(0, min(100, temp_pct))
+
+        
+        # Pressure dial
+        pressure_angle = 180
+        if weather and weather.pressure is not None:
+            pressure_angle_1 = ((weather.pressure - cfg.pressure_min) / (cfg.pressure_max - cfg.pressure_min)) * (cfg.angle_max - cfg.angle_min) + cfg.angle_min
+            pressure_angle = round(max(cfg.angle_min, min(cfg.angle_max, pressure_angle_1)), 2)
+
+        # Knots - mph
+        wind_speed = cv.knots_to_mph(weather.wind_speed)
+        wind_gust = cv.knots_to_mph(weather.wind_gust)
+
+        pressure_labels = {
+            "low": cfg.pressure_min,
+            "mid": cfg.pressure_mid,
+            "high": cfg.pressure_max,
+        }
+
+        w_units = {
+            "temp": "°F",
+            "precip_r": "in/hr",
+            "precip_a": "in",
+            "wind": "mph",
+            "pressure": "inHg",
+        }
+
+        converted = {
+            "temp": temp,
+            "dew_p": dew_p,
+            "pressure": weather.pressure,
+            "precip_r": weather.precip_rate,
+            "precip_a": weather.precip_accum,
+            "wind_speed": wind_speed,
+            "wind_gust": wind_gust,
+        }
+
+    return templates.TemplateResponse(request, "public_dash.html", context={
+        "request": request, 
+        "title": f"{station.station_name} Station Dashboard", 
+        "active_page": "stations", 
+        "station": station, 
+        "weather": weather, 
+        "status": status, 
+        "date": date, 
+        "time": time,
+        "units": units,
+        "pressure_labels": pressure_labels,
+        "wind_label": wind_label, 
+        "temp_pct": temp_pct, 
+        "pressure_angle": pressure_angle,
+        "w_units": w_units,
+        "converted": converted
+    })
 
 #---Login---
 

@@ -20,11 +20,14 @@ default_history = 20
 limit_history = 1000
 
 # Temperature Widget:
+m_temp_max = 40 # C
+m_temp_min = 0 
 temp_max = 120 # F
 temp_min = -10
 
 # Pressure Widget:
 pressure_min = 29.12
+pressure_mid = 29.92
 pressure_max = 30.72
 angle_max = 120
 angle_min = -120

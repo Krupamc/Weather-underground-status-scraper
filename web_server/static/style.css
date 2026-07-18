@@ -137,7 +137,7 @@
     top: 230px;
     left: 0;
     width: 100%;
-    height: 35px;
+    height: 50px;
     justify-content: center;
     align-items: center;
     gap: 10px;
@@ -182,6 +182,28 @@
 
 .p_time_bar h1 {
     font-size: 26px;
+}
+
+.unit_toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.unit_toggle a {
+    text-decoration: none;
+    color: #333;
+    padding: 8px 14px;
+    border: 2px solid #d3cfcf;
+    background: white;
+    border-radius: 10px;
+    color: black
+}
+
+.unit_toggle a.active_unit {
+    background: #005baa;
+    color: white;
+    border-color: #005baa;
 }
 
 /* Static Img Cards */
@@ -381,18 +403,18 @@
 }
 
 .tick_label1 {
-    left: -24px;
+    left: -25px;
     bottom: 10px;
     transform: rotate(60deg);
 }
 
 .tick_label2 {
-    left: 23px;
+    left: 20px;
     top: -18px;
 }
 
 .tick_label3 {
-    left: 73px;
+    left: 70px;
     bottom: 10px;
     transform: rotate(-60deg)
 }
