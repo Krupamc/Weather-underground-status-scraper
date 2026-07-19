@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+{% if not station_rows %}
+    <div class="login_page">
+        <div class="login_card">
+            <h1>No stations to access:</h1>
+            <h3>If you are a a station owner, please create a account and reach out to example@example.com to get dashboard access.</h3>
+        </div>
+    </div>
+{% else %}
+    <div class="station_card_content">
+        <div class="station_list" style="padding-top: 140px;">
+            {% for station in station_rows %}
+                <a href="/stations/dashboard/{{ station.station_id }}" class="station_card">
+                    <h2>{{ station.station_name }}</h2>
+                    <h3>{{ station.station_id }}</h3>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

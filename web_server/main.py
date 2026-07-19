@@ -64,7 +64,7 @@ def template_context(request: Request):
                 with db.Session(db.engine) as session:
                     current_user = session.exec(select(m.User).where(m.User.username == username)).first()
         except InvalidTokenError:
-            curent_user = None
+            current_user = None
 
     return {"current_user": current_user}
 
@@ -88,7 +88,7 @@ def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(d
 
     if user is None:
         raise credentials_exception
-    
+
     return user
     
 # Check if someone is signed in, NOT REQUIRED
@@ -187,6 +187,27 @@ def stations(request: Request):
     with db.Session(db.engine) as session:
         stations = session.exec(select(m.Station)).all()
     return templates.TemplateResponse(request, "stations.html", context={"request": request, "title": "Weather Stations", "active_page": "stations", "stations": stations})
+
+# Stations owned
+@app.get("/my-stations", response_class=HTMLResponse)
+def my_stations(request: Request, session: db.SessionDep, current_user: Annotated[m.User, Depends(get_current_user)]):
+    if current_user.role == "admin":
+        stations = session.exec(select(m.Station)).all()
+        return templates.TemplateResponse(request, "my_stations.html", context={"request": request, "title": "My Stations", "active_page": "my_stations", "station_rows": stations})
+
+    stations = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True)).all()
+
+    # Add names
+    station_rows = []
+    for access in stations:
+        station = session.exec(select(m.Station).where(m.Station.station_id == access.station_id)).first()
+        if station:
+            station_rows.append({
+                "station_id": access.station_id,
+                "station_name": station.station_name
+            })
+    
+    return templates.TemplateResponse(request, "my_stations.html", context={"request": request, "title": "My Stations", "active_page": "my_stations", "station_rows": station_rows})
 
 # Public dashboard for the station:
 @app.get("/stations/public/{station_id}", response_class=HTMLResponse)
@@ -360,14 +381,14 @@ def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth
         return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login", "error": "Invalid Credentials"}, status_code=401)
     
     access_token = s.create_access_token(data={"sub": user.username}) 
-    response = RedirectResponse(url="/users", status_code=303)
-    response.set_cookie(key="access_token", value=access_token, httponly=True)
+    response = RedirectResponse(url="/my-stations", status_code=303)
+    response.set_cookie(key="access_token", value=access_token, httponly=True, path="/", samesite="lax")
     return response
 
 @app.get("/logout")
 def logout():
     response = RedirectResponse("/", status_code=303)
-    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="access_token", path="/", samesite="lax")
     return response
 
 @app.get("/register/no")
@@ -402,6 +423,23 @@ def read_users(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], curr
  
 #---Access---
 
+# Read what stations a user can affect
+@app.get("/users/{user_id}/stations")
+def read_user_stations(user_id: int, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    access_rows = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id)).all()
+
+    if not access_rows:
+        return []
+
+    return [
+        {
+            "station_id": row.station_id,
+            "can_view": row.can_view,
+            "can_toggle_maintenance": row.can_toggle_maintenance,
+        }
+        for row in access_rows
+    ]
+
 # Give User Access to a station
 @app.post("/users/{user_id}/stations/{station_id}")
 def grant_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
@@ -422,7 +460,7 @@ def grant_station_access(user_id: int, station_id: str, session: db.SessionDep, 
     return {"Ok": True}
 
 # Delete Access
-@app.delete("/users/{user_id}/station/{station_id}")
+@app.delete("/users/{user_id}/stations/{station_id}")
 def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
