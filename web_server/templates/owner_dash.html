@@ -32,6 +32,20 @@
 
     <div class="p_station_content" style="padding-top: 270px; padding-left: 30px;">
         
+        <!-- Status -->
+        <div class="p_station_card">
+            <!-- Image -->
+            <img src="{{ url_for('static', path='/icons/gear.png')}}" alt="Status Infomation" class="p_solar_img">   
+
+            <div class="p_dash_text">
+                <h1>Last Status:</h1>
+                <h3>{{ status.last_status}}</h3>
+                <h1>Consecutive Offline</h1>
+                <h3>{{ status.consecutive_offline }}</h3>
+            </div>
+        </div>
+
+
         <!-- Temperature -->
         <div class="p_station_card p_temp_card">
             <!-- Temp Widget -->
@@ -193,6 +207,13 @@
 
             </div>
         </div>
+
+        <!-- Maintence Mode Toggle -->
+        <div class="p_station_card">
+            <div class="unit_toggle">Maintenance</div>
+        </div>
+
+
     </div>
     {% endif %}
 {% endblock %}

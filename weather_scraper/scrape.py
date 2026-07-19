@@ -76,9 +76,7 @@ def save_data(results: dict, now):
 
 # Send back time in right timezone
 def api_timestamp():
-    utc_now = datetime.now(pytz.UTC)
-    timezone = pytz.timezone(cfg.pytz_timezone)
-    now = utc_now.astimezone(timezone)
+    now = datetime.now(pytz.UTC)
     return now
 
 def scrape(station_id):

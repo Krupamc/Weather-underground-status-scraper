@@ -1,4 +1,4 @@
-import status_scraper.config as cfg
+import config as cfg
 import requests
 from requests.exceptions import HTTPError, RequestException
 from bs4 import BeautifulSoup as bs
@@ -705,7 +705,3 @@ for station, station_names in cfg.stations.items():
     if data[station]["last_status"] == "RECOVERED":
         print(f"[RECOVERED]: {station_names} ({station})")
 
-
-print(now)
-print(now.tzinfo)
-print(now.isoformat())
