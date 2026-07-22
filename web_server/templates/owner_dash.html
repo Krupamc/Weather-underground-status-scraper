@@ -1,13 +1,6 @@
 {% extends "layout.html" %}
 
 {% block content %}
-    <!-- If the station is no public, provide no data -->
-    {% if not station.is_public or station.last_status =="OFFLINE"%}
-        <h1 style="padding-top: 270px">Station not Available</h1>
-
-    <!-- Else continue dashboard-->
-    {% else %}
-
     <!-- Time -->
     <div class="p_time_bar">
         <h1>{{ date }}: {{ time }}</h1>
@@ -31,189 +24,225 @@
     {% endif %}
 
     <div class="p_station_content" style="padding-top: 270px; padding-left: 30px;">
-        
+
+
         <!-- Status -->
         <div class="p_station_card">
             <!-- Image -->
-            <img src="{{ url_for('static', path='/icons/gear.png')}}" alt="Status Infomation" class="p_solar_img">   
+            {% if status.last_status != "CONNECTED" %}
+                <img src="{{ url_for('static', path='/icons/red_x.png')}}" alt="Status Problem" class="p_solar_img">   
+
+            {% else %}
+                <img src="{{ url_for('static', path='/icons/green_check.png')}}" alt="Status Ok" class="p_solar_img">
+            {% endif %}
 
             <div class="p_dash_text">
+                <h1>Time:</h1>
+                <h3>{{ stime.s_date }}: {{ stime.s_time }}</h3>
+                
                 <h1>Last Status:</h1>
                 <h3>{{ status.last_status}}</h3>
-                <h1>Consecutive Offline</h1>
-                <h3>{{ status.consecutive_offline }}</h3>
             </div>
         </div>
+        {% if status.last_status != "CONNECTED" %}
+            <!-- Detail Status -->
+            <div class="p_station_card">
+                <!-- Image  -->
+                <img src="{{ url_for('static', path='/icons/gear.png')}}" alt="Status Infomation" class="p_solar_img">
+                
+                <div class="p_dash_text">
+                    <h1>Consecutive Offline</h1>
+                    <h3>{{ status.consecutive_offline }}</h3>
 
+                    <h1>First Time Offline:</h1>
+                    <h3>{{ stime.fo_date }}: {{ stime.fo_time }}</h3>
 
-        <!-- Temperature -->
-        <div class="p_station_card p_temp_card">
-            <!-- Temp Widget -->
-            <div class=thermo_widget>
-                <div class="thermo_tube">
-                    <div class="thermo_fill" style="height: {{ temp_pct }}%;"></div> <!-- The Error is intentional; ignore it-->
+                    <h1>Last Time Connected</h1>
+                    <h3>{{ stime.lc_date }}: {{ stime.lc_time }}</h3>
+
+                    <h1>Alert Email Sent?</h1>
+                    <h3>{{ status.alert_sent }}</h3>
                 </div>
-                <div class="thermo_bulb"></div>
             </div>
+        {% endif %}
 
-            <!-- Text -->
-            <div class="p_dash_text">
-                <h1>Temperature:</h1>
-                <h3>{{ converted.temp }} {{ w_units.temp }}</h3>
-            </div>
-        </div>
+        <!-- Mode Buttons -->
+        
+        <!-- Maintenance -->
+        <form action="/maintenance/{{station_id}}" method="post" class="toggle_button">
+            <button type="submit" class="{% if station.is_in_maintenance %}maintenance_on{% else %}maintenance_off{% endif %}"> <!-- Change colors based on mode-->
+                {% if station.is_in_maintenance %}
+                   <h2>Turn off maintenance mode</h2>
+                {% else %}
+                    <h2>Turn on maintenance mode</h2>
+                {% endif %}
+            </button>
+        </form>
 
-        <!-- Humidity & Dew point-->
-        <div class="p_station_card">
 
-            <!-- Water Drop Image-->
-            <img src="{{ url_for('static', path='/icons/water_drop.png')}}" alt="Water Drop" class="p_solar_img">
-            <div class="p_dash_text">
-                <h1>Dew Point:</h1>
-                <h3>{{ converted.dew_p }} {{ w_units.temp }}</h3>
+        {% if status.last_status == "CONNECTED" %}
+            <!-- Temperature -->
+            <div class="p_station_card p_temp_card">
+                <!-- Temp Widget -->
+                <div class=thermo_widget>
+                    <div class="thermo_tube">
+                        <div class="thermo_fill" style="height: {{ temp_pct }}%;"></div> <!-- The Error is intentional; ignore it-->
+                    </div>
+                    <div class="thermo_bulb"></div>
+                </div>
 
-                <h1>Humidity:</h1>
-                <h3>{{ weather.humidity }}%</h3>
-            </div>
-        </div>
-
-        <!-- Precipitation -->
-        <div class="p_station_card">
-
-            <!-- Cloud Image -->
-            <img src="{{ url_for('static', path='/icons/cloud.png')}}" alt="Rainy Cloud" class="p_solar_img">
-            <!-- Text -->
-            <div class="p_dash_text">
-                <h1>Precipitation Rate:</h1>
-                <h3>{{ converted.precip_r }} {{ w_units.precip_r }}</h3>
-
-                <h1>Precipitation Accumulation</h1>
-                <h3>{{ converted.precip_a }} {{ w_units.precip_a }}<Inp></Inp></h3>
-            </div>
-        </div>
-
-        <!-- Uv/Solar-->
-        <div class="p_station_card p_solar_card">
-            <!-- Sun Image (here comes the sun....)-->
-            <img src="{{ url_for('static', path='/icons/sun.png')}}" alt="Solar" class="p_solar_img">
-            <!-- Text -->
-            <div class="p_dash_text">
-                <h1>UV Index:</h1>
-                <h3>{{ weather.uv }}</h3>
-
-                <h1>Solar Radiation: </h1>
-                <h3>{{ weather.solar }} (watts/m²)</h3>
-            </div>
-        </div>
-
-        <!-- Pressure -->
-        <div class="p_station_card">
-            <!-- Pressure Widget -->
-            <div class="pressure_widget">
-                <div class="pressure_circle">
-                    
-                    <!-- Units -->
-                    <div class="tick tick1"></div> <!-- Very Low Pressure-->
-                    <div class="tick_label tick_label1">{{ pressure_labels.low }}</div>
-                    <div class="tick_small tick2"></div>
-                    <div class="tick tick3"></div> <!-- Average Pressure -->
-                    <div class="tick_label tick_label2">{{ pressure_labels.mid }}</div>
-                    <div class="tick_small tick4"></div>
-                    <div class="tick tick5"></div> <!-- Very High Pressure-->
-                    <div class="tick_label tick_label3">{{ pressure_labels.high }}</div>
-
-                    <!-- Needle angle-->
-                    <div class="pressure_needle" style="transform: translateX(-50%) rotate({{ pressure_angle }}deg);"></div>
-                    <div class="pressure_center"></div>
+                <!-- Text -->
+                <div class="p_dash_text">
+                    <h1>Temperature:</h1>
+                    <h3>{{ converted.temp }} {{ w_units.temp }}</h3>
                 </div>
             </div>
 
+            <!-- Humidity & Dew point-->
+            <div class="p_station_card">
 
-            <!-- Text -->
-             <div class="p_dash_text">
-                <h1>Pressure:</h1>
-                <h3>{{ converted.pressure }} {{ w_units.pressure }}</h3>
-             </div>
-        </div>
+                <!-- Water Drop Image-->
+                <img src="{{ url_for('static', path='/icons/water_drop.png')}}" alt="Water Drop" class="p_solar_img">
+                <div class="p_dash_text">
+                    <h1>Dew Point:</h1>
+                    <h3>{{ converted.dew_p }} {{ w_units.temp }}</h3>
 
-        <!-- Wind :D -->
-        <div class="p_station_card">
-
-            <!-- Wind Compass Widget -->
-            <div class="wind_widget" style="padding-left: 20px;">
-                <div class="wind_compass">
-                    {% if weather.wind_dir%}
-                        <!-- Arrow ({{ weather.wind_dir - 90}}) -->
-                        <div class="wind_arrow" style="z-index: 1005; transform: translate(-50%, -50%) rotate({{ weather.wind_dir - 90}}deg)">
-                            <div class="wind_arrow_head"></div>
-                            <div class="wind_arrow_tail"></div>
-                        </div>
-                    {% else %}
-                        <div style="padding-left: 34px; padding-top: 83px">No Wind data</div>
-                    {% endif %}
-                    <!-- Center Dot -->
-                    <div class="wind_center"></div>
-
-                    <!-- Compass text -->
-                    <div class="compass_label north">N</div>
-                    <div class="compass_label_s ne">NE</div>
-                    
-                    <div class="compass_label east">E</div>
-                    <div class="compass_label_s se">SE</div>
-
-                    <div class="compass_label south">S</div>
-                    <div class="compass_label_s sw">SW</div>
-
-                    <div class="compass_label west">W</div>
-                    <div class="compass_label_s nw">NW</div>
-
-                    <!-- Tick Marks -->
-                    <!-- N -->
-                    <div class="wind_tick wind_tick_n"></div> 
-                    <div class="wind_tick_ss wind_tick_nne"></div>
-                    <div class="wind_tick_s wind_tick_ne"></div>
-                    <div class="wind_tick_ss wind_tick_ene"></div>
-                    <!-- E -->
-                    <div class="wind_tick wind_tick_e"></div> 
-                    <div class="wind_tick_ss wind_tick_ese"></div>
-                    <div class="wind_tick_s wind_tick_se"></div>
-                    <div class="wind_tick_ss wind_tick_sse"></div>
-
-                    <!-- S -->
-                    <div class="wind_tick wind_tick_south"></div>
-                    <div class="wind_tick_ss wind_tick_ssw"></div>
-                    <div class="wind_tick_s wind_tick_sw"></div>
-                    <div class="wind_tick_ss wind_tick_wsw"></div> 
-
-                    <!-- W -->
-                    <div class="wind_tick wind_tick_w"></div>
-                    <div class="wind_tick_ss wind_tick_wnw"></div>
-                    <div class="wind_tick_s wind_tick_nw"></div>
-                    <div class="wind_tick_ss wind_tick_nnw"></div>   
-
+                    <h1>Humidity:</h1>
+                    <h3>{{ weather.humidity }}%</h3>
                 </div>
             </div>
 
-            <!-- Text -->
-            <div class="p_dash_text">
-                <h1>Wind Speed:</h1>
-                <h3>{{ converted.wind_speed }} {{ w_units.wind }}</h3>
+            <!-- Precipitation -->
+            <div class="p_station_card">
 
-                <h1>Wind Gust:</h1>
-                <h3>{{ converted.wind_gust }} {{ w_units.wind }}</h3>
+                <!-- Cloud Image -->
+                <img src="{{ url_for('static', path='/icons/cloud.png')}}" alt="Rainy Cloud" class="p_solar_img">
+                <!-- Text -->
+                <div class="p_dash_text">
+                    <h1>Precipitation Rate:</h1>
+                    <h3>{{ converted.precip_r }} {{ w_units.precip_r }}</h3>
 
-                <h1>Wind Direction:</h1>
-                <h3>{{ weather.wind_dir }}° / {{ wind_label }}</h3>
-
+                    <h1>Precipitation Accumulation</h1>
+                    <h3>{{ converted.precip_a }} {{ w_units.precip_a }}<Inp></Inp></h3>
+                </div>
             </div>
-        </div>
 
-        <!-- Maintence Mode Toggle -->
-        <div class="p_station_card">
-            <div class="unit_toggle">Maintenance</div>
-        </div>
+            <!-- Uv/Solar-->
+            <div class="p_station_card p_solar_card">
+                <!-- Sun Image (here comes the sun....)-->
+                <img src="{{ url_for('static', path='/icons/sun.png')}}" alt="Solar" class="p_solar_img">
+                <!-- Text -->
+                <div class="p_dash_text">
+                    <h1>UV Index:</h1>
+                    <h3>{{ weather.uv }}</h3>
 
+                    <h1>Solar Radiation: </h1>
+                    <h3>{{ weather.solar }} (watts/m²)</h3>
+                </div>
+            </div>
+
+            <!-- Pressure -->
+            <div class="p_station_card">
+                <!-- Pressure Widget -->
+                <div class="pressure_widget">
+                    <div class="pressure_circle">
+                        
+                        <!-- Units -->
+                        <div class="tick tick1"></div> <!-- Very Low Pressure-->
+                        <div class="tick_label tick_label1">{{ pressure_labels.low }}</div>
+                        <div class="tick_small tick2"></div>
+                        <div class="tick tick3"></div> <!-- Average Pressure -->
+                        <div class="tick_label tick_label2">{{ pressure_labels.mid }}</div>
+                        <div class="tick_small tick4"></div>
+                        <div class="tick tick5"></div> <!-- Very High Pressure-->
+                        <div class="tick_label tick_label3">{{ pressure_labels.high }}</div>
+
+                        <!-- Needle angle-->
+                        <div class="pressure_needle" style="transform: translateX(-50%) rotate({{ pressure_angle }}deg);"></div>
+                        <div class="pressure_center"></div>
+                    </div>
+                </div>
+
+
+                <!-- Text -->
+                <div class="p_dash_text">
+                    <h1>Pressure:</h1>
+                    <h3>{{ converted.pressure }} {{ w_units.pressure }}</h3>
+                </div>
+            </div>
+
+            <!-- Wind :D -->
+            <div class="p_station_card">
+
+                <!-- Wind Compass Widget -->
+                <div class="wind_widget" style="padding-left: 20px;">
+                    <div class="wind_compass">
+                        {% if weather.wind_dir%}
+                            <!-- Arrow ({{ weather.wind_dir - 90}}) -->
+                            <div class="wind_arrow" style="transform: translate(-50%, -50%) rotate({{ weather.wind_dir - 90}}deg)">
+                                <div class="wind_arrow_head"></div>
+                                <div class="wind_arrow_tail"></div>
+                            </div>
+                        {% else %}
+                            <div style="padding-left: 34px; padding-top: 83px">No Wind data</div>
+                        {% endif %}
+                        <!-- Center Dot -->
+                        <div class="wind_center"></div>
+
+                        <!-- Compass text -->
+                        <div class="compass_label north">N</div>
+                        <div class="compass_label_s ne">NE</div>
+                        
+                        <div class="compass_label east">E</div>
+                        <div class="compass_label_s se">SE</div>
+
+                        <div class="compass_label south">S</div>
+                        <div class="compass_label_s sw">SW</div>
+
+                        <div class="compass_label west">W</div>
+                        <div class="compass_label_s nw">NW</div>
+
+                        <!-- Tick Marks -->
+                        <!-- N -->
+                        <div class="wind_tick wind_tick_n"></div> 
+                        <div class="wind_tick_ss wind_tick_nne"></div>
+                        <div class="wind_tick_s wind_tick_ne"></div>
+                        <div class="wind_tick_ss wind_tick_ene"></div>
+                        <!-- E -->
+                        <div class="wind_tick wind_tick_e"></div> 
+                        <div class="wind_tick_ss wind_tick_ese"></div>
+                        <div class="wind_tick_s wind_tick_se"></div>
+                        <div class="wind_tick_ss wind_tick_sse"></div>
+
+                        <!-- S -->
+                        <div class="wind_tick wind_tick_south"></div>
+                        <div class="wind_tick_ss wind_tick_ssw"></div>
+                        <div class="wind_tick_s wind_tick_sw"></div>
+                        <div class="wind_tick_ss wind_tick_wsw"></div> 
+
+                        <!-- W -->
+                        <div class="wind_tick wind_tick_w"></div>
+                        <div class="wind_tick_ss wind_tick_wnw"></div>
+                        <div class="wind_tick_s wind_tick_nw"></div>
+                        <div class="wind_tick_ss wind_tick_nnw"></div>   
+
+                    </div>
+                </div>
+
+                <!-- Text -->
+                <div class="p_dash_text">
+                    <h1>Wind Speed:</h1>
+                    <h3>{{ converted.wind_speed }} {{ w_units.wind }}</h3>
+
+                    <h1>Wind Gust:</h1>
+                    <h3>{{ converted.wind_gust }} {{ w_units.wind }}</h3>
+
+                    <h1>Wind Direction:</h1>
+                    <h3>{{ weather.wind_dir }}° / {{ wind_label }}</h3>
+
+                </div>
+            </div>
+        {% endif %}
 
     </div>
-    {% endif %}
 {% endblock %}

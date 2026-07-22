@@ -60,11 +60,13 @@
     align-items: center;
     justify-content: center;
     white-space: nowrap;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .nav_item:hover {
     color: white;
     background-color: #005baa;
+    transform: translateY(-3px)
 }
 
 .nav_item.active {
@@ -91,12 +93,12 @@
     width: fit-content;
     border-radius: 18px;
     border: 3px solid #d3cfcf;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .station_card:hover {
     color: white;
     background-color: #005baa;
-    border: 3px solid black;
 }
 
 .station_card_content {
@@ -188,6 +190,7 @@
     display: flex;
     gap: 10px;
     margin-bottom: 16px;
+    
 }
 
 .unit_toggle a {
@@ -197,7 +200,14 @@
     border: 2px solid #d3cfcf;
     background: white;
     border-radius: 10px;
-    color: black
+    color: black;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.unit_toggle a:hover {
+    color: white;
+    background: #005baa;
+    transform: translateY(-3px)
 }
 
 .unit_toggle a.active_unit {
@@ -264,6 +274,7 @@
     border-radius: 16px;
     padding: 20px 18px;
     gap: 28px;
+    overflow: hidden;
 }
 
 .p_temp_card {
@@ -308,8 +319,8 @@
     border-radius: 50%;
     background: #d63c45;
     border: 3px solid #333;
-    z-index: 1001;
     margin-top: -16px;
+    z-index: 20;
 }
 
 
@@ -612,6 +623,39 @@
 .wind_tick_nw { transform: translateX(-50%) rotate(315deg)}
 .wind_tick_nnw { transform: translateX(-50%) rotate(337.5deg)}
 
+/* Owner Dashboard */
+.toggle_button button{
+    margin-top: 10px;
+    padding: 12px;
+    font-size: 16px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    background-color: black;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.toggle_button .maintenance_on {
+    background-color: #d63c45;
+}
+
+.toggle_button .maintenance_on:hover {
+    background-color: #b00020;
+}
+
+.toggle_button .maintenance_off {
+    background-color: #2e7d32;
+}
+
+.toggle_button .maintenance_off:hover {
+    background-color: #1b5e20;
+}
+
+.toggle_button button:hover {
+    transform: translateY(-1px);
+}
+
 /* 404 Page */
 
 .error_page {
@@ -683,10 +727,12 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .login_form button:hover {
-    background-color: #042949
+    background-color: #b00020;
+    transform: translateY(-1px)
 }
 
 .login_error {

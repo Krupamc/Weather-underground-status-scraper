@@ -1,8 +1,8 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="station_card_content">
-    <div class="station_list">
+<div class="station_card_content" >
+    <div class="station_list" style="padding-top: 140px;">
             <!-- List every station if public and not in maintenance -->
             {% for station in stations %}
                 {% if station.is_public and not station.is_in_maintenance %}

@@ -21,6 +21,10 @@ def utc_now() -> datetime:
     return datetime.now(pytz.UTC)
 
 def to_eastern(dt: datetime) -> datetime:
+
+    if dt is None:
+        return None
+
     utc = pytz.UTC
     eastern = pytz.timezone(cfg.timezone)
 

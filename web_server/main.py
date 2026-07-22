@@ -53,38 +53,46 @@ def seed_stations(): # perhaps add auto delete if not in dict?
 
 # Passes user into each template
 def template_context(request: Request):
+    
+    # Read cookie from heaer
     access_token = request.cookies.get("access_token")
     current_user = None
 
     if access_token:
         try:
+            # Decode cookie and get username
             payload = jwt.decode(access_token, s.secret_key, algorithms=[s.algorithm])
             username = payload.get("sub")
 
+            # Select user from username
             if username:
                 with db.Session(db.engine) as session:
                     current_user = session.exec(select(m.User).where(m.User.username == username)).first()
         except InvalidTokenError:
             current_user = None
-
+    
     return {"current_user": current_user}
 
 # Check what user
 def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(default=None)):
-    
+
+    # Setup the exception
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated; login")
-    
+
+    # If no cookie
     if access_token is None:
         raise credentials_exception
     
     try:
+        # Decode cookie for username
         payload = jwt.decode(access_token, s.secret_key, algorithms=[s.algorithm],)
         username = payload.get("sub")
         if username is None:
             raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
-    
+
+    # Get user from username
     user = session.exec(select(m.User).where(m.User.username == username)).first()
 
     if user is None:
@@ -112,13 +120,16 @@ def get_current_user_op(session: db.SessionDep, access_token: str | None = Cooki
 templates = Jinja2Templates(directory="web_server/templates", context_processors=[template_context])
 app.mount("/static", StaticFiles(directory="web_server/static"), name="static")
 
+# Force admin
 def require_admin(current_user: Annotated[m.User, Depends(get_current_user)]):
     if current_user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not Enough Permissions")
     return current_user
 
+# Force user having access to a station
 def require_station_access(station_id: str, current_user: Annotated[m.User, Depends(get_current_user)], session: db.SessionDep):
-    
+
+    # Open Station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     
     if not station:
@@ -127,7 +138,8 @@ def require_station_access(station_id: str, current_user: Annotated[m.User, Depe
     # Admin override
     if current_user.role == "admin":
         return station
-    
+
+    # Where user can access station
     access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.station_id == station_id, m.UserAccess.can_view == True)).first()
 
     if not access:
@@ -135,6 +147,7 @@ def require_station_access(station_id: str, current_user: Annotated[m.User, Depe
     
     return station
 
+# Convert wind directions to their labels
 def degree_to_label(degree: int | None) -> str | None:
     if degree is None:
         return None
@@ -151,8 +164,21 @@ def degree_to_label(degree: int | None) -> str | None:
 
     return map[index]
 
+# Convert date/time to selected timezone (can be configered to not be eastern in config)
+def get_date_and_time(input_time):
+
+    if input_time is None:
+        return None, None
+
+    time = m.to_eastern(input_time)
+    date = datetime.strftime(time, "%B %d, %Y")
+    time = datetime.strftime(time, "%I:%M %p")
+
+    return date, time
+
 #----Actual Web App-----
 
+# What to do on startup
 @app.on_event("startup")
 def on_startup():
     db.create_db_table()
@@ -192,6 +218,7 @@ def stations(request: Request):
 # Stations owned
 @app.get("/my-stations", response_class=HTMLResponse)
 def my_stations(request: Request, session: db.SessionDep, current_user: Annotated[m.User, Depends(get_current_user)]):
+    # Admin pass
     if current_user.role == "admin":
         stations = session.exec(select(m.Station)).all()
         return templates.TemplateResponse(request, "my_stations.html", context={"request": request, "title": "My Stations", "active_page": "my_stations", "station_rows": stations})
@@ -225,9 +252,7 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
 
     # Time Expressions
     if weather is not None:
-        time = m.to_eastern(weather.observed_at)
-        date = datetime.strftime(time, "%B %d, %Y")
-        time = datetime.strftime(time, "%I:%M %p")
+        date, time = get_date_and_time(weather.observed_at)
 
         # Wind dir label
         wind_label = degree_to_label(weather.wind_dir)
@@ -384,6 +409,13 @@ def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth
     access_token = s.create_access_token(data={"sub": user.username}) 
     response = RedirectResponse(url="/my-stations", status_code=303)
     response.set_cookie(key="access_token", value=access_token, httponly=True, path="/", samesite="lax")
+    return response
+
+# Log out
+@app.get("/logout")
+def logout():
+    response = RedirectResponse("/", status_code=303)
+    response.delete_cookie(key="access_token", path="/", samesite="lax")
     return response
 
 # Owner dashboard for the station:
@@ -396,19 +428,61 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
     weather = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
 
-    if not status or not station or not weather:
+    print("station_id:", station_id)
+    print("status:", status)
+    print("station:", station)
+    print("weather:", weather)
+
+    if not station:
         raise HTTPException(status_code=404, detail="Station Not Found")
+
+    date = None
+    time = None
+    wind_label = None
+
+    s_date = None
+    s_time = None
+    lc_date = None
+    lc_time = None
+    fo_date = None
+    fo_time = None
+    temp = None
+    dew_p = None
+    wind_speed = None
+    wind_gust = None
+    pressure_angle = 180
+    temp_pct = 0
+
+    converted = {
+        "temp": None,
+        "dew_p": None,
+        "pressure": None,
+        "precip_r": None,
+        "precip_a": None,
+        "wind_speed": None,
+        "wind_gust": None,
+    }
 
     # Time Expressions
     if weather is not None:
-        est_time = m.to_eastern(weather.observed_at)
-        print(est_time)
-        date = est_time.strftime("%B %d, %Y")
-        time = est_time.strftime("%I:%M %p")
-        print(time)
+        date, time = get_date_and_time(weather.observed_at)
 
         # Wind dir label
         wind_label = degree_to_label(weather.wind_dir)
+
+    if status is not None:
+        s_date, s_time = get_date_and_time(status.time_of_status)
+        lc_date, lc_time = get_date_and_time(status.last_connected)
+        fo_date, fo_time = get_date_and_time(status.first_offline)
+
+    stime = {
+        "s_date": s_date,
+        "s_time": s_time,
+        "lc_date": lc_date,
+        "lc_time": lc_time,
+        "fo_date": fo_date,
+        "fo_time": fo_time,
+    }
 
 
     # Imperial
@@ -507,244 +581,77 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
             "wind_speed": wind_speed,
             "wind_gust": wind_gust,
         }
+
+    print("GET route reached successfully before render")
 
     return templates.TemplateResponse(request, "owner_dash.html", context={
         "request": request, 
         "title": f"{station.station_name} Station Dashboard", 
-        "active_page": "stations", 
+        "active_page": "my_stations", 
         "station": station, 
         "weather": weather, 
-        "status": status, 
+        "status": status,
+        "station_id": station_id, 
         "date": date, 
         "time": time,
         "units": units,
         "pressure_labels": pressure_labels,
-        "wind_label": wind_label, 
+        "wind_label": wind_label,
+        "stime": stime,
         "temp_pct": temp_pct, 
         "pressure_angle": pressure_angle,
         "w_units": w_units,
-        "converted": converted
+        "converted": converted,
     })
 
-#---Login---
+# Toggle maintenance with a form
+@app.post("/maintenance/{station_id}", response_class=HTMLResponse)
+def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
 
-# Gives direct token
-@app.post("/token")
-def login_for_access_token(
-    session: db.SessionDep,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-):
-    user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
+    # Redirect Page
+    response = RedirectResponse(url=f"/stations/dashboard/{station_id}", status_code=303)
 
-    if not user or not s.verify_password(form_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # Admin Pass
+    if current_user.role == "admin":
+        update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
 
-    access_token = s.create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+        if not update:
+            raise HTTPException(status_code=404, detail="Station Not Found")
+        
+        update.is_in_maintenance = not update.is_in_maintenance
 
-# Page for people
-@app.get("/login", response_class=HTMLResponse)
-def load_login(request: Request):
-    return templates.TemplateResponse(request, "login.html", context={"request": request, "title": "Login", "active_page": "login"})
+        session.add(update)
+        session.commit()
+        session.refresh(update)
+        
+        return response
 
-# From Response with creds.
-@app.post("/login")
-def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
-    user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
+    # Check if they have access
+    access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
 
-    if not user or not s.verify_password(form_data.password, user.password_hash):
-        return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login", "error": "Invalid Credentials"}, status_code=401)
-    
-    access_token = s.create_access_token(data={"sub": user.username}) 
-    response = RedirectResponse(url="/my-stations", status_code=303)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, path="/", samesite="lax")
-    return response
+    if not access:
+        raise HTTPException(status_code=403, detail="Cannot Toggle Maintenance")
 
-# Public dashboard for the station:
-@app.get("/stations/public/{station_id}", response_class=HTMLResponse)
-def public_station(request: Request, session: db.SessionDep, station_id: str):
-    # Check units:
-    units = request.query_params.get("units", "imperial")
-    # Open DB tables
-    status = session.exec(select(m.Status).where(m.Status.station_id == station_id)).first()
-    weather = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
-    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    # Station to update
+    update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
 
-    if not status or not station or not weather:
+    if not update:
         raise HTTPException(status_code=404, detail="Station Not Found")
 
-    # Time Expressions
-    if weather is not None:
-        time = m.to_eastern(weather.observed_at)
-        date = datetime.strftime(time, "%B %d, %Y")
-        time = datetime.strftime(time, "%I:%M %p")
+    update.is_in_maintenance = not update.is_in_maintenance
 
-        # Wind dir label
-        wind_label = degree_to_label(weather.wind_dir)
-
-
-    # Imperial
-    if units == "metric":
-        
-        # Temp Percent fill
-        temp_pct = 0
-        if weather and weather.temp is not None:
-            temp_pct = ((weather.temp - cfg.m_temp_min) / (cfg.m_temp_max - cfg.m_temp_min)) * 100
-            temp_pct = max(0, min(100, temp_pct)) 
-
-        # Pressure dial
-        pressure_angle = 180
-        if weather and weather.pressure is not None:
-
-            pressure = cv.inhg_to_hpa(weather.pressure)
-            pressure_min = cv.inhg_to_hpa(cfg.pressure_min)
-            pressure_mid = cv.inhg_to_hpa(cfg.pressure_mid)
-            pressure_max = cv.inhg_to_hpa(cfg.pressure_max)
-
-
-            pressure_angle_1 = ((pressure - pressure_min) / (pressure_max - pressure_min)) * (cfg.angle_max - cfg.angle_min) + cfg.angle_min
-            pressure_angle = round(max(cfg.angle_min, min(cfg.angle_max, pressure_angle_1)), 2)
-        
-        # Precip
-        precip_r = cv.in_to_mm(weather.precip_rate)
-        precip_a = cv.in_to_mm(weather.precip_accum)
-
-
-        pressure_labels = {
-            "low": pressure_min,
-            "mid": pressure_mid,
-            "high": pressure_max
-        }
-
-        w_units = {
-            "temp": "°C",
-            "precip_r": "mm/hr",
-            "precip_a": "mm",
-            "wind": "knots",
-            "pressure": "hPa"
-        }
-
-        converted = {
-            "pressure": pressure,
-            "precip_r": precip_r,
-            "precip_a": precip_a,
-            "temp": weather.temp,
-            "dew_p": weather.dewpoint,
-            "wind_speed": weather.wind_speed,
-            "wind_gust": weather.wind_gust
-        }
-
-    else:
-
-        # Thermometer percent fill
-        temp = cv.c_to_f(weather.temp)
-        dew_p = cv.c_to_f(weather.dewpoint)
-
-        temp_pct = 0
-        if weather and weather.temp is not None:
-            temp_pct = ((temp - cfg.temp_min) / (cfg.temp_max - cfg.temp_min)) * 100
-            temp_pct = max(0, min(100, temp_pct))
-
-        
-        # Pressure dial
-        pressure_angle = 180
-        if weather and weather.pressure is not None:
-            pressure_angle_1 = ((weather.pressure - cfg.pressure_min) / (cfg.pressure_max - cfg.pressure_min)) * (cfg.angle_max - cfg.angle_min) + cfg.angle_min
-            pressure_angle = round(max(cfg.angle_min, min(cfg.angle_max, pressure_angle_1)), 2)
-
-        # Knots - mph
-        wind_speed = cv.knots_to_mph(weather.wind_speed)
-        wind_gust = cv.knots_to_mph(weather.wind_gust)
-
-        pressure_labels = {
-            "low": cfg.pressure_min,
-            "mid": cfg.pressure_mid,
-            "high": cfg.pressure_max,
-        }
-
-        w_units = {
-            "temp": "°F",
-            "precip_r": "in/hr",
-            "precip_a": "in",
-            "wind": "mph",
-            "pressure": "inHg",
-        }
-
-        converted = {
-            "temp": temp,
-            "dew_p": dew_p,
-            "pressure": weather.pressure,
-            "precip_r": weather.precip_rate,
-            "precip_a": weather.precip_accum,
-            "wind_speed": wind_speed,
-            "wind_gust": wind_gust,
-        }
-
-    return templates.TemplateResponse(request, "public_dash.html", context={
-        "request": request, 
-        "title": f"{station.station_name} Station Dashboard", 
-        "active_page": "stations", 
-        "station": station, 
-        "weather": weather, 
-        "status": status, 
-        "date": date, 
-        "time": time,
-        "units": units,
-        "pressure_labels": pressure_labels,
-        "wind_label": wind_label, 
-        "temp_pct": temp_pct, 
-        "pressure_angle": pressure_angle,
-        "w_units": w_units,
-        "converted": converted
-    })
-
-#---Login---
-
-# Gives direct token
-@app.post("/token")
-def login_for_access_token(
-    session: db.SessionDep,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-):
-    user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
-
-    if not user or not s.verify_password(form_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    access_token = s.create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
-
-# Page for people
-@app.get("/login", response_class=HTMLResponse)
-def load_login(request: Request):
-    return templates.TemplateResponse(request, "login.html", context={"request": request, "title": "Login", "active_page": "login"})
-
-# From Response with creds.
-@app.post("/login")
-def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
-    user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
-
-    if not user or not s.verify_password(form_data.password, user.password_hash):
-        return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login", "error": "Invalid Credentials"}, status_code=401)
+    # Update in db
+    session.add(update)
+    session.commit()
+    session.refresh(update)
     
-    access_token = s.create_access_token(data={"sub": user.username}) 
-    response = RedirectResponse(url="/my-stations", status_code=303)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, path="/", samesite="lax")
     return response
 
-@app.get("/logout")
-def logout():
-    response = RedirectResponse("/", status_code=303)
-    response.delete_cookie(key="access_token", path="/", samesite="lax")
-    return response
+# Toggle public with form
+@app.post("/public/{station_id}", response_class=HTMLResponse)
+def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
+
+    respoonse 
 
 @app.get("/register/no")
 def load_register_no():
@@ -890,7 +797,7 @@ def seed(current_user: Annotated[m.User, Depends(require_admin)]):
     return {"message": "Stations seeded"}
 
 # Delete station
-@app.delete("/stations/{station_id}")
+@app.delete("/delete/stations/{station_id}")
 def delete_station(station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
@@ -900,7 +807,7 @@ def delete_station(station_id: str, session: db.SessionDep, current_user: Annota
     return {"ok": True}
 
 # Update Station (MAIN METHOD)
-@app.patch("/stations/{station_id}", response_model=m.StationPublic)
+@app.patch("/update/stations/{station_id}", response_model=m.StationPublic)
 def update_station(station_id: str, station: m.StationUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
     station_db = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station_db:

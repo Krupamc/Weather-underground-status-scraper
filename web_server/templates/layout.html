@@ -80,8 +80,8 @@
                     <a href="/stations" class="nav_item {% if active_page == 'stations' %}active{% endif %}">WEATHER STATIONS ▼</a>
                     <!-- If user is signed in-->
                     {% if current_user%}
-                        <a href="my-stations" class="nav_item {% if active_page == 'my-stations' %}active{% endif %}">MY STATIONS ▼</a>
-                        <a href="logout" class="nav_item">LOGOUT ▼</a>
+                        <a href="/my-stations" class="nav_item {% if active_page == 'my_stations' %}active{% endif %}">MY STATIONS ▼</a>
+                        <a href="/logout" class="nav_item">LOGOUT ▼</a>
 
                         <!-- Public -->
                         {% else %}
