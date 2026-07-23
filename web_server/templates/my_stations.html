@@ -13,7 +13,7 @@
     <div class="station_card_content">
         <div class="station_list" style="padding-top: 140px;">
             {% for station in station_rows %}
-                <a href="/stations/dashboard/{{ station.station_id }}" class="station_card">
+                <a href="/stations/dashboard/{{ station.station_id }}?units=imperial" class="station_card">
                     <h2>{{ station.station_name }}</h2>
                     <h3>{{ station.station_id }}</h3>
                 </a>

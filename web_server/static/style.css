@@ -102,7 +102,6 @@
 }
 
 .station_card_content {
-    padding-top: 60px;
     padding-left: 25px;
 }
 .station_card h2,
@@ -254,7 +253,7 @@
 }
 
 .p_station_content {
-    padding-top: 200px;
+    padding-top: 20px;
     padding-left: 30px;
     display: flex;
     flex-wrap: wrap;

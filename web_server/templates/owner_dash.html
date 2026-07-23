@@ -48,7 +48,41 @@
         </div>
     {% endif %}
 
-    <div class="p_station_content" style="padding-top: 270px; padding-left: 30px;">
+    <div class="p_station_content" style="padding-top: 270px; justify-content: center;">
+        <!-- Mode Buttons -->
+        
+        {% if maintenance == True %}
+            <!-- Maintenance -->
+            <form action="/maintenance/{{station_id}}" method="post" class="toggle_button">
+                <button type="submit" class="{% if station.is_in_maintenance %}maintenance_on{% else %}maintenance_off{% endif %}"> <!-- Change colors based on mode-->
+                    <span class="button_text">
+                        {% if station.is_in_maintenance %}
+                            Turn off maintenance mode
+                        {% else %}
+                            Turn on maintenance mode
+                        {% endif %}
+                    </span>
+                </button>
+            </form>
+
+            <!-- Public -->
+            <form action="/public/{{station_id}}" method="post" class="toggle_button">
+                <button type="submit" class="{% if station.is_public %}maintenance_off{% else %}maintenance_on{% endif %}"> <!-- Change colors -->
+                    <span class="button_text">
+                        {% if station.is_public %}
+                            Turn off public dashboard
+                        {% else %}
+                            Turn on public dashboard
+                        {% endif %}         
+                        </span>           
+                </button>
+            </form>
+        {% endif %}
+    </div>
+
+
+    <div class="p_station_content" style="padding-left: 30px;">
+
 
 
         <!-- Status -->
@@ -89,36 +123,6 @@
                     <h3>{{ status.alert_sent }}</h3>
                 </div>
             </div>
-        {% endif %}
-
-        <!-- Mode Buttons -->
-        
-        {% if maintenance == True %}
-            <!-- Maintenance -->
-            <form action="/maintenance/{{station_id}}" method="post" class="toggle_button">
-                <button type="submit" class="{% if station.is_in_maintenance %}maintenance_on{% else %}maintenance_off{% endif %}"> <!-- Change colors based on mode-->
-                    <span class="button_text">
-                        {% if station.is_in_maintenance %}
-                            Turn off maintenance mode
-                        {% else %}
-                            Turn on maintenance mode
-                        {% endif %}
-                    </span>
-                </button>
-            </form>
-
-            <!-- Public -->
-            <form action="/public/{{station_id}}" method="post" class="toggle_button">
-                <button type="submit" class="{% if station.is_public %}maintenance_off{% else %}maintenance_on{% endif %}"> <!-- Change colors -->
-                    <span class="button_text">
-                        {% if station.is_public %}
-                            Turn off public dashboard
-                        {% else %}
-                            Turn on public dashboard
-                        {% endif %}         
-                        </span>           
-                </button>
-            </form>
         {% endif %}
 
         {% if status.last_status == "CONNECTED" %}
@@ -164,7 +168,7 @@
                     <h3>{{ converted.precip_r }} {{ w_units.precip_r }}</h3>
 
                     <h1>Precipitation Accumulation</h1>
-                    <h3>{{ converted.precip_a }} {{ w_units.precip_a }}<Inp></Inp></h3>
+                    <h3>{{ converted.precip_a }} {{ w_units.precip_a }}</h3>
                 </div>
             </div>
 
@@ -283,7 +287,14 @@
 
                 </div>
             </div>
-        {% endif %}
 
+
+            <!-- Graph -->
+            <img src="{{ url_for('graph_variables', station_id=station.station_id, variable='temp') }}?units={{ units }}" alt="Temperature graph">
+
+        {% endif %}
+          
     </div>
+
+    
 {% endblock %}

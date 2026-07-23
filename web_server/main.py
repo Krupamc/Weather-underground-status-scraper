@@ -1,6 +1,6 @@
 # Web Deployment using sqlite:
 
-from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header, Form
+from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header, Form, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -17,9 +17,15 @@ import jwt
 from jwt import InvalidTokenError
 from datetime import datetime
 import convert_metric as cv
-import pytz
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import io
 
 app = FastAPI(title="SBB Mesonet Notification System")
+
+# Graph text
+myfont = {'fontname':'Roboto'}
 
 # Security using JWT
 #oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -620,6 +626,124 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, re
         "timezone": cfg.time_zone_name,
         "success": success
     })
+
+#---Graphing---
+
+# Graph data and return as memory
+@app.get("/graph/weather/{station_id}/{variable}")
+def graph_variables(station_id: str, variable: str, session: db.SessionDep, units: str="imperial"):
+    print("GRAPH REQUEST:", station_id, variable, units)
+    # Get all data 
+    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id).order_by(m.WeatherHistory.observed_at)).all()
+
+    if not weather:
+        raise HTTPException(status_code=404, detail="No Weather History Found")
+
+    # Define allowed variables
+    allowed = {
+        "temp": "Temperature",
+        "dewpoint": "Dew Point",
+        "humidity": "Humidity",
+        "pressure": "Pressure",
+        "wind_speed": "Wind Speed",
+        "wind_gust": "Wind Gust",
+        "precip_rate": "Precipitation Rate",
+        "precip_accum": "Precipitation Accumulation",
+        "uv": "UV Index",
+        "solar": "Solar Radiation"
+    }
+
+    if variable not in allowed:
+        raise HTTPException(status_code=400, detail="Invalid Variable")
+
+    # Variables
+    x = []
+    y = []
+
+    labels = {
+        "temp": "",
+        "dewpoint": "",
+        "humidity": "",
+        "pressure": "",
+        "wind_speed": "",
+        "wind_gust": "",
+        "wind_dir": "",
+        "precip_rate": "",
+        "precip_accum": "",
+        "uv": "",
+        "solar": ""
+        }
+
+    # Append to values
+    for row in weather:
+        value = getattr(row, variable, None)
+        if value is None or row.observed_at is None:
+            continue
+
+        x.append(m.to_eastern(row.observed_at))
+
+        # Convert to metric
+        if units == "metric":
+            if variable in ["pressure"]:
+                value = cv.inhg_to_hpa(value)
+            elif variable in ["precip_rate", "precip_accum"]:
+                value = cv.in_to_mm(value)
+            labels = {
+                "temp": " °C",
+                "dewpoint": " °C",
+                "humidity": "%",
+                "pressure": " hPa",
+                "wind_speed": " knots",
+                "wind_gust": " knots",
+                "wind_dir": "°",
+                "precip_rate": " mm/hr",
+                "precip_accum": " mm",
+                "uv": "",
+                "solar": " watts/m²"
+            }
+
+        # Convert to Imperial
+        else:
+            if variable in ["temp", "dewpoint"]:
+                value = cv.c_to_f(value)
+            elif variable in ["wind_speed", "wind_gust"]:
+                value = cv.knots_to_mph(value)
+            labels = {
+                "temp": " °F",
+                "dewpoint": " °F",
+                "humidity": "%",
+                "pressure": " inHg",
+                "wind_speed": " mph",
+                "wind_gust": " mph",
+                "wind_dir": "°",
+                "precip_rate": " in/hr",
+                "precip_accum": " in",
+                "uv": "",
+                "solar": " watts/m²"
+                }
+            
+        y.append(value)
+
+    if not x or not y:
+        raise HTTPException(status_code=404, detail="No Plottable Data Found")
+
+    # Graph
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.plot(x, y, marker="o", linewidth=2, markersize=3)
+    ax.set_title(f"{allowed[variable]} - {station_id}")
+    ax.set_xlabel("Time")
+    ax.set_ylabel(f"{allowed[variable]}{labels[variable]}")
+    ax.grid(True, alpha=0.3)
+    fig.autofmt_xdate()
+    
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+
+    return Response(content=buf.getvalue(), media_type="image/png")
+
+#---Maintenance---
 
 # API Maintenance Read
 @app.get("/scraper/stations/{station_id}")
