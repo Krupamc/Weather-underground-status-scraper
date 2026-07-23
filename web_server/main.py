@@ -497,6 +497,9 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, re
         "fo_time": fo_time,
     }
 
+    # Get success (from maintenance/public) querry
+    success = request.query_params.get("success")
+
 
     # Imperial
     if units == "metric":
@@ -595,8 +598,6 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, re
             "wind_gust": wind_gust,
         }
 
-    print("GET route reached successfully before render")
-
     return templates.TemplateResponse(request, "owner_dash.html", context={
         "request": request, 
         "title": f"{station.station_name} Station Dashboard", 
@@ -617,14 +618,33 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, re
         "converted": converted,
         "maintenance": maintenance,
         "timezone": cfg.time_zone_name,
+        "success": success
     })
+
+# API Maintenance Read
+@app.get("/scraper/stations/{station_id}")
+def scraper_station_state(station_id: str, session: db.SessionDep, x_api_key: Annotated[str, Header()]):
+    # Check if api key is correct
+    if x_api_key != cfg.scraper_api_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Open station
+    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+
+    if not station:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+
+    return {
+        "station_id": station_id,
+        "is_in_maintenance": station.is_in_maintenance,
+    }
+
+
 
 # Toggle maintenance with a form
 @app.post("/maintenance/{station_id}", response_class=HTMLResponse)
 def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
 
-    # Redirect Page
-    response = RedirectResponse(url=f"/stations/dashboard/{station_id}", status_code=303)
 
     # Admin Pass
     if current_user.role == "admin":
@@ -639,7 +659,10 @@ def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str
         session.commit()
         session.refresh(update)
         
-        return response
+        # Success message
+        msg = "public_on" if update.is_public else "public_off"
+
+        return RedirectResponse(url=f"/stations/dashboard/{station_id}?success={msg}", status_code=303)
 
     # Check if user
     user = session.exec(select(m.User).where(m.User.id == current_user.id)).first()
@@ -665,15 +688,15 @@ def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str
     session.add(update)
     session.commit()
     session.refresh(update)
+
+    # Response message
+    msg = "maintenance_on" if update.is_in_maintenance else "maintenance_off"
     
-    return response
+    return RedirectResponse(url=f"/stations/dashboard/{station_id}?success={msg}", status_code=303)
 
 # Toggle public with form
 @app.post("/public/{station_id}", response_class=HTMLResponse)
 def toggle_public(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
-
-    # Redirect Page
-    response = RedirectResponse(url=f"/stations/dashboard/{station_id}", status_code=303)
 
     # Admin Pass
     if current_user.role == "admin":
@@ -688,7 +711,10 @@ def toggle_public(request: Request, session: db.SessionDep, station_id: str, cur
         session.commit()
         session.refresh(update)
 
-        return response
+        # Success message
+        msg = "public_on" if update.is_public else "public_off"
+
+        return RedirectResponse(url=f"/stations/dashboard/{station_id}?success={msg}", status_code=303)
 
     # Check if user
     user = session.exec(select(m.User).where(m.User.id == current_user.id)).first()
@@ -714,7 +740,10 @@ def toggle_public(request: Request, session: db.SessionDep, station_id: str, cur
     session.commit()
     session.refresh(update)
 
-    return response
+    # Success message
+    msg = "public_on" if update.is_public else "public_off"
+
+    return RedirectResponse(url=f"/stations/dashboard/{station_id}?success={msg}", status_code=303)
 
 @app.get("/register/no")
 def load_register_no():

@@ -490,14 +490,48 @@ def write_report_file(data):
         json.dump(data, file, indent=2)
 
 # Check if a station is in maintenance
-def is_in_maintenance(station_id):
-    data = read_maintenance_file()
+def is_in_maintenance(station_id: str) -> bool:
+    for attempt in range(cfg.max_retries):
+        try:
+            # Url
+            url = f"{cfg.api_base}/scraper/stations/{station_id}"
 
-    if data[station_id]["enabled"]:
-        return True
-    
+            # GET json from API
+            r = requests.get(url, headers={"x-api-key": cfg.api_key}, timeout=10)
+            r.raise_for_status()
+            data = r.json()
+            return bool(data.get("is_in_maintenance", False))
+
+        except HTTPError as e:
+            last_error = f"Maintenance API HTTP Error: {e}"
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[MAINTENANCE HTTP ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+            continue
+
+        except RequestException as e:
+            last_error = f"Maintenance API Request Error: {e}"
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[MAINTENANCE API REQUEST ERROR] {e} retrying in {wait_time} seconds")
+
+        except Exception as e:
+            last_error = f"Maintenance API Error: {e}"
+            print(f"[MAINTENANCE ERROR]: Failed to get maintenance data for {station_id}. Error {e}")
+            break
+
     else:
-        return False
+        data = read_json_file()
+        now = get_time()
+
+        log_data(now.isoformat(), station_id, "", "error", data[station_id]["consecutive_offline"], "maintenance_api_error", last_error)
+
+        if not is_in_maintenance(station_id):
+            email(
+                subject=cfg.maintenance_e_subject,
+                body=cfg.e_body.format(err=last_error),
+                recipients=cfg.admin
+            )
+# Finish mainteance rewplacement
 
 # Send JSON over Post
 def post_status_to_api(station_id: str, station_name: str, now: datetime, last_status, consecutive_offline, first_offline, last_connected, alert_sent):

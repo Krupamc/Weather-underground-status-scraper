@@ -6,6 +6,31 @@
         <h1>{{ date }}: {{ time }} {{ timezone }}</h1>
     </div>
 
+    <!-- If toggle was done -->
+    {% if success %}
+    <div class="popup_overlay">
+        <div class="popup_box">
+            {% if success == "maintenance_on" %}
+                <p>Maintenance mode turned on successfully!</p>
+            
+            {% elif success == "maintenance_off" %}
+                <p>Maintenance mode turned off successfully!</p>
+            
+            {% elif success == "public_on" %}
+                <p>Public Dashboard turned on successfully!</p>
+            
+            {% elif success == "public_off" %}
+                <p>Public Dashboard turned off successfully!</p>
+            
+            {% else %}
+                <p>ERROR: Contact Admin for more Infomation</p>
+
+            {% endif %}
+            <a href="/stations/dashboard/{{ station_id }}" class="popup_close">OK</a>
+        </div>    
+    </div>
+    {% endif %}
+
     <!-- Online-->
     {% if status.last_status == "CONNECTED" %}
         <div class="status_bar">

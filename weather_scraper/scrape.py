@@ -74,7 +74,7 @@ def save_data(results: dict, now):
             results["solar"]
         ])
 
-# Send back time in right timezone
+# Send back time in UTC
 def api_timestamp():
     now = datetime.now(pytz.UTC)
     return now
@@ -232,6 +232,6 @@ for station in cfg.stations:
     save_data(results, now=results["observed_at"])
 
     print(f"Sending data...{results["station_id"]}\n")
-    requests.post(cfg.URL, json=results, headers=api_header)
+    requests.post(f"{cfg.API_base}/weather/stations", json=results, headers=api_header)
 
 print("Scraping Complete! All data Saved")

@@ -661,6 +661,35 @@
     font-weight: 700;
 }
 
+.popup_overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.popup_box {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    min-width: 280px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.popup_close {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: #005baa;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
 /* 404 Page */
 
 .error_page {

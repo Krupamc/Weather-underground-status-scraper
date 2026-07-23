@@ -1,6 +1,7 @@
 # Config for the Status checker
 
 api_post_url = "http://127.0.0.1:8000/status/stations"
+api_base = "http://127.0.0.1:8000"
 consecutive_offline = 3
 max_retries = 5
 backoff_factor = 3
@@ -53,7 +54,8 @@ m_body = "Reliability Report:\n{period_start} to {period_end}\n\nOverview:\n- St
 http_e_subject = "Krupamc WU Checker HTTP Error:"
 scrape_e_subject = "Krupamc WU Checker Scrape Error:"
 time_e_subject = "Krupamc WU CHecker Time Error"
-post_e_subject = "SBB WU Checker DB POST Error"
+post_e_subject = "Krupamc WU Checker DB POST Error"
+maintenance_e_subject = "Krupamc WU Checker Maintenance API Error"
 
 e_body = "Error: {err}"
 time_e_body = "Error (perhaps wifi issue?): {err}"
