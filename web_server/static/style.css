@@ -656,6 +656,11 @@
     transform: translateY(-1px);
 }
 
+.toggle_button .button_text {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
 /* 404 Page */
 
 .error_page {

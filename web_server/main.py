@@ -171,6 +171,7 @@ def get_date_and_time(input_time):
         return None, None
 
     time = m.to_eastern(input_time)
+    # Format
     date = datetime.strftime(time, "%B %d, %Y")
     time = datetime.strftime(time, "%I:%M %p")
 
@@ -198,6 +199,7 @@ def home(request: Request):
 # For any http error, send them to a specific error page
 @app.exception_handler(StarletteHTTPException)
 async def not_found(request: Request, exc: StarletteHTTPException):
+    # HTTP Errors
     if exc.status_code == 404:
         return templates.TemplateResponse(request, "404.html", {"request": request, "title": "404"})
     elif exc.status_code == 403:
@@ -223,9 +225,10 @@ def my_stations(request: Request, session: db.SessionDep, current_user: Annotate
         stations = session.exec(select(m.Station)).all()
         return templates.TemplateResponse(request, "my_stations.html", context={"request": request, "title": "My Stations", "active_page": "my_stations", "station_rows": stations})
 
+    # Load stations
     stations = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True)).all()
 
-    # Add names
+    # Add names to list
     station_rows = []
     for access in stations:
         station = session.exec(select(m.Station).where(m.Station.station_id == access.station_id)).first()
@@ -234,14 +237,17 @@ def my_stations(request: Request, session: db.SessionDep, current_user: Annotate
                 "station_id": access.station_id,
                 "station_name": station.station_name
             })
-    
+
+    # Send list to html to render
     return templates.TemplateResponse(request, "my_stations.html", context={"request": request, "title": "My Stations", "active_page": "my_stations", "station_rows": station_rows})
 
 # Public dashboard for the station:
 @app.get("/stations/public/{station_id}", response_class=HTMLResponse)
 def public_station(request: Request, session: db.SessionDep, station_id: str):
+
     # Check units:
     units = request.query_params.get("units", "imperial")
+
     # Open DB tables
     status = session.exec(select(m.Status).where(m.Status.station_id == station_id)).first()
     weather = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
@@ -250,7 +256,7 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
     if not status or not station or not weather:
         raise HTTPException(status_code=404, detail="Station Not Found")
 
-    # Time Expressions
+    # Time Expressions convert
     if weather is not None:
         date, time = get_date_and_time(weather.observed_at)
 
@@ -370,19 +376,19 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
         "temp_pct": temp_pct, 
         "pressure_angle": pressure_angle,
         "w_units": w_units,
-        "converted": converted
+        "converted": converted,
+        "timezone": cfg.time_zone_name,
     })
 
 #---Login---
 
-# Gives direct token
+# Gives direct token for docs login
 @app.post("/token")
-def login_for_access_token(
-    session: db.SessionDep,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-):
+def login_for_access_token(session: db.SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
+    # Open user using creds
     user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
 
+    # If user is right give token if not 401
     if not user or not s.verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -401,11 +407,14 @@ def load_login(request: Request):
 # From Response with creds.
 @app.post("/login")
 def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
+    # Open user with form creds
     user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
 
+    # If not right, 401
     if not user or not s.verify_password(form_data.password, user.password_hash):
         return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login", "error": "Invalid Credentials"}, status_code=401)
-    
+
+    # Give cookie 
     access_token = s.create_access_token(data={"sub": user.username}) 
     response = RedirectResponse(url="/my-stations", status_code=303)
     response.set_cookie(key="access_token", value=access_token, httponly=True, path="/", samesite="lax")
@@ -414,24 +423,20 @@ def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth
 # Log out
 @app.get("/logout")
 def logout():
+    # Delete cookie
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie(key="access_token", path="/", samesite="lax")
     return response
 
 # Owner dashboard for the station:
 @app.get("/stations/dashboard/{station_id}", response_class=HTMLResponse)
-def public_station(request: Request, session: db.SessionDep, station_id: str):
+def public_station(request: Request, session: db.SessionDep, station_id: str, required_user: Annotated[m.User, Depends(require_station_access)], current_user: Annotated[m.User, Depends(get_current_user)]):
     # Check units:
     units = request.query_params.get("units", "imperial")
     # Open DB tables
     status = session.exec(select(m.Status).where(m.Status.station_id == station_id)).first()
     weather = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
-
-    print("station_id:", station_id)
-    print("status:", status)
-    print("station:", station)
-    print("weather:", weather)
 
     if not station:
         raise HTTPException(status_code=404, detail="Station Not Found")
@@ -452,6 +457,14 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
     wind_gust = None
     pressure_angle = 180
     temp_pct = 0
+
+    # If user can activate maintence:
+    maintenance = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
+    if maintenance: maintenance = True; 
+    else: maintenance == False
+
+    if current_user.role == "admin":
+        maintenance = True
 
     converted = {
         "temp": None,
@@ -602,6 +615,8 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
         "pressure_angle": pressure_angle,
         "w_units": w_units,
         "converted": converted,
+        "maintenance": maintenance,
+        "timezone": cfg.time_zone_name,
     })
 
 # Toggle maintenance with a form
@@ -626,6 +641,12 @@ def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str
         
         return response
 
+    # Check if user
+    user = session.exec(select(m.User).where(m.User.id == current_user.id)).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User Not Found")
+
     # Check if they have access
     access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
 
@@ -649,9 +670,51 @@ def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str
 
 # Toggle public with form
 @app.post("/public/{station_id}", response_class=HTMLResponse)
-def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
+def toggle_public(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
 
-    respoonse 
+    # Redirect Page
+    response = RedirectResponse(url=f"/stations/dashboard/{station_id}", status_code=303)
+
+    # Admin Pass
+    if current_user.role == "admin":
+        update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+
+        if not update:
+            raise HTTPException(status_code=404, detail="Station Not Found")
+
+        update.is_in_maintenance = not update.is_in_maintenance
+
+        session.add(update)
+        session.commit()
+        session.refresh(update)
+
+        return response
+
+    # Check if user
+    user = session.exec(select(m.User).where(m.User.id == current_user.id)).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User Not Found")
+
+    # Check if they have access
+    access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
+
+    if not access:
+        raise HTTPException(status_code=403, detail="Cannot Toggle Maintenance")
+
+    # Station to update
+    update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+
+    if not update:
+        raise HTTPException(status_code=404, detail="Station Not Found")
+
+    update.is_public = not update.is_public
+    # Update DB
+    session.add(update)
+    session.commit()
+    session.refresh(update)
+
+    return response
 
 @app.get("/register/no")
 def load_register_no():
@@ -664,20 +727,24 @@ def load_register(request: Request):
 # Form Response for register
 @app.post("/register")
 def register(session: db.SessionDep, username: str = Form(), password: str = Form()): #make this require admin later
+    # Table Entry
     db_user = m.User(
         username=username,
         role="public",
         password_hash=s.hash_password(password),
     )
+    # Save to db
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
     return db_user
 
+# Read your user
 @app.get("/users/me")
 def read_users_me(current_user: Annotated[m.User, Depends(get_current_user)]):
     return current_user
 
+# All users
 @app.get("/users/")
 def read_users(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], current_user: Annotated[m.User, Depends(require_admin)], limit: Annotated[int, Query(gt=0, le=100)] = 100,):
    users = session.exec(select(m.User).offset(offset).limit(limit)).all()
@@ -688,11 +755,13 @@ def read_users(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], curr
 # Read what stations a user can affect
 @app.get("/users/{user_id}/stations")
 def read_user_stations(user_id: int, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Open row
     access_rows = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id)).all()
 
     if not access_rows:
         return []
 
+    # Send back data
     return [
         {
             "station_id": row.station_id,
@@ -705,17 +774,22 @@ def read_user_stations(user_id: int, session: db.SessionDep, current_user: Annot
 # Give User Access to a station
 @app.post("/users/{user_id}/stations/{station_id}")
 def grant_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Open station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         raise HTTPException(status_code=404, detail="Station Not Found")
+
+    # Find user
     id = session.exec(select(m.User).where(m.User.id == user_id)).first()
     if not id:
         raise HTTPException(status_code=404, detail="User Not Found")
 
+    # Check for duplicate
     existing = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id, m.UserAccess.station_id == station_id)).first()
     if existing:
         raise HTTPException(status_code=409, detail="Access already exists")
-    
+
+    # Add access
     access = m.UserAccess(user_id=user_id, station_id=station_id, can_view=True)
     session.add(access)
     session.commit()
@@ -724,15 +798,20 @@ def grant_station_access(user_id: int, station_id: str, session: db.SessionDep, 
 # Delete Access
 @app.delete("/users/{user_id}/stations/{station_id}")
 def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Open station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         raise HTTPException(status_code=404, detail="Station Not Found")
+
+    # Check id
     id = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id)).first()
     if not id:
         raise HTTPException(status_code=404, detail="User Not Found")
-    
+
+    # Select
     access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id, m.UserAccess.station_id == station_id)).first()
 
+    # Delete
     session.delete(access)
     session.commit()
     return {"ok": True}
@@ -740,9 +819,13 @@ def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep,
 # Update access
 @app.patch("/users/{user_id}/stations/{station_id}")
 def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+
+    # select user
     user_db = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id, m.UserAccess.station_id == station_id)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="Station Not Found")
+
+    # Open and update
     user_data = user.model_dump(exclude_unset=True)
     user_db.sqlmodel_update(user_data)
     session.commit()
@@ -752,24 +835,31 @@ def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdat
 # Update User
 @app.patch("/users/{user_id}")
 def update_user(user_id: int, user: m.UserUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Open User
     user_db = session.exec(select(m.User).where(m.User.id == user_id)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="No User Exists")
+
+    # update
     user_data = user.model_dump(exclude_unset=True)
 
+    # Hash password
     if "password" in user_data:
         user_db.password_hash = s.hash_password(user_data.pop("password"))
 
+    # Save
     user_db.sqlmodel_update(user_data)
     session.add(user_db)
     session.commit()
     session.refresh(user_db)
     return user_db
+
 #---Stations---
 
 # Create Station Rows in DB:
 @app.post("/stations/create", response_model=m.StationPublic)
 def create_station(station: m.StationCreate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Make and Save
     db_station = m.Station.model_validate(station)
     session.add(db_station)
     session.commit()
@@ -823,10 +913,12 @@ def update_station(station_id: str, station: m.StationUpdate, session: db.Sessio
 # Add Current/History Status
 @app.post("/status/stations", response_model=m.StatusPublic)
 def post_status(session: db.SessionDep, status_in: m.StatusIn, x_api_key: Annotated[str, Header()]):
-    
+
+    # Check api_key
     if x_api_key != cfg.scraper_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+
+    # Open current
     current = session.exec(select(m.Status).where(m.Status.station_id == status_in.station_id)).first()
     
     # On first post
@@ -888,6 +980,7 @@ def post_status(session: db.SessionDep, status_in: m.StatusIn, x_api_key: Annota
 
     session.add(current)
 
+    # Save
     session.commit()
     session.refresh(current)
     return current
@@ -895,6 +988,7 @@ def post_status(session: db.SessionDep, status_in: m.StatusIn, x_api_key: Annota
 # Read Current by Station
 @app.get("/read/status/stations/{station_id}", response_model=m.StatusPublic)
 def read_current_status(session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(require_station_access)]):
+    # Read
     status = session.exec(select(m.Status).where(m.Status.station_id == station_id)).first()
     if not status:
         raise HTTPException(status_code=404, detail="Station Not Found")
@@ -910,12 +1004,7 @@ def read_status_history(session: db.SessionDep, station_id: str, current_user: A
 
 # Add Current/History Weather
 @app.post("/weather/stations", response_model=m.WeatherPublic)
-def post_weather(
-    session: db.SessionDep,
-    x_api_key: Annotated[str, Header()], 
-    w_in: m.WeatherIn,
-    
-):
+def post_weather(session: db.SessionDep, x_api_key: Annotated[str, Header()], w_in: m.WeatherIn):
     current = session.exec(select(m.Weather).where(m.Weather.station_id == w_in.station_id)).first()
 
     # On first post

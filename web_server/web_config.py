@@ -13,6 +13,7 @@ stations = {
 }
 
 timezone = "US/Eastern"
+time_zone_name = "EST"
 
 
 # Status History Query
