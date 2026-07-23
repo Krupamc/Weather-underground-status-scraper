@@ -17,9 +17,12 @@ def check_station(station_id):
 
     station_name = cfg.stations[station_id]
 
+    # Time
     now = get_time(station_id, station_name)
     if now is None:
         return
+
+    maintenance = is_in_maintenance(station_id)
 
     for attempt in range(cfg.max_retries): # Try the scraping for configered 
         try:
@@ -68,7 +71,7 @@ def check_station(station_id):
         data = read_json_file()
         log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "request_error", last_error)
 
-        if not is_in_maintenance(station_id):
+        if not maintenance:
             email(
                 subject=cfg.scrape_e_subject,
                 body=cfg.e_body.format(err=last_error),
@@ -91,7 +94,7 @@ def check_station(station_id):
         consec_offline = data[station_id]["consecutive_offline"]
     
         # First Alert email
-        if consec_offline >= cfg.consecutive_offline and not data[station_id]["alert_sent"] and not is_in_maintenance(station_id):
+        if consec_offline >= cfg.consecutive_offline and not data[station_id]["alert_sent"] and not maintenance:
             stat_name = cfg.stations[station_id]
             stat_id = station_id
             offline_alert(
@@ -109,7 +112,7 @@ def check_station(station_id):
             log_data(now.isoformat(), station_id, station_name, "OFFLINE", consec_offline, "offline_alert", "Threshold Reached, email sent")
         
         # Reminder Emails
-        elif data[station_id]["alert_sent"] and should_send_reminder(data[station_id], now) and not is_in_maintenance(station_id):
+        elif data[station_id]["alert_sent"] and should_send_reminder(data[station_id], now) and not maintenance:
             offline_remind(
                 stat_id=station_id,
                 stat_name=station_name,
@@ -146,7 +149,7 @@ def check_station(station_id):
         data[station_id]["last_status"] = "CONNECTED"
         
         # Recovery
-        if data[station_id]["alert_sent"] and not is_in_maintenance(station_id):
+        if data[station_id]["alert_sent"] and not maintenance:
             print(f"[RECOVERED] {station_name} ({station_id})")
             status = "recovered"
             outage_start_str = data[station_id]["first_offline"]
@@ -218,7 +221,7 @@ def get_time(station_id, station_name) -> datetime:
             log_data(None, station_id, station_name, "error", data[station_id]["consecutive_offline"], "Time_error", f"{e}")
 
             # Email
-            if not is_in_maintenance(station_id):
+            if not is_in_maintenance():
                 email(
                     subject=cfg.time_e_subject,
                     body=cfg.time_e_body.format(err = e),
@@ -525,12 +528,12 @@ def is_in_maintenance(station_id: str) -> bool:
 
         log_data(now.isoformat(), station_id, "", "error", data[station_id]["consecutive_offline"], "maintenance_api_error", last_error)
 
-        if not is_in_maintenance(station_id):
-            email(
-                subject=cfg.maintenance_e_subject,
-                body=cfg.e_body.format(err=last_error),
-                recipients=cfg.admin
-            )
+        # Send Error Email
+        email(
+            subject=cfg.maintenance_e_subject,
+            body=cfg.e_body.format(err=last_error),
+            recipients=cfg.admin
+        )
 # Finish mainteance rewplacement
 
 # Send JSON over Post
@@ -736,6 +739,10 @@ data = read_json_file()
 for station, station_names in cfg.stations.items():
     if data[station]["last_status"] == "OFFLINE":
         print(f"[OFFLINE]: {station_names} ({station})")
+
     if data[station]["last_status"] == "RECOVERED":
         print(f"[RECOVERED]: {station_names} ({station})")
+  
+    if is_in_maintenance(station):
+        print(f"[MAINTENANCE]: {station_names} ({station})")
 

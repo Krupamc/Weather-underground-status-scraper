@@ -1,0 +1,68 @@
+{
+  "KNJBERKE13": {
+    "station_id": "KNJBERKE13",
+    "station_name": "Island Beach State Park Bathhouse #1",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJWARET3": {
+    "station_id": "KNJWARET3",
+    "station_name": "Sedge Island",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJMANAH111": {
+    "station_id": "KNJMANAH111",
+    "station_name": "Stafford Municipal Complex",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJMANAH7": {
+    "station_id": "KNJMANAH7",
+    "station_name": "MATES/Stafford",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJBAYHE18": {
+    "station_id": "KNJBAYHE18",
+    "station_name": "Bayhead Fire Company #1",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJLONGB89": {
+    "station_id": "KNJLONGB89",
+    "station_name": "LBT Marine Field Station",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJLONGB21": {
+    "station_id": "KNJLONGB21",
+    "station_name": "LBI Foundation",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJBEACH64": {
+    "station_id": "KNJBEACH64",
+    "station_name": "Beachwood Yacht Club",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJOCEAN178": {
+    "station_id": "KNJOCEAN178",
+    "station_name": "Ocean Gate Yacht Club",
+    "enabled": false,
+    "changed_at": null
+  },
+  "KNJSEASI44": {
+    "station_id": "KNJSEASI44",
+    "station_name": "Seaside Park Yacht Club",
+    "enabled": false,
+    "changed_at": null
+  },
+  "Ecocenter": {
+    "station_id": "Ecocenter",
+    "station_name": "Ecocenter",
+    "enabled": false,
+    "changed_at": null
+  }
+}
