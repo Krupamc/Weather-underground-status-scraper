@@ -2,7 +2,7 @@
 
 {% block content %}
     <!-- If the station is no public, provide no data -->
-    {% if not station.is_public or not status or status.last_status == "OFFLINE" %}
+    {% if not station.is_public or station.is_in_maintenance or not status or status.last_status == "OFFLINE" %}
         <div class="p_station_content" style="padding-top: 270px; justify-content: center">
             <div style="border: 3px solid #d3cfcf; background: white; border-radius: 16px; padding: 20px 18px; gap: 28px;">
                 <h1>Station not Available</h1>
@@ -85,18 +85,20 @@
         </div>
 
         <!-- Uv/Solar-->
-        <div class="p_station_card p_solar_card">
-            <!-- Sun Image (here comes the sun....)-->
-            <img src="{{ url_for('static', path='/icons/sun.png')}}" alt="Solar" class="p_solar_img">
-            <!-- Text -->
-            <div class="p_dash_text">
-                <h1>UV Index:</h1>
-                <h3>{{ weather.uv }}</h3>
+        {% if weather.uv != None or weather.solar != None %}
+            <div class="p_station_card p_solar_card">
+                <!-- Sun Image (here comes the sun....)-->
+                <img src="{{ url_for('static', path='/icons/sun.png')}}" alt="Solar" class="p_solar_img">
+                <!-- Text -->
+                <div class="p_dash_text">
+                    <h1>UV Index:</h1>
+                    <h3>{{ weather.uv }}</h3>
 
-                <h1>Solar Radiation: </h1>
-                <h3>{{ weather.solar }} (watts/m²)</h3>
+                    <h1>Solar Radiation: </h1>
+                    <h3>{{ weather.solar }} (watts/m²)</h3>
+                </div>
             </div>
-        </div>
+        {% endif %}
 
         <!-- Pressure -->
         <div class="p_station_card">
@@ -202,10 +204,12 @@
 
         <!-- Graph -->
         <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Temperature Infomation&variables=temp&variables=dewpoint&variables=humidity" alt="Temperature Graph" class="graph_border">
-        <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Solar Infomation&variables=uv&variables=solar" alt="Solar Infomation Graph" class="graph_border">
+        {% if weather.uv != None or weather.solar != None %}<img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Solar Infomation&variables=uv&variables=solar" alt="Solar Infomation Graph" class="graph_border"> {% endif %}
         <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Pressure&variables=pressure" alt="Pressure Graph" class="graph_border">
         <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Wind Infomation&variables=wind_speed&variables=wind_gust" alt="Wind Graph" class="graph_border">
-
+        {% if converted.precip_a > 0.0 %}
+                <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Precipitation&variables=precip_rate&variables=precip_accum" alt="Precipitation Graph" class="graph_border">
+        {% endif %}
     </div>
     {% endif %}
 {% endblock %}

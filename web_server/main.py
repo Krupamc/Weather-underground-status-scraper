@@ -443,7 +443,7 @@ def logout():
 
 # Owner dashboard for the station:
 @app.get("/stations/dashboard/{station_id}", response_class=HTMLResponse)
-def public_station(request: Request, session: db.SessionDep, station_id: str, required_user: Annotated[m.User, Depends(require_station_access)], current_user: Annotated[m.User, Depends(get_current_user)]):
+def owner_station(request: Request, session: db.SessionDep, station_id: str, required_user: Annotated[m.User, Depends(require_station_access)], current_user: Annotated[m.User, Depends(get_current_user)]):
     # Check units:
     units = request.query_params.get("units", "imperial")
     # Open DB tables
@@ -473,8 +473,7 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, re
 
     # If user can activate maintence:
     maintenance = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
-    if maintenance: maintenance = True; 
-    else: maintenance == False
+    maintenance = bool(maintenance)
 
     if current_user.role == "admin":
         maintenance = True
@@ -921,44 +920,29 @@ def scraper_station_state(station_id: str, session: db.SessionDep, x_api_key: An
 @app.post("/maintenance/{station_id}", response_class=HTMLResponse)
 def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
 
+    update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
 
-    # Admin Pass
-    if current_user.role == "admin":
-        update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
-
-        if not update:
-            raise HTTPException(status_code=404, detail="Station Not Found")
-        
-        update.is_in_maintenance = not update.is_in_maintenance
-
-        session.add(update)
-        session.commit()
-        session.refresh(update)
-        
-        # Success message
-        msg = "public_on" if update.is_public else "public_off"
-
-        return RedirectResponse(url=f"/stations/dashboard/{station_id}?success={msg}", status_code=303)
+    if not update:
+        raise HTTPException(status_code=404, detail="Station Not Found")
 
     # Check if user
     user = session.exec(select(m.User).where(m.User.id == current_user.id)).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User Not Found")
+    
+    if current_user.role != "admin":
+        # Check if user
+        access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
 
-    # Check if they have access
-    access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
-
-    if not access:
-        raise HTTPException(status_code=403, detail="Cannot Toggle Maintenance")
-
-    # Station to update
-    update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
-
-    if not update:
-        raise HTTPException(status_code=404, detail="Station Not Found")
+        # Check if they have access
+        if not access:
+            raise HTTPException(status_code=403, detail="Cannot Toggle Maintenance")
 
     update.is_in_maintenance = not update.is_in_maintenance
+
+    if update.is_in_maintenance:
+        update.is_public = False
 
     # Update in db
     session.add(update)
@@ -974,23 +958,10 @@ def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str
 @app.post("/public/{station_id}", response_class=HTMLResponse)
 def toggle_public(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
 
-    # Admin Pass
-    if current_user.role == "admin":
-        update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
 
-        if not update:
-            raise HTTPException(status_code=404, detail="Station Not Found")
-
-        update.is_in_maintenance = not update.is_in_maintenance
-
-        session.add(update)
-        session.commit()
-        session.refresh(update)
-
-        # Success message
-        msg = "public_on" if update.is_public else "public_off"
-
-        return RedirectResponse(url=f"/stations/dashboard/{station_id}?success={msg}", status_code=303)
+    if not update:
+        raise HTTPException(status_code=404, detail="Station Not Found")
 
     # Check if user
     user = session.exec(select(m.User).where(m.User.id == current_user.id)).first()
@@ -998,19 +969,18 @@ def toggle_public(request: Request, session: db.SessionDep, station_id: str, cur
     if not user:
         raise HTTPException(status_code=404, detail="User Not Found")
 
-    # Check if they have access
-    access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
+    if current_user.role != "admin":
+        # Check if they have access
+        access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True, m.UserAccess.can_toggle_maintenance == True, m.UserAccess.station_id == station_id)).first()
 
-    if not access:
-        raise HTTPException(status_code=403, detail="Cannot Toggle Maintenance")
+        if not access:
+            raise HTTPException(status_code=403, detail="Cannot Toggle Maintenance")
 
-    # Station to update
-    update = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
-
-    if not update:
-        raise HTTPException(status_code=404, detail="Station Not Found")
-
+    if update.is_in_maintenance and not update.is_public:
+        return RedirectResponse(url=f"/stations/dashboard/{station_id}?success=public_blocked", status_code=303)
+    
     update.is_public = not update.is_public
+    
     # Update DB
     session.add(update)
     session.commit()
