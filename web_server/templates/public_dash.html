@@ -2,9 +2,15 @@
 
 {% block content %}
     <!-- If the station is no public, provide no data -->
-    {% if not station.is_public or station.last_status =="OFFLINE"%}
-        <h1 style="padding-top: 270px">Station not Available</h1>
-
+    {% if not station.is_public or not status or status.last_status == "OFFLINE" %}
+        <div class="p_station_content" style="padding-top: 270px; justify-content: center">
+            <div style="border: 3px solid #d3cfcf; background: white; border-radius: 16px; padding: 20px 18px; gap: 28px;">
+                <h1>Station not Available</h1>
+                <div class="error_page">
+                    <a href="/">Go Back Home</a>
+                </div>
+            </div>
+        </div>
     <!-- Else continue dashboard-->
     {% else %}
 
@@ -44,7 +50,7 @@
 
             <!-- Text -->
             <div class="p_dash_text">
-                <h1>Temperature:</h1>
+                <h1>Air Temperature:</h1>
                 <h3>{{ converted.temp }} {{ w_units.temp }}</h3>
             </div>
         </div>
@@ -73,7 +79,7 @@
                 <h1>Precipitation Rate:</h1>
                 <h3>{{ converted.precip_r }} {{ w_units.precip_r }}</h3>
 
-                <h1>Precipitation Accumulation</h1>
+                <h1>Precipitation Accumulation:</h1>
                 <h3>{{ converted.precip_a }} {{ w_units.precip_a }}<Inp></Inp></h3>
             </div>
         </div>
@@ -130,7 +136,7 @@
                 <div class="wind_compass">
                     {% if weather.wind_dir%}
                         <!-- Arrow ({{ weather.wind_dir - 90}}) -->
-                        <div class="wind_arrow" style="z-index: 1005; transform: translate(-50%, -50%) rotate({{ weather.wind_dir - 90}}deg)">
+                        <div class="wind_arrow" style="transform: translate(-50%, -50%) rotate({{ weather.wind_dir - 90}}deg)">
                             <div class="wind_arrow_head"></div>
                             <div class="wind_arrow_tail"></div>
                         </div>
@@ -193,6 +199,13 @@
 
             </div>
         </div>
+
+        <!-- Graph -->
+        <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Temperature Infomation&variables=temp&variables=dewpoint&variables=humidity" alt="Temperature Graph" class="graph_border">
+        <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Solar Infomation&variables=uv&variables=solar" alt="Solar Infomation Graph" class="graph_border">
+        <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Pressure&variables=pressure" alt="Pressure Graph" class="graph_border">
+        <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Wind Infomation&variables=wind_speed&variables=wind_gust" alt="Wind Graph" class="graph_border">
+
     </div>
     {% endif %}
 {% endblock %}

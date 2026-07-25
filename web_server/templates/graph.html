@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="graph_page">
+        <div class="graph_container">
+
+            <h1 class="graph_title">Weather Graph</h1>
+            <p class="graph_subtitle">Select a station, time range, units, and variables to make a graph!</p>
+
+            <!-- Get the inputs-->
+            <form method="get" action="/graph" class="graph_form_card">
+                <!-- Select Station-->
+                <div class="graph_form_row">
+                    <label for="station_id" class="graph_label">Stations:</label>
+                    <select name="station_id" id="station_id" class="graph_select" required>
+                        <option value="">Choose a Station</option>
+                        {% for station in stations %}
+                            <option value="{{ station.station_id }}"
+                                {% if selected_station == station.station_id %}selected{% endif %}>
+                                {{ station.station_id }} - {{ station.station_name}}
+                            </option>   
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Type Title -->
+                <div class="graph_form_row">
+                    <label for="title" class="graph_label">Graph Title:</label>
+                    <input type="text" id="title" name="title" class="graph_input" value="{{ selected_title }}" placeholder="Temperature, Wind, Pressure, etc.">
+                </div>
+
+                <!-- Time range -->
+                <div class="graph_form_row">
+                    <label for="hours" class="graph_label">Past Hours</label>
+                    <input type="number" id="hours" name="hours" class="graph_input" min="1" max="168" value="{{ selected_hours }}">
+                </div>
+
+                <!-- Units -->
+                <div class="graph_form_row">
+                    <label for="units" class="graph_label">Units:</label>
+                    <select name="units" id="units" class="graph_select">
+                        <option value="imperial" {% if selected_units == "imperial" %}selected{% endif %}>Imperial</option>
+                        <option value="metric" {% if selected_units == "metric" %}selected{% endif %}>Metric</option>
+                    </select>
+                </div>
+
+                <!-- Presets -->
+                <div class="graph_form_row">
+                    <label class="graph_label">Variable Presets</label>
+                    <div class="graph_preset_row">
+                        <button type="button" class="graph_preset_button" onclick="applyPreset('temperature')">Temperature</button>
+                        <button type="button" class="graph_preset_button" onclick="applyPreset('wind')">Wind</button>
+                        <button type="button" class="graph_preset_button" onclick="applyPreset('rain')">Precipitation</button>
+                        <button type="button" class="graph_preset_button" onclick="applyPreset('pressure')">Pressure</button>
+                        <button type="button" class="graph_preset_button" onclick="applyPreset('solar')">Solar</button>
+                        <button type="button" class="graph_preset_button" onclick="applyPreset('clear')">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Variables -->
+                <div class="graph_form_row">
+                    <label class="graph_label">Variables:</label>
+                    <div class="graph_checkbox_grid">
+                        {% set vars = {
+                            "temp": "Air Temperature",
+                            "dewpoint": "Dew Point",
+                            "humidity": "Humidity",
+                            "pressure": "Pressure",
+                            "wind_speed": "Wind Speed",
+                            "wind_gust": "Wind Gust",
+                            "wind_dir": "Wind Direction",
+                            "precip_rate": "Precipitation Rate",
+                            "precip_accum": "PrecipItation Accumulation",
+                            "uv": "UV Index",
+                            "solar": "Solar Radiation"
+                        }%}
+
+                        {% for key, label in vars.items() %}
+                        <div class="graph_checkbox_item">
+                            <input class="graph_checkbox_input" type="checkbox" name="variables" value="{{ key }}" id="var_{{ key }}" {% if key in selected_variables %}checked{% endif %}>
+                            <label class="graph_checkbox_label" for="var_{{ key }}">
+                                {{ label }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button type="submit" class="graph_submit_button">Generate Graph</button>
+            </form>
+
+            <!-- Graph -->
+            {% if graph_url %}
+            <div class="graph_preview_card">
+                <h2 class="graph_preview_title">Preview</h2>
+                <img src="{{ graph_url }}" alt="Weather Graph" class="graph_item">
+
+                <a href="{{ graph_url }}" title="Download Graph" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_hours}}_hours).png" class="graph_submit_button">Download Graph</a>
+                <a href="{{ csv_url }}" title="Download CSV" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_hours}}_hours).csv" class="graph_submit_button">Download Graph CSV</a>
+                <a href="/graph" class="graph_clear_button">Clear Graph</a>
+            </div>
+
+            
+            {% endif %}
+
+        </div>
+    </div>
+
+<!-- presets -->
+    <script>
+function applyPreset(presetName) {
+    const presetMap = {
+        temperature: ["temp", "dewpoint", "humidity"],
+        wind: ["wind_speed", "wind_gust"],
+        rain: ["precip_rate", "precip_accum"],
+        pressure: ["pressure"],
+        solar: ["uv", "solar"],
+        clear: []
+    };
+
+    const titleMap = {
+        temperature: "Temperature",
+        wind: "Wind",
+        rain: "Precipitation",
+        pressure: "Pressure",
+        solar: "Solar",
+        clear: ""
+    };
+
+    /* Select only whats in preset */
+    const selected = presetMap[presetName] || [];
+    const checkboxes = document.querySelectorAll('input[name="variables"]');
+
+    checkboxes.forEach((checkbox) => {
+        checkbox.checked = selected.includes(checkbox.value);
+    });
+
+    const titleInput = document.getElementById("title");
+    if (titleInput) {
+        titleInput.value = titleMap[presetName] || "";
+    }
+}
+</script>
+
+{% endblock %}

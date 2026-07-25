@@ -15,17 +15,24 @@ import web_config as cfg
 import security as s
 import jwt
 from jwt import InvalidTokenError
-from datetime import datetime
+from datetime import datetime, timedelta
 import convert_metric as cv
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager as fm
+import matplotlib.dates as mdates
 import io
+import pytz
+import csv
 
 app = FastAPI(title="SBB Mesonet Notification System")
 
 # Graph text
-myfont = {'fontname':'Roboto'}
+roboto_path = "web_server/static/fonts/Roboto-Regular.ttf"
+fm.fontManager.addfont(roboto_path)
+plt.rcParams["font.family"] = fm.FontProperties(fname=roboto_path).get_name()
+
 
 # Security using JWT
 #oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -629,119 +636,264 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, re
 
 #---Graphing---
 
+# Graph page
+@app.get("/graph", response_class=HTMLResponse)
+def graph_page(request: Request, session: db.SessionDep, station_id: str="", variables: Annotated[list[str] | None, Query()] = None, units: str="imperial", title: str="", hours: int=24):
+    # Open stations
+    stations = session.exec(select(m.Station).where(m.Station.is_public == True).order_by(m.Station.station_name)).all()
+
+    # Variables
+    selected_variables = variables or []
+
+    graph_url = None
+    csv_url = None
+
+    # Add parms
+    if station_id and selected_variables:
+        params = []
+
+        for var in selected_variables:
+            params.append(f"variables={var}") # All variables
+        params.append(f"units={units}")
+        params.append(f"title={title}")
+        params.append(f"hours={hours}")
+        params.append(f"fig_width=10")
+        params.append(f"fig_height=5")
+        query_string = "&".join(params)
+
+        graph_url = f"/graph/weather/{station_id}?{query_string}"
+        csv_url = f"/graph/weather/{station_id}/csv?{query_string}"
+
+    return templates.TemplateResponse(request, "graph.html", context={"request": request, "title": "Graphing and Analysis", "active_page": "graph", "selected_title": title, "selected_station": station_id, "selected_units": units, "selected_variables": selected_variables, "stations": stations, "selected_hours": hours, "graph_url": graph_url, "csv_url": csv_url})
+
 # Graph data and return as memory
-@app.get("/graph/weather/{station_id}/{variable}")
-def graph_variables(station_id: str, variable: str, session: db.SessionDep, units: str="imperial"):
-    print("GRAPH REQUEST:", station_id, variable, units)
-    # Get all data 
-    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id).order_by(m.WeatherHistory.observed_at)).all()
+@app.get("/graph/weather/{station_id}")
+def graph_variables(station_id: str, variables: Annotated[list[str], Query()], session: db.SessionDep, units: str="imperial", title: str="", hours: int=24, fig_width: int=6, fig_height: int=3):
+    print("kijnjoweoj")
+    # Graph by last 24 hrs
+    cutoff = datetime.now(pytz.UTC) - timedelta(hours=hours)
+
+    # Get last 24 hr of data
+    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff).order_by(m.WeatherHistory.observed_at)).all()
 
     if not weather:
         raise HTTPException(status_code=404, detail="No Weather History Found")
 
     # Define allowed variables
     allowed = {
-        "temp": "Temperature",
+        "temp": "Air Temperature",
         "dewpoint": "Dew Point",
         "humidity": "Humidity",
         "pressure": "Pressure",
         "wind_speed": "Wind Speed",
         "wind_gust": "Wind Gust",
+        "wind_dir": "Wind Direction",
         "precip_rate": "Precipitation Rate",
         "precip_accum": "Precipitation Accumulation",
         "uv": "UV Index",
         "solar": "Solar Radiation"
     }
 
-    if variable not in allowed:
-        raise HTTPException(status_code=400, detail="Invalid Variable")
+    for var in variables:
+        if var not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid Variable")
 
-    # Variables
-    x = []
-    y = []
-
-    labels = {
-        "temp": "",
-        "dewpoint": "",
-        "humidity": "",
-        "pressure": "",
-        "wind_speed": "",
-        "wind_gust": "",
-        "wind_dir": "",
-        "precip_rate": "",
-        "precip_accum": "",
-        "uv": "",
-        "solar": ""
+    # Units
+    if units == "metric":
+        labels = {
+            "temp": " °C",
+            "dewpoint": " °C",
+            "humidity": "%",
+            "pressure": " hPa",
+            "wind_speed": " knots",
+            "wind_gust": " knots",
+            "wind_dir": "°",
+            "precip_rate": " mm/hr",
+            "precip_accum": " mm",
+            "uv": "",
+            "solar": " watts/m²"
         }
 
-    # Append to values
-    for row in weather:
-        value = getattr(row, variable, None)
-        if value is None or row.observed_at is None:
-            continue
-
-        x.append(m.to_eastern(row.observed_at))
-
-        # Convert to metric
-        if units == "metric":
-            if variable in ["pressure"]:
-                value = cv.inhg_to_hpa(value)
-            elif variable in ["precip_rate", "precip_accum"]:
-                value = cv.in_to_mm(value)
-            labels = {
-                "temp": " °C",
-                "dewpoint": " °C",
-                "humidity": "%",
-                "pressure": " hPa",
-                "wind_speed": " knots",
-                "wind_gust": " knots",
-                "wind_dir": "°",
-                "precip_rate": " mm/hr",
-                "precip_accum": " mm",
-                "uv": "",
-                "solar": " watts/m²"
+    else:
+        labels = {
+            "temp": "°F",
+            "dewpoint": "°F",
+            "humidity": "%",
+            "pressure": "inHg",
+            "wind_speed": "mph",
+            "wind_gust": "mph",
+            "wind_dir": "°",
+            "precip_rate": "in/hr",
+            "precip_accum": "in",
+            "uv": "",
+            "solar": "watts/m²"
             }
 
-        # Convert to Imperial
-        else:
-            if variable in ["temp", "dewpoint"]:
-                value = cv.c_to_f(value)
-            elif variable in ["wind_speed", "wind_gust"]:
-                value = cv.knots_to_mph(value)
-            labels = {
-                "temp": " °F",
-                "dewpoint": " °F",
-                "humidity": "%",
-                "pressure": " inHg",
-                "wind_speed": " mph",
-                "wind_gust": " mph",
-                "wind_dir": "°",
-                "precip_rate": " in/hr",
-                "precip_accum": " in",
-                "uv": "",
-                "solar": " watts/m²"
-                }
-            
-        y.append(value)
+    series = {}
 
-    if not x or not y:
+    # Variables
+    for var in variables: # for each variables append converted data to series
+        x = []
+        y = []
+
+        # Append to values
+        for row in weather:
+            value = getattr(row, var, None)
+            if value is None or row.observed_at is None:
+                continue
+
+            x.append(m.to_eastern(row.observed_at))
+
+            # Convert to metric
+            if units == "metric":
+                if var in ["pressure"]:
+                    value = cv.inhg_to_hpa(value)
+                elif var in ["precip_rate", "precip_accum"]:
+                    value = cv.in_to_mm(value)
+                
+
+            # Convert to Imperial
+            else:
+                if var in ["temp", "dewpoint"]:
+                    value = cv.c_to_f(value)
+                elif var in ["wind_speed", "wind_gust"]:
+                    value = cv.knots_to_mph(value)
+                
+                
+            y.append(value)
+
+        if x and y:
+            series[var] = {"x": x, "y": y} 
+
+    if not series:
         raise HTTPException(status_code=404, detail="No Plottable Data Found")
 
+    # Size and Color
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    colors = ["#005baa", "#d1295b", "#2a9d8f", "#8d5fd3", "#f4a26a", "#FE05E9"]
+
     # Graph
-    fig, ax = plt.subplots(figsize=(6, 3))
-    ax.plot(x, y, marker="o", linewidth=2, markersize=3)
-    ax.set_title(f"{allowed[variable]} - {station_id}")
-    ax.set_xlabel("Time")
-    ax.set_ylabel(f"{allowed[variable]}{labels[variable]}")
+    for i, var in enumerate(series):
+        ax.plot(series[var]["x"], series[var]["y"], marker="o", linewidth=2, markersize=3, color=colors[i % len(colors)], label=f"{allowed[var]} ({labels[var]})" if labels[var] else allowed[var])
+
+    # Titles
+    ax.set_title(f"{station_id} {title} (Past {hours} hours)", fontsize=16)
+    ax.set_xlabel("Time", fontsize=13)
+    ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
-    fig.autofmt_xdate()
-    
+    ax.margins(x=0.05, y=0.10)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d %H"))
+    fig.autofmt_xdate(rotation=30)
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.80)
     buf = io.BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
     plt.close(fig)
     buf.seek(0)
 
-    return Response(content=buf.getvalue(), media_type="image/png")
+    # Download link
+    filename = f"{station_id}_{title or 'graph'}_(Past_{hours}_hours).png"
+    safe_name = filename.replace(" ", "_")
+
+    headers = {"Content-Disposition": f'attachment; filename="{safe_name}"'}
+
+
+    return Response(content=buf.getvalue(), media_type="image/png", headers=headers)
+
+# CSV Download
+@app.get("/graph/weather/{station_id}/csv")
+def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], session: db.SessionDep, units: str="imperial", title: str="", hours: int=24):
+    # Data from...
+    cutoff = datetime.now(pytz.UTC) - timedelta(hours=hours)
+
+    # Weather data
+    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff).order_by(m.WeatherHistory.observed_at)).all()
+
+    if not weather:
+        raise HTTPException(status_code=404, detail="No Weather History Found")
+
+    allowed = {
+        "temp": "Air Temperature",
+        "dewpoint": "Dew Point",
+        "humidity": "Humidity",
+        "pressure": "Pressure",
+        "wind_speed": "Wind Speed",
+        "wind_gust": "Wind Gust",
+        "wind_dir": "Wind Direction",
+        "precip_rate": "Precipitation Rate",
+        "precip_accum": "Precipitation Accumulation",
+        "uv": "UV Index",
+        "solar": "Solar Radiation"
+    }
+
+    for var in variables:
+        if var not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid Variable")
+
+    def convert_value(var, value):
+        if value is None:
+            return None
+
+        # Convert to metric
+        if units == "metric":
+            if var == "pressure":
+                return cv.inhg_to_hpa(value)
+            elif var in ["precip_rate", "precip_accum"]:
+                return cv.in_to_mm(value)
+            return value
+
+        # convert to imperial
+        else:
+            if var in ["temp", "dewpoint"]:
+                return cv.c_to_f(value)
+            elif var in ["wind_speed", "wind_gust"]:
+                return cv.knots_to_mph(value)
+            return value
+
+    output = io.StringIO()
+
+    fieldnames = ["station_id", f"observed_at_{cfg.time_zone_name}"] + variables
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+
+    wrote_rows = False
+
+    for row in weather:
+        if row.observed_at is None:
+            continue
+
+        csv_row = {
+            "station_id": station_id,
+            f"observed_at_{cfg.time_zone_name}": m.to_eastern(row.observed_at).isoformat()
+        }
+
+        has_value = False
+
+        for var in variables:
+            value = getattr(row, var, None)
+            value = convert_value(var, value)
+            csv_row[var] = value
+            if value is not None:
+                has_value = True
+
+        if has_value:
+            writer.writerow(csv_row)
+            wrote_rows = True
+
+    if not wrote_rows:
+        raise HTTPException(status_code=404, detail="No Exportable Data Found")
+
+    csv_data = output.getvalue()
+    output.close()
+
+    safe_title = title.strip().replace(" ", "_") if title.strip() else "weather_graph"
+    filename = f"{station_id}_{safe_title}_past_{hours}_hours.csv"
+
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+    return Response(content=csv_data, media_type="text/csv", headers=headers)
+        
+    
 
 #---Maintenance---
 
@@ -879,7 +1031,13 @@ def load_register(request: Request):
 
 # Form Response for register
 @app.post("/register")
-def register(session: db.SessionDep, username: str = Form(), password: str = Form()): #make this require admin later
+def register(request: Request, session: db.SessionDep, username: str = Form(), password: str = Form()): #make this require admin later
+    # Check for existing user:
+    existing_user = session.exec(select(m.User).where(m.User.username == username)).first()
+
+    if existing_user:
+        return templates.TemplateResponse(request, "register.html", {"request": request, "title": "Register", "active_page": "register", "error": "User already exists"}, status_code=401)
+
     # Table Entry
     db_user = m.User(
         username=username,
@@ -890,7 +1048,15 @@ def register(session: db.SessionDep, username: str = Form(), password: str = For
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
-    return db_user
+
+    # First account is A admin account
+    if db_user.id == 1:
+        db_user.role = "admin"
+        session.add(db_user)
+        session.commit()
+        session.refresh(db_user)
+
+    return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login"})
 
 # Read your user
 @app.get("/users/me")

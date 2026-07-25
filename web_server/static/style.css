@@ -102,6 +102,7 @@
 }
 
 .station_card_content {
+    padding-top: 70px;
     padding-left: 25px;
 }
 .station_card h2,
@@ -115,7 +116,7 @@
     text-decoration: none;
     position: absolute;
     left: 0%;
-    top: 40%;
+    top: 40px;
 }
 
 /* Main Page */
@@ -687,6 +688,233 @@
     color: white;
     text-decoration: none;
     border-radius: 4px;
+}
+
+/* Graphs */
+
+.graph_page {
+    padding-top: 210px;
+    padding-bottom: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+.graph_container {
+    width: min(1100px, 92%);
+}
+
+.graph_title {
+    margin: 0 0 8px 0;
+    font-size: 34px;
+    color: #333;
+}
+
+.graph_subtitle {
+    margin: 0 0 22px 0;
+    font-size: 17px;
+    color: #444;
+}
+
+.graph_form_card,
+.graph_preview_card {
+    background: white;
+    border: 3px solid #d3cfcf;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    margin-bottom: 22px;
+}
+
+.graph_form_row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.graph_label {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+}
+
+.graph_input,
+.graph_select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 2px solid #d3cfcf;
+    border-radius: 10px;
+    background: white;
+    color: #333;
+    box-sizing: border-box;
+}
+
+.graph_input:focus,
+.graph_select:focus {
+    outline: none;
+    border-color: #005baa;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
+}
+
+.graph_checkbox_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 12px 18px;
+    margin-top: 6px;
+}
+
+.graph_checkbox_item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 2px solid #d3cfcf;
+    border-radius: 12px;
+    background-color: white;
+    transition: border-color 0.2s ease, transform 0.2s ease
+}
+
+.graph_checkbox_item:hover {
+    border-color: #005baa;
+    transform: translateY(-1px)
+}
+
+.graph_checkbox_input {
+    width: 18px;
+    height: 18px;
+    accent-color: #005baa;
+    flex-shrink: 0;
+}
+
+.graph_button_row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.graph_checkbox_label {
+    font-size: 15px;
+    color: black;
+    cursor: pointer;
+}
+
+.graph_submit_button,
+.graph_clear_button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    background-color: #005baa;
+    border: none;
+    border-radius: 10px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.graph_item {
+    justify-content: center;
+}
+
+.graph_submit_button {
+    color: white;
+    background-color: #005baa;
+}
+
+.graph_submit_button:hover {
+    background-color: #00498a;
+    transform: translateY(-2px);
+}
+
+.graph_clear_button {
+    color: white;
+    background-color: #d63c45;
+}
+
+.graph_clear_button:hover {
+    background-color: #b00020;
+    transform: translateY(-2px);
+}
+
+.graph_preview_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.graph_preview_title {
+    margin: 0 0 14px 0;
+    font-size: 24px;
+    color: #333;
+}
+
+.graph_image_wrap {
+    display: wrap;
+    justify-content: center;
+    overflow-x: auto
+}
+
+.graph_image {
+    width: 100%;
+    max-width: 1000px;
+    display: block;
+    background: white;
+}
+
+.graph_border {
+    border: 3px solid #d3cfcf;
+    border-radius: 16px;
+}
+
+@media (max-width: 900px) {
+    .graph_form_split {
+        grid-template-columns: 1fr;
+    }
+
+    .graph_checkbox_grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.graph_preset_row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.graph_preset_button {
+    padding: 10px 14px;
+    font-size: 15px;
+    font-weight: 700;
+    color: black;
+    background: white;
+    border: 3px solid #d3cfcf;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.graph_preset_button:hover {
+    background: #005baa;
+    color: white;
+    transform: translateY(-2px)
+}
+
+.graph_preset_clear {
+    color: #d63c45;
+    border-color: #d63c45;
+}
+
+.graph_preset_color:hover {
+    background-color: #d63c45;
+    color: white;
 }
 
 /* 404 Page */
