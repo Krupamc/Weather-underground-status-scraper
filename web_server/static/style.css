@@ -698,8 +698,54 @@
 
 /* Graphs */
 
+.graph_bar {
+    position: fixed;
+    top: 175px;
+    padding-bottom: 14px;
+    left: 0%;
+    justify-content: center;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    z-index: 1003;
+    background-color: white;
+    border-bottom: 2px solid #d3cfcf;
+}
+
+.graph_nav {
+    display: flex;
+    gap: 14px;
+    align-items: center
+}
+
+.graph_nav_item {
+    text-decoration: none;
+    color: #333;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 12px 22px;
+    border: 3px solid #d3cfcf;
+    border-radius: 12px;
+    background-color: white;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.graph_nav_item:hover {
+    color: white;
+    background-color: #005baa;
+    border-color: #005baa;
+    transform: translateY(-2px);
+}
+
+.graph_nav_item.active {
+    color: white;
+    background-color: #005baa;
+    border-color: #005baa;
+}
+
 .graph_page {
-    padding-top: 210px;
+    padding-top: 275px;
     padding-bottom: 40px;
     display: flex;
     justify-content: center;

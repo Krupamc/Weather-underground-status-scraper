@@ -1,6 +1,15 @@
 {% extends "layout.html" %}
 
 {% block content %}
+    <!-- Menu Bar-->
+    <div class="graph_bar">
+        <nav class="graph_nav">
+                <a href="/graph" class="graph_nav_item {% if active_page == 'graph' %}active{% endif %}">GRAPHING</a>
+                <a href="/graph/analysis" class="graph_nav_item {% if active_page == 'analysis' %}active{% endif %}">ANALYSIS</a>
+        </nav>
+    </div>
+
+    <!-- Graph Tab-->
     <div class="graph_page">
         <div class="graph_container">
 
@@ -29,10 +38,41 @@
                     <input type="text" id="title" name="title" class="graph_input" value="{{ selected_title }}" placeholder="Temperature, Wind, Pressure, etc.">
                 </div>
 
-                <!-- Time range -->
+                <!-- Choose Range Method -->
                 <div class="graph_form_row">
-                    <label for="hours" class="graph_label">Past Hours</label>
-                    <input type="number" id="hours" name="hours" class="graph_input" min="1" max="168" value="{{ selected_hours }}">
+                    <label for="range_mode" class="graph_label">Range Mode:</label>
+
+                    <select name="range_mode" id="range_mode" class="graph_select" onchange="toggleRangeMode()">
+                        <option value="relative" {% if selected_range_mode == "relative" %}selected{% endif %}>Relative Range</option>
+                        <option value="dates" {% if selected_range_mode == "dates"%}selected{% endif %}>Date Range</option>
+                    </select>
+                </div>
+
+                <!-- Time range (relative range) -->
+                <div id="relative_range_group" class="graph_form_row">
+                    <label class="graph_label">Relative Range:</label>
+                    
+                    <!-- Input -->
+                    <div class="graph_range_row">
+                        <input type="number" id="range_value" name="range_value" class="graph_input" min="1" max="365" value="{{ selected_range_value or 24 }}">
+
+                        <select name="range_unit" id="range_unit" class="graph_select">
+                            <option value="hours" {% if selected_range_unit == "hours" %}selected{% endif %}>Hours</option>
+                            <option value="days" {% if selected_range_unit == "days" %}selected{% endif %}>Days</option>
+                            <option value="weeks" {% if selected_range_unit == "weeks" %}selected{% endif %}>Weeks</option>
+                            <option value="months" {% if selected_range_unit == "months" %}selected{% endif %}>Months</option>
+                            <option value="years" {% if selected_range_unit == "years" %}selected{% endif %}>Years</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Date Range -->
+                <div id="date_range_group" class="graph_form_row">
+                    <label class="graph_label">Date Range:</label>
+                    <div class="graph_range_row">
+                        <input type="date" id="start_date" name="start_date" class="graph_input" value="{{ selected_start_date or '' }}">
+                        <input type="date" id="end_date" name="end_date" class="graph_input" value="{{ selected_end_date or '' }}">
+                    </div>
                 </div>
 
                 <!-- Units -->
@@ -106,8 +146,10 @@
         </div>
     </div>
 
-<!-- presets -->
+<!-- JS -->
     <script>
+
+/* Preset */
 function applyPreset(presetName) {
     const presetMap = {
         temperature: ["temp", "dewpoint", "humidity"],
@@ -140,6 +182,50 @@ function applyPreset(presetName) {
         titleInput.value = titleMap[presetName] || "";
     }
 }
+
+/* Range Mode */
+function toggleRangeMode() {
+    const mode = document.getElementById("range_mode").value;
+
+    const relativeGroup = document.getElementById("relative_range_group");
+    const dateGroup = document.getElementById("date_range_group");
+
+    const rangeValue = document.getElementById("range_value");
+    const rangeUnit = document.getElementById("range_unit");
+    const startDate = document.getElementById("start_date");
+    const endDate = document.getElementById("end_date");
+
+    if (mode === "relative") {
+        relativeGroup.style.display = "flex";
+        relativeGroup.style.flexDirection = "column";
+        dateGroup.style.display = "none";
+
+        rangeValue.disabled = false;
+        rangeUnit.disabled = false;
+        startDate.disabled = true;
+        endDate.disabled = true;
+    } else {
+        relativeGroup.style.display = "none";
+        dateGroup.style.display = "flex";
+        dateGroup.style.flexDirection = "column";
+
+        rangeValue.disabled = true;
+        rangeUnit.disabled = true;
+        startDate.disabled = false;
+        endDate.disabled = false;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    toggleRangeMode();
+
+    const startDate = document.getElementById("start_date");
+    const endDate = document.getElementById("end_date");
+
+    startDate.addEventListener("change", function () {
+        endDate.min = startDate.value;
+    });
+});
 </script>
 
 {% endblock %}

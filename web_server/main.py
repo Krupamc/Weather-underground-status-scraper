@@ -637,7 +637,7 @@ def owner_station(request: Request, session: db.SessionDep, station_id: str, req
 
 # Graph page
 @app.get("/graph", response_class=HTMLResponse)
-def graph_page(request: Request, session: db.SessionDep, station_id: str="", variables: Annotated[list[str] | None, Query()] = None, units: str="imperial", title: str="", hours: int=24):
+def graph_page(request: Request, session: db.SessionDep, station_id: str="", variables: Annotated[list[str] | None, Query()] = None, units: str="imperial", title: str="", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
     # Open stations
     stations = session.exec(select(m.Station).where(m.Station.is_public == True).order_by(m.Station.station_name)).all()
 
@@ -655,25 +655,88 @@ def graph_page(request: Request, session: db.SessionDep, station_id: str="", var
             params.append(f"variables={var}") # All variables
         params.append(f"units={units}")
         params.append(f"title={title}")
-        params.append(f"hours={hours}")
         params.append(f"fig_width=10")
         params.append(f"fig_height=5")
+        params.append(f"range_mode={range_mode}")
+
+        if range_mode == "relative":
+            params.append(f"range_value={range_value}")
+            params.append(f"range_unit={range_unit}")
+
+        elif range_mode == "dates":
+            if start_date:
+                params.append(f"start_date={start_date}")
+
+            if end_date:
+                params.append(f"end_date={end_date}")
+        
         query_string = "&".join(params)
 
         graph_url = f"/graph/weather/{station_id}?{query_string}"
         csv_url = f"/graph/weather/{station_id}/csv?{query_string}"
 
-    return templates.TemplateResponse(request, "graph.html", context={"request": request, "title": "Graphing and Analysis", "active_page": "graph", "selected_title": title, "selected_station": station_id, "selected_units": units, "selected_variables": selected_variables, "stations": stations, "selected_hours": hours, "graph_url": graph_url, "csv_url": csv_url})
+    return templates.TemplateResponse(request, "graph.html", context={"request": request, "title": "Graphing and Analysis", "active_page": "graph", "selected_title": title, "selected_station": station_id, "selected_units": units, "selected_variables": selected_variables, "stations": stations, "selected_range_mode": range_mode, "selected_range_value": range_value, "selected_range_unit": range_unit, "selected_start_date": start_date, "selected_end_date": end_date, "graph_url": graph_url, "csv_url": csv_url})
 
 # Graph data and return as memory
 @app.get("/graph/weather/{station_id}")
-def graph_variables(station_id: str, variables: Annotated[list[str], Query()], session: db.SessionDep, units: str="imperial", title: str="", hours: int=24, fig_width: int=6, fig_height: int=3):
-    print("kijnjoweoj")
-    # Graph by last 24 hrs
-    cutoff = datetime.now(pytz.UTC) - timedelta(hours=hours)
+def graph_variables(station_id: str, variables: Annotated[list[str], Query()], session: db.SessionDep, units: str="imperial", title: str="", range_mode: str = "relative", range_value: int | None = 24, range_unit: str | None = "hours", start_date: str | None = None, end_date: str | None = None, fig_width: int=6, fig_height: int=3):
+
+    # Relative Mode
+    if range_mode == "relative":
+        if not range_value or not range_unit:
+            raise HTTPException(status_code=400, detail="Range Value must at least be 1")
+
+
+        allowed_units = {"hours", "days", "weeks", "months", "years"}
+        if range_unit not in allowed_units:
+            raise HTTPException(status_code=400, detail="Must be valid unit")
+
+        now = datetime.now(pytz.UTC)
+
+        # Graph by last 24 hrs
+        if range_unit == "hours":
+            cutoff_start = now - timedelta(hours=range_value)
+            range_unit = "hour(s)"
+
+        elif range_unit == "days":
+            cutoff_start = now - timedelta(days=range_value)
+            range_unit = "day(s)"
+
+        elif range_unit == "weeks":
+            cutoff_start = now - timedelta(weeks=range_value)
+            range_unit = "week(s)"
+
+        elif range_unit == "months":
+            cutoff_start = now - timedelta(days = 30 * range_value)
+            range_unit = "month(s)"
+
+        elif range_unit == "years":
+            cutoff_start = now - timedelta(days = 365 * range_value)
+            range_unit = "year(s)"
+
+        cutoff_end = now
+
+    # Date Mode
+    elif range_mode == "dates":
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="Start date and end date are required")
+
+        start_naive = datetime.strptime(start_date, "%Y-%m-%d")
+        end_naive = datetime.strptime(end_date, "%Y-%m-%d")
+
+        if end_naive < start_naive:
+            raise HTTPException(status_code=400, detail="End date must be after start date")
+
+        eastern = pytz.timezone(cfg.timezone)
+        cutoff_start = eastern.localize(start_naive).astimezone(pytz.UTC)
+        cutoff_end = eastern.localize(end_naive.replace(hour=23, minute=59, second=59)).astimezone(pytz.UTC)
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid Range Mode")
+    
 
     # Get last 24 hr of data
-    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff).order_by(m.WeatherHistory.observed_at)).all()
+    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
 
     if not weather:
         raise HTTPException(status_code=404, detail="No Weather History Found")
@@ -700,17 +763,17 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
     # Units
     if units == "metric":
         labels = {
-            "temp": " °C",
-            "dewpoint": " °C",
+            "temp": "°C",
+            "dewpoint": "°C",
             "humidity": "%",
-            "pressure": " hPa",
-            "wind_speed": " knots",
-            "wind_gust": " knots",
+            "pressure": "hPa",
+            "wind_speed": "knots",
+            "wind_gust": "knots",
             "wind_dir": "°",
-            "precip_rate": " mm/hr",
-            "precip_accum": " mm",
+            "precip_rate": "mm/hr",
+            "precip_accum": "mm",
             "uv": "",
-            "solar": " watts/m²"
+            "solar": "watts/m²"
         }
 
     else:
@@ -775,8 +838,15 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
     for i, var in enumerate(series):
         ax.plot(series[var]["x"], series[var]["y"], marker="o", linewidth=2, markersize=3, color=colors[i % len(colors)], label=f"{allowed[var]} ({labels[var]})" if labels[var] else allowed[var])
 
+    # Mode title
+    if range_mode == "relative":
+        range_title = (f"(Past {range_value} {range_unit})")
+
+    else:
+        range_title = (f"{start_date} to {end_date}")
+
     # Titles
-    ax.set_title(f"{station_id} {title} (Past {hours} hours)", fontsize=16)
+    ax.set_title(f"{station_id} {title} {range_title}", fontsize=16)
     ax.set_xlabel("Time", fontsize=13)
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
@@ -791,7 +861,7 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
     buf.seek(0)
 
     # Download link
-    filename = f"{station_id}_{title or 'graph'}_(Past_{hours}_hours).png"
+    filename = f"{station_id}_{title or 'graph'}_{range_title}.png"
     safe_name = filename.replace(" ", "_")
 
     headers = {"Content-Disposition": f'attachment; filename="{safe_name}"'}
