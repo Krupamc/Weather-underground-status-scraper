@@ -1,0 +1,278 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<!-- Sub-nav Bar -->
+<div class="graph_bar">
+    <nav class="graph_nav">
+        <a href="/graph" class="graph_nav_item {% if active_page == 'graph' %}active{% endif %}">GRAPHING</a>
+        <a href="/graph/analysis" class="graph_nav_item {% if active_page == 'analysis' %}active{% endif %}">ANALYSIS</a>
+    </nav>
+</div>
+
+<div class="analysis_page">
+    <div class="analysis_container">
+        <!-- Info -->
+        <h1 class="graph_title">Station Analysis</h1>
+        <p class="graph_subtitle">Choose a station, variable, units, and time range to generate statistics.</p>
+
+        <!-- Info submit -->
+        <form method="get" action="/graph/analysis" class="graph_form_card">
+            
+            <!-- Choose Station-->
+            <div class="graph_form_row">
+                <label for="station_id" class="graph_label">Station:</label>
+                <select name="station_id" id="station_id" class="graph_select">
+                    <option value="">Choose a station:</option>
+                    {% for station in stations %}
+                    <option value="{{ station.station_id }}"{% if selected_station == station.station_id %}selected{% endif %}>{{ station.station_id }} - {{ station.station_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Variable-->
+            <div class="graph_form_row">
+                <label for="variable" class="graph_label">Variable:</label>
+                <select name="variable" id="variable" class="graph_select">
+                    <option value="">Choose a Variable</option>
+                    {% for key, label in allowed_variables.items() %}
+                    <option value="{{ key }}"{% if selected_variable == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Range Mode -->
+            <div class="graph_form_row">
+                <label for="range_mode" class="graph_label">Range Mode:</label>
+                <select name="range_mode" id="range_mode" class="graph_select" onchange="toggleRangeMode()">
+                    <option value="relative" {% if selected_range_mode == "relative" %}selected{% endif %}>Relative Range</option>
+                    <option value="dates" {% if selected_range_mode == "dates" %}selected{% endif %}>Date Range</option>
+                </select>
+            </div>
+
+            <!-- Relative Range -->
+            <div id="relative_range_group" class="graph_form_row">
+                <label class="graph_label">Relative Range:</label>
+                <div class="graph_range_row">
+                    <!-- Number -->
+                    <input type="number" id="range_value" name="range_value" class="graph_input" min="1" max="365" value="{{ selected_range_value or 24}}">
+
+                    <!-- Unit -->
+                    <select name="range_unit" id="range_unit" class="graph_select">
+                        <option value="hours" {% if selected_range_unit == "hours" %}selected{% endif %}>Hours</option>
+                        <option value="days" {% if selected_range_unit == "days" %}selected{% endif %}>Days</option>
+                        <option value="weeks" {% if selected_range_unit == "weeks" %}selected{% endif %}>Weeks</option>
+                        <option value="months" {% if selected_range_unit == "months" %}selected{% endif %}>Months</option>
+                        <option value="years" {% if selected_range_unit == "years" %}selected{% endif %}>Years</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Date Range -->
+            <div id="date_range_group" class="graph_form_row">
+                <label class="graph_label">Date Range:</label>
+                <div class="graph_range_row">
+                    <!-- Start -->
+                    <input type="date" id="start_date" name="start_date" class="graph_input" value="{{ selected_start_date or '' }}">
+
+                    <!-- End -->
+                    <input type="date" id="end_date" name="end_date" class="graph_input" value="{{ selected_end_date or '' }}">
+                </div>
+            </div>
+
+            <!-- Units -->
+            <div class="graph_form_row">
+                <label for="units" class="graph_label">Units:</label>
+                <select name="units" id="units" class="graph_select">
+                    <!-- Imperial-->
+                    <option value="imperial" {% if selected_units == "imperial" %}selected{% endif %}>Imperial</option>
+
+                    <!-- Metric -->
+                    <option value="metric" {% if selected_units == "metric" %}selected{% endif %}>Metric</option>
+                </select>
+            </div>
+
+            <!-- Submit -->
+            <div class="analysis_button_row">
+                <!-- Submit -->
+                <button type="submit" class="graph_submit_button">Analyze</button>
+            </div>
+
+        </form>
+
+        <!-- Stats -->
+        {% if latest_value is defined %}
+        <div class="analysis_summary_card">
+            <div class="analysis_summary_header">
+                <h2 class="analysis_section_title">{{ variable_label }}</h2>
+                <p class="analysis_section_subtitle">{{ range_title }}</p>
+            </div>
+
+            <div class="analysis_stats_grid">
+                <!-- Latest Value -->
+                <div class="analysis_stat_card">
+                    <div class="analysis_stat_label">Latest:</div>
+                    <div class="analysis_stat_value">{{ latest_value }} {{ unit_label }}</div>
+                    <div class="analysis_stat_meta">{{ latest_time.date }}: {{ latest_time.time }}</div>
+                </div>
+
+                <!-- Latest Minimum -->
+                <div class="analysis_stat_card">
+                    <div class="analysis_stat_label">Minimum:</div>
+                    <div class="analysis_stat_value">{{ min_value }} {{ unit_label }}</div>
+                    <div class="analysis_stat_meta">{{ min_time.date }}: {{ min_time.time }}</div>
+                </div>
+
+                <!-- Latest Maximum -->
+                <div class="analysis_stat_card">
+                    <div class="analysis_stat_label">Maximum:</div>
+                    <div class="analysis_stat_value">{{ max_value }} {{ unit_label }}</div>
+                    <div class="analysis_stat_meta">{{ max_time.date }}: {{ max_time.time }}</div>
+                </div>
+
+                <!-- Latest Average -->
+                <div class="analysis_stat_card">
+                    <div class="analysis_stat_label">Mean:</div>
+                    <div class="analysis_stat_value">{{ mean_value }} {{ unit_label }}</div>
+                    <div class="analysis_stat_meta">Average value</div>
+                </div>
+
+                <!-- Median -->
+                <div class="analysis_stat_card">
+                    <div class="analysis_stat_label">Median:</div>
+                    <div class="analysis_stat_value">{{ median_value }}</div>
+                    <div class="analysis_stat_meta">Middle Value of Set</div>
+                </div>
+
+                <!-- Range -->
+                <div class="analysis_stat_card">
+                    <div class="analysis_stat_label">Range:</div>
+                    <div class="analysis_stat_value">{{ value_range }}</div>
+                    <div class="analysis_stat_meta">Max - Min</div>
+                </div>
+
+                <!-- N Value -->
+                <div class="analysis_stat_card">
+                    <div class="analysis_stat_label">Sample Size (n value):</div>
+                    <div class="analysis_stat_value">{{ n_value }}</div>
+                    <div class="analysis_stat_meta">Points analyzed</div>
+                </div>
+
+                <!-- Trends -->
+                <div class="analysis_stat_card">
+                    <div class="analysis_stat_label">Trend:</div>
+                    <div class="analysis_stat_value">
+                        {{ trend_direction }}
+
+                        <!-- Trend Arrow-->
+                        {% if trend_direction == "Rising" %}
+                            <img src="{{ url_for('static', path='/icons/trend_arrow_up.png')}}" class="trend_img">
+                        {% elif trend_direction == "Falling"%}
+                            <img src="{{url_for('static', path='/icons/trend_arrow_up.png')}}" class="trend_img" style="transform: scaleY(-1)">
+                        {% elif trend_direction == "Steady" %}
+                            <img src="{{ url_for('static', path='/icons/trend_arrow_straight.png')}}" class="trend_img">
+                        {% endif %}
+                    </div>
+                    <div class="analysis_stat_meta">Based on first vs last value</div>
+
+                </div>
+
+                <!-- CSV Download -->
+                {% if csv_url %}
+                <a href="{{ csv_url }}" class="graph_submit_button">Download CSV</a>
+                {% endif %}
+                <!-- Clear -->
+                <a href="/graph/analysis" class="graph_clear_button">Clear</a>
+
+            </div>
+        </div>
+
+        <div style="padding: 10px"></div>
+
+        <!-- Coverage Grid -->
+        <div class="analysis_detail_card">
+            <h2 class="analysis_section_title">Coverage:</h2>
+            
+            <div class="analysis_details_grid">
+                <!-- Start Coverage -->
+                <div class="analysis_detail_item">
+                    <span class="analysis_detail_label">Start:</span>
+                    <span class="analysis_detail_value">{{ start_coverage.date }}: {{ start_coverage.time }}</span>
+                </div>
+
+                <!-- End Coverage -->
+                <div class="analysis_detail_item">
+                    <span class="analysis_detail_label">End:</span>
+                    <span class="analysis_detail_value">{{ end_coverage.date }}: {{ end_coverage.time }}</span>
+                </div>
+
+                <!-- Units -->
+                <div class="analysis_detail_item">
+                    <span class="analysis_detail_label">Units:</span>
+                    <span class="analysis_detail_value">{{ selected_units | capitalize }}</span>
+                </div>
+            </div>
+        </div>  
+
+        {% else %}
+        <div class="analysis_empty_card">
+            <h2 class="analysis_section_title">No Analysis Yet</h2>
+            <p class="analysis_empty_text">Select a station, choose a variable, pick a time range and click "Analyze" to view summary statistics</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    /* Change Range Mode */
+    function toggleRangeMode() {
+        const mode = document.getElementById("range_mode").value;
+
+        const relativeGroup = document.getElementById("relative_range_group");
+        const dateGroup = document.getElementById("date_range_group");
+
+        const rangeValue = document.getElementById("range_value");
+        const rangeUnit = document.getElementById("range_unit");
+        const startDate = document.getElementById("start_date");
+        const endDate = document.getElementById("end_date");
+
+        /* Only show widgets based on range mode */
+        if (mode === "relative") {
+        relativeGroup.style.display = "flex";
+        relativeGroup.style.flexDirection = "column";
+        dateGroup.style.display = "none";
+
+        rangeValue.disabled = false;
+        rangeUnit.disabled = false;
+        startDate.disabled = true;
+        endDate.disabled = true;
+        }
+         
+        else {
+        relativeGroup.style.display = "none";
+        dateGroup.style.display = "flex";
+        dateGroup.style.flexDirection = "column";
+
+        rangeValue.disabled = true;
+        rangeUnit.disabled = true;
+        startDate.disabled = false;
+        endDate.disabled = false;
+    }
+}
+
+    /* Listener */
+    document.addEventListener("DOMContentLoaded", function () {
+    toggleRangeMode();
+
+    const startDate = document.getElementById("start_date");
+    const endDate = document.getElementById("end_date");
+
+    if (startDate && endDate) {
+        startDate.addEventListener("change", function () {
+            endDate.min = startDate.value;
+        });
+    }
+});
+</script>
+
+{% endblock %}

@@ -13,7 +13,7 @@ import database as db
 import model as m
 import web_config as cfg
 import security as s
-import jwt
+import pytz, csv, io, jwt, statistics
 from jwt import InvalidTokenError
 from datetime import datetime, timedelta
 import convert_metric as cv
@@ -22,9 +22,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager as fm
 import matplotlib.dates as mdates
-import io
-import pytz
-import csv
+
 
 app = FastAPI(title="SBB Mesonet Notification System")
 
@@ -675,7 +673,7 @@ def graph_page(request: Request, session: db.SessionDep, station_id: str="", var
         graph_url = f"/graph/weather/{station_id}?{query_string}"
         csv_url = f"/graph/weather/{station_id}/csv?{query_string}"
 
-    return templates.TemplateResponse(request, "graph.html", context={"request": request, "title": "Graphing and Analysis", "active_page": "graph", "selected_title": title, "selected_station": station_id, "selected_units": units, "selected_variables": selected_variables, "stations": stations, "selected_range_mode": range_mode, "selected_range_value": range_value, "selected_range_unit": range_unit, "selected_start_date": start_date, "selected_end_date": end_date, "graph_url": graph_url, "csv_url": csv_url})
+    return templates.TemplateResponse(request, "graph.html", context={"request": request, "title": "Graphing", "active_page": "graph", "selected_title": title, "selected_station": station_id, "selected_units": units, "selected_variables": selected_variables, "stations": stations, "selected_range_mode": range_mode, "selected_range_value": range_value, "selected_range_unit": range_unit, "selected_start_date": start_date, "selected_end_date": end_date, "graph_url": graph_url, "csv_url": csv_url})
 
 # Graph data and return as memory
 @app.get("/graph/weather/{station_id}")
@@ -696,23 +694,18 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
         # Graph by last 24 hrs
         if range_unit == "hours":
             cutoff_start = now - timedelta(hours=range_value)
-            range_unit = "hour(s)"
 
         elif range_unit == "days":
             cutoff_start = now - timedelta(days=range_value)
-            range_unit = "day(s)"
 
         elif range_unit == "weeks":
             cutoff_start = now - timedelta(weeks=range_value)
-            range_unit = "week(s)"
 
         elif range_unit == "months":
             cutoff_start = now - timedelta(days = 30 * range_value)
-            range_unit = "month(s)"
 
         elif range_unit == "years":
             cutoff_start = now - timedelta(days = 365 * range_value)
-            range_unit = "year(s)"
 
         cutoff_end = now
 
@@ -727,6 +720,7 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
         if end_naive < start_naive:
             raise HTTPException(status_code=400, detail="End date must be after start date")
 
+        # Turn request into UTC to query db
         eastern = pytz.timezone(cfg.timezone)
         cutoff_start = eastern.localize(start_naive).astimezone(pytz.UTC)
         cutoff_end = eastern.localize(end_naive.replace(hour=23, minute=59, second=59)).astimezone(pytz.UTC)
@@ -735,7 +729,7 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
         raise HTTPException(status_code=400, detail="Invalid Range Mode")
     
 
-    # Get last 24 hr of data
+    # Get data
     weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
 
     if not weather:
@@ -842,12 +836,16 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
     if range_mode == "relative":
         range_title = (f"(Past {range_value} {range_unit})")
 
+        if range_value == 1:
+            range_title = f"Past {range_unit[:-1]}"
+
+
     else:
         range_title = (f"{start_date} to {end_date}")
 
     # Titles
     ax.set_title(f"{station_id} {title} {range_title}", fontsize=16)
-    ax.set_xlabel("Time", fontsize=13)
+    ax.set_xlabel(f"Time ({cfg.time_zone_name})", fontsize=13)
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.margins(x=0.05, y=0.10)
@@ -961,8 +959,312 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
     return Response(content=csv_data, media_type="text/csv", headers=headers)
-        
+
+# Analysis
+
+def build_analysis_stats(session, station_id: str, variable: str, units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
+    allowed = {
+        "temp": "Air Temperature",
+        "dewpoint": "Dew Point",
+        "humidity": "Humidity",
+        "pressure": "Pressure",
+        "wind_speed": "Wind Speed",
+        "wind_gust": "Wind Gust",
+        "wind_dir": "Wind Direction",
+        "precip_rate": "Precipitation Rate",
+        "precip_accum": "Precipitation Accumulation",
+        "uv": "UV Index",
+        "solar": "Solar Radiation"
+    }
+
+    # Check if valid
+    if variable not in allowed:
+        raise HTTPException(status_code=400, detail="Invalid Variable")
+
+    if units == "metric":
+        labels = {
+            "temp": "°C",
+            "dewpoint": "°C",
+            "humidity": "°C",
+            "pressure": "hPa",
+            "wind_speed": "knots",
+            "wind_gust": "knots",
+            "wind_dir": "°",
+            "precip_rate": "mm/hr",
+            "precip_accum": "mm",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
+    else:
+        labels = {
+          "temp": "°F",
+            "dewpoint": "°F",
+            "humidity": "%",
+            "pressure": "inHg",
+            "wind_speed": "mph",
+            "wind_gust": "mph",
+            "wind_dir": "°",
+            "precip_rate": "in/hr",
+            "precip_accum": "in",
+            "uv": "",
+            "solar": "watts/m²",  
+        }
+
+    if range_mode == "relative":
+        # Defaults
+        range_value = range_value or 24
+        range_unit = range_unit or "hours"
+
+        allowed_units = {"hours", "days", "weeks", "months", "years"}
+        if range_unit not in allowed_units:
+            raise HTTPException(status_code=400, detail="Not Valid Relative Unit")
+
+        now = datetime.now(pytz.UTC)
+
+        # Set cutoffs
+        if range_unit == "hours":
+            cutoff_start = now - timedelta(hours=range_value)
+
+        elif range_unit == "days":
+            cutoff_start = now - timedelta(days=range_value)
+
+        elif range_unit == "weeks":
+            cutoff_start = now - timedelta(weeks=range_value)
+
+        elif range_unit == "months":
+            cutoff_start = now - timedelta(days = 30 * range_value)
+
+        else:
+            cutoff_start = now - timedelta(days = 365 * range_value)
+
+        cutoff_end = now
+
+        # Title
+        range_title = f"Past {range_value} {range_unit}"
+        if range_value == 1:
+            range_title = f"Past {range_value} {range_unit[:-1]}"
+
+    elif range_mode == "dates":
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="Start and End Date Required")
+
+        start_naive = datetime.strptime(start_date, "%Y-%m-%d")
+        end_naive = datetime.strptime(end_date, "%Y-%m-%d")
+
+        if end_naive < start_naive:
+            raise HTTPException(status_code=400, detail="End date must be after start date")
+
+        # Turn user inputs to UTC
+        eastern = pytz.timezone(cfg.timezone)
+        cutoff_start = eastern.localize(start_naive).astimezone(pytz.UTC)
+        cutoff_end = eastern.localize(end_naive.replace(hour=23, minute=59, second=59)).astimezone(pytz.UTC)
+
+        range_title = f"{start_date} to {end_date}"
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid Range Mode")
+
+    # Get history
+    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
+
+    x = []
+    y = []
+
+    # Get X/Y
+    for row in weather:
+        value = getattr(row, variable, None)
+        if value is None or row.observed_at is None:
+            continue
+
+        observed_local = m.to_eastern(row.observed_at)
+
+        # Convert
+        if units == "metric":
+            if variable == "pressure":
+                value = cv.inhg_to_hpa(value)
+            elif variable in ["precip_rate", "precip_accum"]:
+                value = cv.in_to_mm(value)
+
+        else:
+            if variable in ["temp", "dewpoint"]:
+                value = cv.c_to_f(value)
+            elif variable in ["wind_speed", "wind_gust"]:
+                value = cv.knots_to_mph(value)
+
+        x.append(observed_local)
+        y.append(value)
+
+    if not y:
+        raise HTTPException(status_code=404, detail="No Data to Analyze")
+
+    # Stats Calc
+    latest_value = y[-1]
+
+    latest_time = x[-1]
+    latest_date, latest_time = get_date_and_time(latest_time)
+    latest_dt = {
+        "date": latest_date,
+        "time": latest_time
+    }
+
+    min_value = min(y)
+    max_value = max(y)
+    mean_value = statistics.mean(y)
+    median_value = statistics.median(y)
+    value_range = max_value - min_value
+    n_value = len(y)
+
+    min_index = y.index(min_value)
+    max_index = y.index(max_value)
+
+    # Min/Max Time
+    min_time = x[min_index]
+    min_date, min_time = get_date_and_time(min_time)
     
+    max_time = x[max_index]
+    max_date, max_time = get_date_and_time(max_time)
+
+    min_dt = {
+        "date": min_date,
+        "time": min_time
+    }
+
+    max_dt = {
+        "date": max_date,
+        "time": max_time
+    }
+
+    # Trends
+    if len(y) >= 2:
+        if y[-1] > y[0]:
+            trend_direction = "Rising"
+        elif y[-1] < y[0]:
+            trend_direction = "Falling"
+        else:
+            trend_direction = "Steady"
+    else:
+        trend_direction = "Insufficent Data"
+
+    # Start/End Converage
+    s_date, s_time = get_date_and_time(x[0])
+    e_date, e_time = get_date_and_time(x[-1])
+
+    start = {
+        "date": s_date,
+        "time": s_time
+    }
+
+    end = {
+        "date": e_date,
+        "time": e_time, 
+    }
+
+    return {
+        "allowed_variables": allowed, "variable_label": allowed[variable], "unit_label": labels[variable], "range_title": range_title, "timestamps": x, "values": y, "latest_value": round(latest_value, 2), "latest_time": latest_dt,
+        "min_value": round(min_value, 2), "min_time": min_dt, "max_value": max_value, "max_time": max_dt, "mean_value": round(mean_value, 2), "median_value": median_value, "value_range": round(value_range, 2), "n_value": n_value, "start_coverage": start, "end_coverage": end, "trend_direction": trend_direction,
+    }
+
+@app.get("/graph/analysis", response_class=HTMLResponse)
+def analysis_page(request: Request, session: db.SessionDep, station_id: str = "", variable: str = "", units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
+
+    #Get Stations
+    stations = session.exec(select(m.Station).where(m.Station.is_public == True).order_by(m.Station.station_name)).all()
+
+    allowed = {
+        "temp": "Air Temperature",
+        "dewpoint": "Dew Point",
+        "humidity": "Humidity",
+        "pressure": "Pressure",
+        "wind_speed": "Wind Speed",
+        "wind_gust": "Wind Gust",
+        "wind_dir": "Wind Direction",
+        "precip_rate": "Precipitation Rate",
+        "precip_accum": "Precipitation Accumulation",
+        "uv": "UV Index",
+        "solar": "Solar Radiation"
+    }
+
+    # Urls
+    stats = None
+    csv_url = None
+
+    if station_id and variable:
+        stats = build_analysis_stats(session=session, station_id=station_id, variable=variable, units=units, range_mode=range_mode, range_value=range_value, range_unit=range_unit, start_date=start_date, end_date=end_date)
+
+        # Add params
+        params = []
+
+        params.append(f"variable={variable}")
+        params.append(f"units={units}")
+        params.append(f"range_mode={range_mode}")
+
+        if range_mode == "relative":
+            params.append(f"range_value={range_value}")
+            params.append(f"range_unit={range_unit}")
+
+        elif range_mode == "dates":
+            if start_date:
+                params.append(f"start_date={start_date}")
+            if end_date:
+                params.append(f"end_date={end_date}")
+
+        query_string = "&".join(params)
+        csv_url = f"/analyze/weather/{station_id}/csv?{query_string}"
+
+    context = {
+        "request": request,
+        "title": "Analysis",
+        "active_page": "analysis",
+        "stations": stations,
+        "allowed_variables": allowed,
+        "selected_station": station_id,
+        "selected_variable": variable,
+        "selected_units": units,
+        "selected_range_mode": range_mode,
+        "selected_range_value": range_value,
+        "selected_range_unit": range_unit,
+        "selected_start_date": start_date,
+        "selected_end_date": end_date,
+        "csv_url": csv_url,
+    }
+
+    if stats:
+        context.update(stats)
+
+    return templates.TemplateResponse(request, "analysis.html", context=context)
+
+@app.get("/analyze/weather/{station_id}/csv")
+def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
+
+    stats = build_analysis_stats(session=session, station_id=station_id, variable=variable, units=units, range_mode=range_mode, range_value=range_value, range_unit=range_unit, start_date=start_date, end_date=end_date)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "station_id", "variable", "unit", "observed_at", "value"
+    ])
+
+    for ts, value in zip(stats["timestamps"], stats["values"]):
+        writer.writerow([
+            station_id, stats["variable_label"], stats["unit_label"], ts.isoformat(), value
+            ])
+
+    csv_data = output.getvalue()
+    output.close()
+
+    if range_mode == "relative":
+        filename = f"{station_id}_{variable}_analysis_{range_value or 24}_{range_unit or 'hours'}.csv"
+
+    else:
+        filename = f"{station_id}_{variable}_analysis_{start_date}_to_{end_date}.csv"
+
+    safe_name = filename.replace(" ", "_")
+
+    headers = {"Content-Disposition": f'attachment; filename="{safe_name}"'}
+
+    return Response(content=csv_data, media_type="text/csv", headers=headers)
 
 #---Maintenance---
 

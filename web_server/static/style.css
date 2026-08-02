@@ -969,6 +969,137 @@
     color: white;
 }
 
+/* Analysis Page */
+.analysis_page {
+    padding-top: 290px;
+    padding-bottom: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+.analysis_container {
+    width: min(1100px, 92%);
+}
+
+.analysis_form_card,
+.analysis_summary_card,
+.analysis_detail_card,
+.analysis_empty_card {
+    background: white;
+    border: 3px solid #d3cfcf;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06)
+}
+
+.analysis_summary_header {
+    margin-bottom: 16px;
+}
+
+.analysis_section_title {
+    margin: 0 0 6px 0;
+    font-size: 24px;
+    color: black;
+}
+
+.analysis_section_subtitle {
+    margin: 0;
+    font-size: 15px;
+    color: #333;
+}
+
+.analysis_stats_grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.analysis_stat_card {
+    border: 2px solid #d3cfcf;
+    border-radius: 14px;
+    padding: 18px;
+    background: white;
+}
+
+.analysis_stat_label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #666;
+}
+
+.analysis_stat_value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.analysis_stat_meta {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.analysis_details_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 14px 20px;
+    margin-top: 16px;
+}
+
+.analysis_detail_item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 2px solid #d3cfcf;
+    border-radius: 12px;
+    padding: 14px 16px;
+    background: white;
+}
+
+.analysis_detail_label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #666;
+}
+
+.analysis_detail_value {
+    font-size: 16px;
+    color: #333;
+    word-break: break-word;
+}
+
+.analysis_empty_text {
+    margin: 8px 0 0 0;
+    font-size: 16px;
+    color: #555;
+    line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+    .analysis_stats_grid {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+
+    .analysis_range_row,
+    .analysis_details_grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .analysis_stats_grid {
+        grid-template-columns: 1fr;
+    }
+}    
+
+.trend_img {
+    padding-bottom: 5px;
+    width: 25px;
+    height: 25px;
+    flex-shrink: 0;
+}
+
 /* 404 Page */
 
 .error_page {
