@@ -960,8 +960,9 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
 
     return Response(content=csv_data, media_type="text/csv", headers=headers)
 
-# Analysis
+#---Analysis---
 
+# Calculations
 def build_analysis_stats(session, station_id: str, variable: str, units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
     allowed = {
         "temp": "Air Temperature",
@@ -1169,6 +1170,7 @@ def build_analysis_stats(session, station_id: str, variable: str, units: str = "
         "min_value": round(min_value, 2), "min_time": min_dt, "min_dt": min_raw.isoformat(), "max_value": max_value, "max_time": max_dt, "max_dt": max_raw.isoformat(), "mean_value": round(mean_value, 2), "median_value": median_value, "value_range": round(value_range, 2), "n_value": n_value, "start_coverage": start_raw.isoformat(), "end_coverage": end_raw.isoformat(), "start_dt": x[0], "end_dt": x[-1], "trend_direction": trend_direction,
     }
 
+# HTML Page
 @app.get("/graph/analysis", response_class=HTMLResponse)
 def analysis_page(request: Request, session: db.SessionDep, station_id: str = "", variable: str = "", units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
 
@@ -1331,8 +1333,74 @@ def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: 
 
     return Response(content=csv_data, media_type="text/csv", headers=headers)
 
-# TESTS
+#---TESTS---
 
+# HTML Page
+@app.get("/graph/test", response_class=HTMLResponse)
+def load_tests(request: Request, session: db.SessionDep, station_id: str = "", variable: str = "", units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str = None, start_date: str | None = None, end_date: str | None = None):
+
+    # Get stations for list
+    stations = session.exec(select(m.Station).where(m.Station.is_public == True).order_by(m.Station.station_name)).all()
+
+    allowed = {
+        "temp": "Air Temperature",
+        "dewpoint": "Dew Point",
+        "humidity": "Humidity",
+        "pressure": "Pressure",
+        "wind_speed": "Wind Speed",
+        "wind_gust": "Wind Gust",
+        "wind_dir": "Wind Direction",
+        "precip_rate": "Precipitation Rate",
+        "precip_accum": "Precipitation Accumulation",
+        "uv": "UV Index",
+        "solar": "Solar Radiation"
+    }
+
+    # Urls
+    stats = None
+    csv_url = None
+
+    if station_id and variable:
+
+        # add params to url
+        params = []
+
+        params.append(f"variable={variable}")
+        params.append(f"units={units}")
+        params.append(f"range_mode={range_mode}")
+
+        if range_mode == "relative":
+            params.append(f"range_value={range_value}")
+            params.append(f"range_unit={range_unit}")
+
+        elif range_mode == "dates":
+            if start_date: 
+                params.append(f"start_date={start_date}")
+            if end_date:
+                params.append(f"end_date={end_date}")
+
+        query_string = "&".join(params)
+        csv_url = f"/test/weather/{station_id}.csv?{query_string}"
+
+    context = {
+        "request": request,
+        "title": "Tests",
+        "active_page": "test",
+        "stations": stations,
+        "allowed_variables": allowed,
+        "selected_station": station_id,
+        "selected_variable": variable,
+        "selected_units": units,
+        "selected_range_mode": range_mode,
+        "selected_range_value": range_value,
+        "selected_range_unit": range_unit,
+        "selected_start_date": start_date,
+        "selected_end_date": end_date,
+        "csv_url": csv_url,
+        "timezone": cfg.time_zone_name
+    }
+
+    return templates.TemplateResponse(request, "testing.html", context=context)
 
 #---Maintenance---
 
