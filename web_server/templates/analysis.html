@@ -65,7 +65,21 @@
                         <option value="months" {% if selected_range_unit == "months" %}selected{% endif %}>Months</option>
                         <option value="years" {% if selected_range_unit == "years" %}selected{% endif %}>Years</option>
                     </select>
+
                 </div>
+
+                <!-- Range Presets-->
+                <div class="graph_form_row">
+                    <label class="graph_label">Range Presets:</label>
+                    <div class="graph_preset_row">
+                        <button type="button" class="graph_preset_button" onclick="applyTimePreset('day')">Past 24 Hours</button>
+                        <button type="button" class="graph_preset_button" onclick="applyTimePreset('week')">Past Week</button>
+                        <button type="button" class="graph_preset_button" onclick="applyTimePreset('month')">Past Month</button>
+                        <button type="button" class="graph_preset_button" onclick="applyTimePreset('sixmonth')">Past 6 Months</button>
+                        <button type="button" class="graph_preset_button" onclick="applyTimePreset('year')">Past Year</button>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Date Range -->
@@ -77,6 +91,18 @@
 
                     <!-- End -->
                     <input type="date" id="end_date" name="end_date" class="graph_input" value="{{ selected_end_date or '' }}">
+                </div>
+
+                <!-- Date Presets-->
+                <div class="graph_form_row">
+                    <label class="graph_label">Date Presets:</label>
+                    <div class="graph_preset_row">
+                        <button type="button" class="graph_preset_button" onclick="applyDatePreset('today')">Today</button>
+                        <button type="button" class="graph_preset_button" onclick="applyDatePreset('week')">Last 7 Days</button>
+                        <button type="button" class="graph_preset_button" onclick="applyDatePreset('month')">Last 30 Days</button>
+                        <button type="button" class="graph_preset_button" onclick="applyDatePreset('sixmonth')">Last 6 Months</button>
+                        <button type="button" class="graph_preset_button" onclick="applyDatePreset('year')">Last Year</button>
+                    </div>
                 </div>
             </div>
 
@@ -113,21 +139,21 @@
                 <div class="analysis_stat_card">
                     <div class="analysis_stat_label">Latest:</div>
                     <div class="analysis_stat_value">{{ latest_value }} {{ unit_label }}</div>
-                    <div class="analysis_stat_meta">{{ latest_time.date }}: {{ latest_time.time }}</div>
+                    <div class="analysis_stat_meta">{{ latest_time.date }}: {{ latest_time.time }} {{ timezone }}</div>
                 </div>
 
                 <!-- Latest Minimum -->
                 <div class="analysis_stat_card">
                     <div class="analysis_stat_label">Minimum:</div>
                     <div class="analysis_stat_value">{{ min_value }} {{ unit_label }}</div>
-                    <div class="analysis_stat_meta">{{ min_time.date }}: {{ min_time.time }}</div>
+                    <div class="analysis_stat_meta">{{ min_time.date }}: {{ min_time.time }} {{ timezone }}</div>
                 </div>
 
                 <!-- Latest Maximum -->
                 <div class="analysis_stat_card">
                     <div class="analysis_stat_label">Maximum:</div>
                     <div class="analysis_stat_value">{{ max_value }} {{ unit_label }}</div>
-                    <div class="analysis_stat_meta">{{ max_time.date }}: {{ max_time.time }}</div>
+                    <div class="analysis_stat_meta">{{ max_time.date }}: {{ max_time.time }} {{ timezone }}</div>
                 </div>
 
                 <!-- Latest Average -->
@@ -140,7 +166,7 @@
                 <!-- Median -->
                 <div class="analysis_stat_card">
                     <div class="analysis_stat_label">Median:</div>
-                    <div class="analysis_stat_value">{{ median_value }}</div>
+                    <div class="analysis_stat_value">{{ median_value }} {{ unit_label }}</div>
                     <div class="analysis_stat_meta">Middle Value of Set</div>
                 </div>
 
@@ -197,13 +223,13 @@
                 <!-- Start Coverage -->
                 <div class="analysis_detail_item">
                     <span class="analysis_detail_label">Start:</span>
-                    <span class="analysis_detail_value">{{ start_coverage.date }}: {{ start_coverage.time }}</span>
+                    <span class="analysis_detail_value">{{ start_coverage.date }}: {{ start_coverage.time }} {{ timezone }}</span>
                 </div>
 
                 <!-- End Coverage -->
                 <div class="analysis_detail_item">
                     <span class="analysis_detail_label">End:</span>
-                    <span class="analysis_detail_value">{{ end_coverage.date }}: {{ end_coverage.time }}</span>
+                    <span class="analysis_detail_value">{{ end_coverage.date }}: {{ end_coverage.time }} {{ timezone }}</span>
                 </div>
 
                 <!-- Units -->
@@ -223,7 +249,77 @@
     </div>
 </div>
 
+<!-- JS -->
 <script>
+    /* Relative Range Time Preset */
+    function applyTimePreset(presetName) {
+        const presetMap = {
+            day: [24, "hours"],
+            week: [7, "days"],
+            month: [1, "months"],
+            sixmonth: [6, "months"],
+            year: [1, "years"]
+
+        };
+
+        /* Select it */
+        const selected = presetMap[presetName] || [];
+        const mode = document.getElementById("range_mode")
+
+        if (mode.value == "relative") {
+            const rangeValue = document.getElementById("range_value");
+            const rangeUnit = document.getElementById("range_unit");
+
+            rangeValue.value = selected[0];
+            rangeUnit.value = selected[1];
+        }
+    }
+
+    /* Sanitise Date as a string */
+    function formatDateForInput(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    /* Date Presets */
+    function applyDatePreset(presetName) {
+        const mode = document.getElementById("range_mode").value;
+
+        /* Values to change */
+        const startDate = document.getElementById("start_date");
+        const endDate = document.getElementById("end_date");
+
+        const today = new Date();
+        const end = new Date(today);
+        const start = new Date(today);
+
+        /* Preset */
+        if (mode === "dates") {
+            if (presetName === "today") {
+                startDate.value = formatDateForInput(today);
+                endDate.value = formatDateForInput(today);
+            } else if (presetName === "week") {
+                start.setDate(today.getDate() - 7);
+                startDate.value = formatDateForInput(start);
+                endDate.value = formatDateForInput(end);
+            } else if (presetName === "month") {
+                start.setMonth(today.getMonth() - 1);
+                startDate.value = formatDateForInput(start);
+                endDate.value = formatDateForInput(end);
+            } else if (presetName === "sixmonth") {
+                start.setMonth(today.getMonth() - 6);
+                startDate.value = formatDateForInput(start);
+                endDate.value = formatDateForInput(end);
+            } else if (presetName === "year") {
+                start.setFullYear(today.getFullYear() - 1);
+                startDate.value = formatDateForInput(start);
+                endDate.value = formatDateForInput(end);
+            }
+        }
+    }
+
     /* Change Range Mode */
     function toggleRangeMode() {
         const mode = document.getElementById("range_mode").value;
@@ -273,6 +369,7 @@
         });
     }
 });
+
 </script>
 
 {% endblock %}

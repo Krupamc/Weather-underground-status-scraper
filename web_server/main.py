@@ -1101,8 +1101,8 @@ def build_analysis_stats(session, station_id: str, variable: str, units: str = "
     # Stats Calc
     latest_value = y[-1]
 
-    latest_time = x[-1]
-    latest_date, latest_time = get_date_and_time(latest_time)
+    latest = x[-1]
+    latest_date, latest_time = get_date_and_time(latest)
     latest_dt = {
         "date": latest_date,
         "time": latest_time
@@ -1119,11 +1119,11 @@ def build_analysis_stats(session, station_id: str, variable: str, units: str = "
     max_index = y.index(max_value)
 
     # Min/Max Time
-    min_time = x[min_index]
-    min_date, min_time = get_date_and_time(min_time)
+    min_raw = x[min_index]
+    min_date, min_time = get_date_and_time(min_raw)
     
-    max_time = x[max_index]
-    max_date, max_time = get_date_and_time(max_time)
+    max_raw = x[max_index]
+    max_date, max_time = get_date_and_time(max_raw)
 
     min_dt = {
         "date": min_date,
@@ -1155,14 +1155,18 @@ def build_analysis_stats(session, station_id: str, variable: str, units: str = "
         "time": s_time
     }
 
+    start_raw = x[0]
+
     end = {
         "date": e_date,
         "time": e_time, 
     }
 
+    end_raw = x[-1]
+
     return {
-        "allowed_variables": allowed, "variable_label": allowed[variable], "unit_label": labels[variable], "range_title": range_title, "timestamps": x, "values": y, "latest_value": round(latest_value, 2), "latest_time": latest_dt,
-        "min_value": round(min_value, 2), "min_time": min_dt, "max_value": max_value, "max_time": max_dt, "mean_value": round(mean_value, 2), "median_value": median_value, "value_range": round(value_range, 2), "n_value": n_value, "start_coverage": start, "end_coverage": end, "trend_direction": trend_direction,
+        "allowed_variables": allowed, "variable_label": allowed[variable], "unit_label": labels[variable], "range_title": range_title, "timestamps": x, "values": y, "latest_value": round(latest_value, 2), "latest_time": latest_dt, "latest_dt": latest.isoformat(),
+        "min_value": round(min_value, 2), "min_time": min_dt, "min_dt": min_raw.isoformat(), "max_value": max_value, "max_time": max_dt, "max_dt": max_raw.isoformat(), "mean_value": round(mean_value, 2), "median_value": median_value, "value_range": round(value_range, 2), "n_value": n_value, "start_coverage": start_raw.isoformat(), "end_coverage": end_raw.isoformat(), "start_dt": x[0], "end_dt": x[-1], "trend_direction": trend_direction,
     }
 
 @app.get("/graph/analysis", response_class=HTMLResponse)
@@ -1227,6 +1231,7 @@ def analysis_page(request: Request, session: db.SessionDep, station_id: str = ""
         "selected_start_date": start_date,
         "selected_end_date": end_date,
         "csv_url": csv_url,
+        "timezone": cfg.time_zone_name
     }
 
     if stats:
@@ -1236,16 +1241,75 @@ def analysis_page(request: Request, session: db.SessionDep, station_id: str = ""
 
 @app.get("/analyze/weather/{station_id}/csv")
 def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
-
+    # Get Data
     stats = build_analysis_stats(session=session, station_id=station_id, variable=variable, units=units, range_mode=range_mode, range_value=range_value, range_unit=range_unit, start_date=start_date, end_date=end_date)
 
     output = io.StringIO()
     writer = csv.writer(output)
 
+    # Write csv Heaers
+
+    # Stats top
     writer.writerow([
-        "station_id", "variable", "unit", "observed_at", "value"
+        "station_id:", "variable:", "unit:", "observed_at:", "value:", "|", "'===", "STATS:", "'===", "|"
     ])
 
+    writer.writerow([
+       "", "", "", "", "", "|", "'===", "'===", "'===", "|"
+    ])
+
+    # Row 1 - Names
+    writer.writerow([
+        "", "", "", "", "", "|", "latest_value:", "minimum:", "maximum:", "|"  
+    ])
+
+    # Row 2 - Variables
+    writer.writerow([
+        "", "", "", "", "", "|", stats["latest_value"], stats["min_value"], stats["max_value"], "|"
+    ]) 
+
+    # Row 3 - Variable times
+    writer.writerow([
+        "", "", "", "", "", "|", stats["latest_dt"], stats["min_dt"], stats["max_dt"], "|"
+    ])
+
+    # Row 4 - Names
+    writer.writerow([
+        "", "", "", "", "", "|", "mean:", "median:", "range:", "|"
+    ])
+
+    # Row 5 - variables
+    writer.writerow([
+        "", "", "", "", "", "|", stats["mean_value"], stats["median_value"], stats["value_range"], "|"
+    ])
+
+    # Row 6 - Names
+    writer.writerow([
+        "", "", "", "", "", "|", "n value:", "trend:", "", "|"
+    ])
+
+    # Row 7 - Variables
+    writer.writerow([
+        "", "", "", "", "", "|", stats["n_value"], stats["trend_direction"], "", "|"
+    ])
+
+    # Row 8 - Names
+    writer.writerow([
+        "", "", "", "", "", "|", "coverage start:", "coverage end:", "", "|", 
+    ])
+
+    # Row 9 - Variables
+    writer.writerow([
+        "", "", "", "", "", "|", stats["start_coverage"], stats["end_coverage"], "", "|"
+    ])
+
+    # Row 10 - End Chart
+    writer.writerow([
+        "", "", "", "", "", "|", "'===", "'===", "'===", "|"
+    ])
+    writer.writerow([""])
+
+    # Write data to csv
     for ts, value in zip(stats["timestamps"], stats["values"]):
         writer.writerow([
             station_id, stats["variable_label"], stats["unit_label"], ts.isoformat(), value
@@ -1254,6 +1318,7 @@ def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: 
     csv_data = output.getvalue()
     output.close()
 
+    # Create titles
     if range_mode == "relative":
         filename = f"{station_id}_{variable}_analysis_{range_value or 24}_{range_unit or 'hours'}.csv"
 
@@ -1265,6 +1330,9 @@ def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: 
     headers = {"Content-Disposition": f'attachment; filename="{safe_name}"'}
 
     return Response(content=csv_data, media_type="text/csv", headers=headers)
+
+# TESTS
+
 
 #---Maintenance---
 
