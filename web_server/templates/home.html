@@ -2,7 +2,18 @@
 
 {% block content %}
     <!-- Load homepage picture -->
-    <img src="{{ url_for('static', path='/icons/main_page.png') }}" alt="Save Barnegat Bay Ecocenter" class="main_page_img">
-
-    <h1>Put stuff here :D</h1>
+    <img src="{{ url_for('static', path='/icons/main_page.png') }}" alt="Jersey Shore Mesonet" class="main_page_img">
+    
+    <div class="main_page">
+        <div class="main_p_container" style="padding-top: 50px">
+            <!-- Keep images and text side-by-side -->
+            <div>
+                <h1 class="text_title">Jersey Shore Mesonet: Precision Weather Tracking for Barnegat Bay</h1>
+                <p class="text_subtitle">When it comes to understanding and preparing for local weather, accurate, up-to-the-minute data is crucial—especially with the rise in severe weather events over the past 20 years. Yet, did you know the nearest official weather station to the Jersey Shore is in Mount Holly? That’s a long way off, which leaves significant data gaps. Fortunately, the Jersey Shore Mesonet is here to bridge those gaps.</p>
+                <p class="text_subtitle">Save Barnegat Bay proudly supports and partners in Dr. Michael Folmer’s Jersey Shore Mesonet Project, an independent, community-driven network of specialized weather stations installed across the Jersey Shore. These stations, hosted by local partners, gather precise data on wind speed, rainfall, and other essential weather conditions to give us a detailed, real-time view of the region’s unique weather patterns.</p>
+                <img src="{{ url_for('static', path='/icons/main_page_1.ong' )}}" alt="Jersey Shore Flooding">
+            </div>
+            <p class="text_subtitle">Dr. Michael Folmer, is a dedicated meteorologist and forecaster for the NWS Ocean Prediction Center, Weather Prediction Center, Tropical Analysis, and the Forecast Branch of the National Hurricane Center. Originally from Toms River, Dr. Folmer initiated this project to enhance local safety and provide his community with critical, localized weather insights that it has been sorely lacking. Each station’s data is meticulously reviewed by Dr. Folmer and then made publicly available, helping residents, boaters, and emergency services stay informed by creating a clearer and more accessible database for our local weather.</p>
+        </div>
+    </div>
 {% endblock %}

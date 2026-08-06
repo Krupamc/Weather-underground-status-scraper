@@ -36,7 +36,7 @@
                 <!-- Type Title -->
                 <div class="graph_form_row">
                     <label for="title" class="graph_label">Graph Title:</label>
-                    <input type="text" id="title" name="title" class="graph_input" value="{{ selected_title }}" placeholder="Temperature, Wind, Pressure, etc.">
+                    <input type="text" id="title" name="title" class="graph_input"  required value="{{ selected_title }}" placeholder="Temperature, Wind, Pressure, etc.">
                 </div>
 
                 <!-- Choose Range Method -->
@@ -65,24 +65,39 @@
                             <option value="years" {% if selected_range_unit == "years" %}selected{% endif %}>Years</option>
                         </select>
                     </div>
+
+                    <!-- Range Presets-->
+                    <div class="graph_form_row">
+                        <label class="graph_label">Range Presets:</label>
+                        <div class="graph_preset_row">
+                            <button type="button" class="graph_preset_button" onclick="applyTimePreset('day')">Past 24 Hours</button>
+                            <button type="button" class="graph_preset_button" onclick="applyTimePreset('week')">Past Week</button>
+                            <button type="button" class="graph_preset_button" onclick="applyTimePreset('month')">Past Month</button>
+                            <button type="button" class="graph_preset_button" onclick="applyTimePreset('sixmonth')">Past 6 Months</button>
+                            <button type="button" class="graph_preset_button" onclick="applyTimePreset('year')">Past Year</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Date Range -->
                 <div id="date_range_group" class="graph_form_row">
                     <label class="graph_label">Date Range:</label>
                     <div class="graph_range_row">
-                        <input type="date" id="start_date" name="start_date" class="graph_input" value="{{ selected_start_date or '' }}">
-                        <input type="date" id="end_date" name="end_date" class="graph_input" value="{{ selected_end_date or '' }}">
+                        <input type="date" id="start_date" name="start_date" class="graph_input"  required value="{{ selected_start_date or '' }}">
+                        <input type="date" id="end_date" name="end_date" class="graph_input" required value="{{ selected_end_date or '' }}">
                     </div>
-                </div>
 
-                <!-- Units -->
-                <div class="graph_form_row">
-                    <label for="units" class="graph_label">Units:</label>
-                    <select name="units" id="units" class="graph_select">
-                        <option value="imperial" {% if selected_units == "imperial" %}selected{% endif %}>Imperial</option>
-                        <option value="metric" {% if selected_units == "metric" %}selected{% endif %}>Metric</option>
-                    </select>
+                    <!-- Date Presets-->
+                    <div class="graph_form_row">
+                        <label class="graph_label">Date Presets:</label>
+                        <div class="graph_preset_row">
+                            <button type="button" class="graph_preset_button" onclick="applyDatePreset('today')">Today</button>
+                            <button type="button" class="graph_preset_button" onclick="applyDatePreset('week')">Last 7 Days</button>
+                            <button type="button" class="graph_preset_button" onclick="applyDatePreset('month')">Last 30 Days</button>
+                            <button type="button" class="graph_preset_button" onclick="applyDatePreset('sixmonth')">Last 6 Months</button>
+                            <button type="button" class="graph_preset_button" onclick="applyDatePreset('year')">Last Year</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Presets -->
@@ -96,6 +111,15 @@
                         <button type="button" class="graph_preset_button" onclick="applyPreset('solar')">Solar</button>
                         <button type="button" class="graph_preset_button" onclick="applyPreset('clear')">Clear</button>
                     </div>
+                </div>
+
+                <!-- Units -->
+                <div class="graph_form_row">
+                    <label for="units" class="graph_label">Units:</label>
+                    <select name="units" id="units" class="graph_select">
+                        <option value="imperial" {% if selected_units == "imperial" %}selected{% endif %}>Imperial</option>
+                        <option value="metric" {% if selected_units == "metric" %}selected{% endif %}>Metric</option>
+                    </select>
                 </div>
 
                 <!-- Variables -->
@@ -185,6 +209,76 @@ function applyPreset(presetName) {
 }
 
 /* Range Mode */
+
+/* Relative Range Time Preset */
+    function applyTimePreset(presetName) {
+        const presetMap = {
+            day: [24, "hours"],
+            week: [7, "days"],
+            month: [1, "months"],
+            sixmonth: [6, "months"],
+            year: [1, "years"]
+
+        };
+
+        /* Select it */
+        const selected = presetMap[presetName] || [];
+        const mode = document.getElementById("range_mode")
+
+        if (mode.value == "relative") {
+            const rangeValue = document.getElementById("range_value");
+            const rangeUnit = document.getElementById("range_unit");
+
+            rangeValue.value = selected[0];
+            rangeUnit.value = selected[1];
+        }
+    }
+
+    /* Sanitise Date as a string */
+    function formatDateForInput(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    /* Date Presets */
+    function applyDatePreset(presetName) {
+        const mode = document.getElementById("range_mode").value;
+
+        /* Values to change */
+        const startDate = document.getElementById("start_date");
+        const endDate = document.getElementById("end_date");
+
+        const today = new Date();
+        const end = new Date(today);
+        const start = new Date(today);
+
+        /* Preset */
+        if (mode === "dates") {
+            if (presetName === "today") {
+                startDate.value = formatDateForInput(today);
+                endDate.value = formatDateForInput(today);
+            } else if (presetName === "week") {
+                start.setDate(today.getDate() - 7);
+                startDate.value = formatDateForInput(start);
+                endDate.value = formatDateForInput(end);
+            } else if (presetName === "month") {
+                start.setMonth(today.getMonth() - 1);
+                startDate.value = formatDateForInput(start);
+                endDate.value = formatDateForInput(end);
+            } else if (presetName === "sixmonth") {
+                start.setMonth(today.getMonth() - 6);
+                startDate.value = formatDateForInput(start);
+                endDate.value = formatDateForInput(end);
+            } else if (presetName === "year") {
+                start.setFullYear(today.getFullYear() - 1);
+                startDate.value = formatDateForInput(start);
+                endDate.value = formatDateForInput(end);
+            }
+        }
+    }
+
 function toggleRangeMode() {
     const mode = document.getElementById("range_mode").value;
 

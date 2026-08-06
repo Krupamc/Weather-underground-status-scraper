@@ -986,7 +986,7 @@ def build_analysis_stats(session, station_id: str, variable: str, units: str = "
         labels = {
             "temp": "°C",
             "dewpoint": "°C",
-            "humidity": "°C",
+            "humidity": "%",
             "pressure": "hPa",
             "wind_speed": "knots",
             "wind_gust": "knots",
@@ -1337,7 +1337,7 @@ def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: 
 
 # HTML Page
 @app.get("/graph/test", response_class=HTMLResponse)
-def load_tests(request: Request, session: db.SessionDep, station_id: str = "", variable: str = "", units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str = None, start_date: str | None = None, end_date: str | None = None):
+def load_tests(request: Request, session: db.SessionDep, station_id: str = "", variable: str = "", units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str = None, start_date: str | None = None, end_date: str | None = None, test: str | None = None, x_variable: str | None = None, y_variable: str | None = None, title: str | None = None):
 
     # Get stations for list
     stations = session.exec(select(m.Station).where(m.Station.is_public == True).order_by(m.Station.station_name)).all()
@@ -1368,6 +1368,7 @@ def load_tests(request: Request, session: db.SessionDep, station_id: str = "", v
         params.append(f"variable={variable}")
         params.append(f"units={units}")
         params.append(f"range_mode={range_mode}")
+        params.append(f"test={test}")
 
         if range_mode == "relative":
             params.append(f"range_value={range_value}")
@@ -1396,6 +1397,7 @@ def load_tests(request: Request, session: db.SessionDep, station_id: str = "", v
         "selected_range_unit": range_unit,
         "selected_start_date": start_date,
         "selected_end_date": end_date,
+        "selected_test": test,
         "csv_url": csv_url,
         "timezone": cfg.time_zone_name
     }
