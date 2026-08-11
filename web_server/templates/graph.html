@@ -10,6 +10,9 @@
         </nav>
     </div>
 
+    <!-- If Graph was made-->
+    
+
     <!-- Graph Tab-->
     <div class="graph_page">
         <div class="graph_container">
@@ -18,7 +21,7 @@
             <p class="graph_subtitle">Select a station, time range, units, and variables to make a graph!</p>
 
             <!-- Get the inputs-->
-            <form method="get" action="/graph" class="graph_form_card">
+            <form method="get" action="/graph" class="graph_form_card" id>
                 <!-- Select Station-->
                 <div class="graph_form_row">
                     <label for="station_id" class="graph_label">Stations:</label>
@@ -157,14 +160,19 @@
             <!-- Graph -->
             {% if graph_url %}
             <div class="graph_preview_card">
-                <h2 class="graph_preview_title">Preview</h2>
-                <img src="{{ graph_url }}" alt="Weather Graph" class="graph_item">
+                <h2 class="graph_preview_title" >Graph Preview:</h2>
+                <img src="{{ graph_url }}" alt="Weather Graph" class="graph_item" >
 
-                <a href="{{ graph_url }}" title="Download Graph" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_hours}}_hours).png" class="graph_submit_button">Download Graph</a>
+                <a href="{{ graph_url }}" title="Download Graph" id="graph" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_hours}}_hours).png" class="graph_submit_button">Download Graph</a>
                 <a href="{{ csv_url }}" title="Download CSV" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_hours}}_hours).csv" class="graph_submit_button">Download Graph CSV</a>
                 <a href="/graph" class="graph_clear_button">Clear Graph</a>
             </div>
 
+            {% else %}
+            <div class="analysis_empty_card">
+                <h2 class="analysis_section_title">No Graph Yet</h2>
+                <p class="analyssi_empty_text">Select a station, choose a variable, pick a time range and click "Graph" to create a graph.</p>
+            </div>
             
             {% endif %}
 
@@ -320,6 +328,15 @@ document.addEventListener("DOMContentLoaded", function () {
     startDate.addEventListener("change", function () {
         endDate.min = startDate.value;
     });
+
+    /* Smooth scroll to the graph on submit */
+    {% if graph_url %}
+    const graphEl = document.getElementById("graph");
+    if (graphEl) {
+        graphEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    {% endif %}
+
 });
 </script>
 

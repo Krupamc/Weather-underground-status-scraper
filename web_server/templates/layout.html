@@ -55,14 +55,22 @@
         
     </head>
     <body>
-        
+        <!-- Broswer title -->
+        <title>
+            {% if title %}
+                {{ title }}
+            {% else %}
+                Jersey Shore Mesonet System
+            {% endif %}
+        </title>
+
         <!-- Red Bar on top with title-->
         <div id="top-red-bar" class="top_red_bar" >
             <span id="top-red-bar-text" class="top_red_bar_text">
                 {% if title %}
-                    SBB Mesonet System - {{ title }}
+                    Jersey Shore Mesonet System - {{ title }}
                 {% else %}
-                    SBB Mesonet System
+                    Jersey Shore Mesonet System
                 {% endif %}
             </span>
         </div>

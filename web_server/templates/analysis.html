@@ -128,8 +128,8 @@
         </form>
 
         <!-- Stats -->
-        {% if latest_value is defined %}
-        <div class="analysis_summary_card">
+        {% if stats %}
+        <div id="stats" class="analysis_summary_card" >
             <div class="analysis_summary_header">
                 <h2 class="analysis_section_title">{{ variable_label }}</h2>
                 <p class="analysis_section_subtitle">{{ range_title }}</p>
@@ -218,19 +218,19 @@
 
         <!-- Coverage Grid -->
         <div class="analysis_detail_card">
-            <h2 class="analysis_section_title">Coverage:</h2>
+            <h2 id="analysis" class="analysis_section_title">Coverage:</h2>
             
             <div class="analysis_details_grid">
                 <!-- Start Coverage -->
                 <div class="analysis_detail_item">
                     <span class="analysis_detail_label">Start:</span>
-                    <span class="analysis_detail_value">{{ start_coverage.date }}: {{ start_coverage.time }} {{ timezone }}</span>
+                    <span class="analysis_detail_value">{{ stats["start_coverage"]["date"] }}: {{ stats["start_coverage"]["time"] }} {{ timezone }}</span>
                 </div>
 
                 <!-- End Coverage -->
                 <div class="analysis_detail_item">
                     <span class="analysis_detail_label">End:</span>
-                    <span class="analysis_detail_value">{{ end_coverage.date }}: {{ end_coverage.time }} {{ timezone }}</span>
+                    <span class="analysis_detail_value">{{ stats["end_coverage"]["date"] }}: {{ stats["end_coverage"]["time"] }} {{ timezone }}</span>
                 </div>
 
                 <!-- Units -->
@@ -369,6 +369,14 @@
             endDate.min = startDate.value;
         });
     }
+
+    /* Smooth scroll to the analysis on submit */
+    {% if stats %}
+    const graphEl = document.getElementById("stats");
+    if (graphEl) {
+        graphEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    {% endif %}
 });
 
 </script>

@@ -200,7 +200,9 @@ def on_startup():
 # Homepage
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse(request, "home.html", {"request": request})
+    with db.Session(db.engine) as session:
+            stations = session.exec(select(m.Station)).all()
+    return templates.TemplateResponse(request, "home.html", {"request": request, "stations": stations, "num_of_stations": len(stations)})
 
 # Manually go to 404 error
 @app.get("/404", response_class=HTMLResponse)
@@ -785,6 +787,43 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
             "solar": "watts/m²"
             }
 
+     # Define Variable Groups
+    unit_groups = {
+        "temp": "temperature",
+        "dewpoint": "temperature",
+        "humidity": "humidity",
+        "pressure": "pressure",
+        "wind_speed": "wind",
+        "wind_gust": "wind",
+        "wind_dir": "direction",
+        "precip_rate": "precipitation",
+        "precip_accum": "precipitation",
+        "uv": "uv",
+        "solar": "solar"
+    }
+
+    # Make Y Label based on units
+    selected_units = {labels[var] for var in variables}
+    selected_groups = {unit_groups[var] for var in variables}
+
+    if len(selected_units) == 1:
+        y_axis_label = next(iter(selected_units)) or "Value"
+    elif len(selected_groups) == 1:
+        family_labels = {
+        "temperature": f"Temperature ({labels[variables[0]]})",
+        "wind": f"Wind ({labels[variables[0]]})",
+        "humidity": "%",
+        "pressure": labels[variables[0]],
+        "direction": "Direction (°)",
+        "precip_rate": labels[variables[0]],
+        "precip_accum": labels[variables[0]],
+        "uv": "UV Index",
+        "solar": "Solar Radiation (watts/m²)",
+    }
+        y_axis_label = family_labels.get(next(iter(selected_groups)), "Value")
+    else:
+        y_axis_label = "(mixed units)"
+
     series = {}
 
     # Variables
@@ -846,6 +885,7 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
     # Titles
     ax.set_title(f"{station_id} {title} {range_title}", fontsize=16)
     ax.set_xlabel(f"Time ({cfg.time_zone_name})", fontsize=13)
+    ax.set_ylabel(y_axis_label, fontsize=13)
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.margins(x=0.05, y=0.10)
@@ -1145,7 +1185,7 @@ def build_analysis_stats(session, station_id: str, variable: str, units: str = "
         else:
             trend_direction = "Steady"
     else:
-        trend_direction = "Insufficent Data"
+        trend_direction = "Insufficient Data"
 
     # Start/End Converage
     s_date, s_time = get_date_and_time(x[0])
@@ -1167,7 +1207,7 @@ def build_analysis_stats(session, station_id: str, variable: str, units: str = "
 
     return {
         "allowed_variables": allowed, "variable_label": allowed[variable], "unit_label": labels[variable], "range_title": range_title, "timestamps": x, "values": y, "latest_value": round(latest_value, 2), "latest_time": latest_dt, "latest_dt": latest.isoformat(),
-        "min_value": round(min_value, 2), "min_time": min_dt, "min_dt": min_raw.isoformat(), "max_value": max_value, "max_time": max_dt, "max_dt": max_raw.isoformat(), "mean_value": round(mean_value, 2), "median_value": median_value, "value_range": round(value_range, 2), "n_value": n_value, "start_coverage": start_raw.isoformat(), "end_coverage": end_raw.isoformat(), "start_dt": x[0], "end_dt": x[-1], "trend_direction": trend_direction,
+        "min_value": round(min_value, 2), "min_time": min_dt, "min_dt": min_raw.isoformat(), "max_value": max_value, "max_time": max_dt, "max_dt": max_raw.isoformat(), "mean_value": round(mean_value, 2), "median_value": median_value, "value_range": round(value_range, 2), "n_value": n_value, "start_coverage": start, "end_coverage": end, "start_dt": x[0], "end_dt": x[-1], "trend_direction": trend_direction,
     }
 
 # HTML Page
@@ -1233,6 +1273,7 @@ def analysis_page(request: Request, session: db.SessionDep, station_id: str = ""
         "selected_start_date": start_date,
         "selected_end_date": end_date,
         "csv_url": csv_url,
+        "stats": stats,
         "timezone": cfg.time_zone_name
     }
 
