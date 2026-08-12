@@ -242,9 +242,9 @@
             <!-- LR -->
             {% if graph_url %}
             <div class="graph_preview_card">
-                <h2 class="graph_preview_title" >Graph Preview:</h2>
+                <h2 class="graph_preview_title" >Linear Regression Graph Preview:</h2>
                 <img src="{{ graph_url }}" alt="Weather Graph" class="graph_item">
-
+                <p></p>
                 <a href="{{ graph_url }}" title="Download Graph" id="graph" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_range_value}}_hours).png" class="graph_submit_button">Download Graph</a>
                 <a href="{{ csv_url }}" title="Download CSV" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_range_hour}}_hours).csv" class="graph_submit_button">Download Graph CSV</a>
                 <a href="/graph/test" class="graph_clear_button">Clear Graph</a>
@@ -255,7 +255,7 @@
             <div class="analysis_summary_card">
                 <!-- Title -->
                 <div class="analysis_summary_header">
-                    <h2 class="analysis_section_title">{{ t_test["variable_label"] }} at {{ t_test["station_a_name"] }} and {{ t_test["station_b_name"] }}:</h2>
+                    <h2 class="analysis_section_title">Independent samples T-Test of {{ t_test["variable_label"] }} at {{ t_test["station_a_name"] }} and {{ t_test["station_b_name"] }}:</h2>
                     <p class="analysis_section_subtitle">{{ range_title }}</p>
                 </div>
 
@@ -271,10 +271,35 @@
                     <div class="analysis_stat_card">
                         <div class="analysis_stat_label">Test Statistic:</div>
                         <div class="analysis_stat_value">{{ t_test["t_stat"] }}</div>
-                        <div class="analysis_stat_meta">Quantifies differences between groups. Distance from zero show differences size.</div>
+                        <div class="analysis_stat_meta">Quantifies differences a group. Distance from zero show differences size.</div>
                     </div>
                 </div>
             </div>
+
+            <!-- Anova -->
+            {% elif anova %}
+                <div class="analysis_summary_card">
+                    <!-- Title -->
+                    <div class="analysis_summary_header">
+                        <h2 class="analysis_summary_header">One-Way Anova of {{ anova["variable_label" ] }} at {{ anova["station_a_name"] }}, {{ anova["station_b_name"] }}, and {{ anova["station_c_name"] }}</h2>
+                        <p class="analysis_section_subtitle">{{ range_title }}</p>
+                    </div>
+
+                    <div class="analysis_stats_grid">
+                        <!-- P Value-->
+                        <div class="analysis_stat_card">
+                            <div class="analysis_stat_label">P-Value:</div>
+                            <div class="analysis_stat_value">{{ anova["p_value"] }}</div>
+                            <div class="analysis_stat_meta">Measures Probability of Significance (Smaller is Better)</div>
+                        </div>
+
+                        <div class="analysis_stat_card">
+                            <div class="analysis_stat_label">F-Statistic:</div>
+                            <div class="analysis_stat_value">{{ anova["f_stat"] }}</div>
+                            <div class="analysis_stat_meta">Quantifies differences between groups. Distance from zero show differences size.</div>
+                        </div>
+                    </div>
+                </div>
 
             {% else %}
             <div class="analysis_empty_card">
