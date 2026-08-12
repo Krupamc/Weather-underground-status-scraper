@@ -8,6 +8,7 @@ from fastapi.exception_handlers import http_exception_handler
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import Annotated
+from scipy import stats
 from sqlmodel import select
 import database as db
 import model as m
@@ -18,6 +19,7 @@ from jwt import InvalidTokenError
 from datetime import datetime, timedelta
 import convert_metric as cv
 import matplotlib
+import numpy as np
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager as fm
@@ -867,20 +869,18 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     colors = ["#005baa", "#d1295b", "#2a9d8f", "#8d5fd3", "#f4a26a", "#FE05E9"]
 
-    # Graph
-    for i, var in enumerate(series):
-        ax.plot(series[var]["x"], series[var]["y"], marker="o", linewidth=2, markersize=3, color=colors[i % len(colors)], label=f"{allowed[var]} ({labels[var]})" if labels[var] else allowed[var])
-
     # Mode title
     if range_mode == "relative":
         range_title = (f"(Past {range_value} {range_unit})")
 
         if range_value == 1:
             range_title = f"Past {range_unit[:-1]}"
-
-
     else:
         range_title = (f"{start_date} to {end_date}")
+
+    # Graph
+    for i, var in enumerate(series):
+        ax.plot(series[var]["x"], series[var]["y"], marker="o", linewidth=2, markersize=3, color=colors[i % len(colors)], label=f"{allowed[var]} ({labels[var]})" if labels[var] else allowed[var])
 
     # Titles
     ax.set_title(f"{station_id} {title} {range_title}", fontsize=16)
@@ -893,6 +893,7 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
     fig.autofmt_xdate(rotation=30)
     plt.tight_layout()
     plt.subplots_adjust(top=0.80)
+    
     buf = io.BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
     plt.close(fig)
@@ -1378,10 +1379,11 @@ def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: 
 
 # HTML Page
 @app.get("/graph/test", response_class=HTMLResponse)
-def load_tests(request: Request, session: db.SessionDep, station_id: str = "", variable: str = "", units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str = None, start_date: str | None = None, end_date: str | None = None, test: str | None = None, x_variable: str | None = None, y_variable: str | None = None, title: str | None = None):
+def load_tests(request: Request, session: db.SessionDep, station_id: str = "", variable: str = "", units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str = None, start_date: str | None = None, end_date: str | None = None, test: str | None = None, x_variable: str | None = None, y_variable: str | None = None, title: str | None = None, station_id_a: str | None = None, station_id_b: str | None = None, station_id_c: str | None = None):
 
     # Get stations for list
     stations = session.exec(select(m.Station).where(m.Station.is_public == True).order_by(m.Station.station_name)).all()
+    stations_map = {station.station_id : station.station_name for station in stations}
 
     allowed = {
         "temp": "Air Temperature",
@@ -1398,31 +1400,85 @@ def load_tests(request: Request, session: db.SessionDep, station_id: str = "", v
     }
 
     # Urls
-    stats = None
+    t_test = None
     csv_url = None
+    graph_url = None
 
-    if station_id and variable:
+    params = []
 
-        # add params to url
-        params = []
-
-        params.append(f"variable={variable}")
-        params.append(f"units={units}")
-        params.append(f"range_mode={range_mode}")
-        params.append(f"test={test}")
+    # Add Params and create urls
+    if test == "linear_regression" and station_id and x_variable and y_variable:
+        params = [
+            f"test={test}",
+            f"station_id={station_id}",
+            f"x_variable={x_variable}",
+            f"y_variable={y_variable}",
+            f"units={units}",
+            f"title={title or ''}",
+            f"range_mode={range_mode}",
+        ]
 
         if range_mode == "relative":
-            params.append(f"range_value={range_value}")
-            params.append(f"range_unit={range_unit}")
-
-        elif range_mode == "dates":
-            if start_date: 
+            params.append(f"range_value={range_value or 24}")
+            params.append(f"range_unit={range_unit or 'hours'}")
+        else:
+            if start_date:
                 params.append(f"start_date={start_date}")
             if end_date:
                 params.append(f"end_date={end_date}")
 
-        query_string = "&".join(params)
-        csv_url = f"/test/weather/{station_id}.csv?{query_string}"
+        csv_url = f"/test/weather/csv?{'&'.join(params)}"
+        graph_url = f"/graph/lr/weather/{station_id}?{'&'.join(params)}"
+
+    elif test == "t_test" and variable and station_id_a and station_id_b:
+
+        t_test = run_t_test(session, units=units, range_mode=range_mode, range_value=range_value, range_unit=range_unit, start_date=start_date, end_date=end_date, station_a=station_id_a, station_b=station_id_b, variable=variable)
+        t_test["variable_label"] = allowed.get(variable, variable)
+        t_test["station_a_name"] = station_name_map.get
+    
+        params = [
+            f"test={test}",
+            f"variable={variable}",
+            f"station_id_a={station_id_a}",
+            f"station_id_b={station_id_b}",
+            f"units={units}",
+            f"range_mode={range_mode}",
+        ]
+
+        if range_mode == "relative":
+            params.append(f"range_value={range_value or 24}")
+            params.append(f"range_unit={range_unit or 'hours'}")
+        else:
+            if start_date:
+                params.append(f"start_date={start_date}")
+            if end_date:
+                params.append(f"end_date={end_date}")
+
+        csv_url = f"/test/weather/csv?{'&'.join(params)}"
+
+    elif test == "anova" and variable and station_id_a and station_id_b and station_id_c:
+        params = [
+            f"test={test}",
+            f"variable={variable}",
+            f"station_id_a={station_id_a}",
+            f"station_id_b={station_id_b}",
+            f"station_id_c={station_id_c}",
+            f"units={units}",
+            f"range_mode={range_mode}",
+        ]
+
+        if range_mode == "relative":
+            params.append(f"range_value={range_value or 24}")
+            params.append(f"range_unit={range_unit or 'hours'}")
+        else:
+            if start_date:
+                params.append(f"start_date={start_date}")
+            if end_date:
+                params.append(f"end_date={end_date}")
+
+        csv_url = f"/test/weather/csv?{'&'.join(params)}"
+
+
 
     context = {
         "request": request,
@@ -1431,8 +1487,14 @@ def load_tests(request: Request, session: db.SessionDep, station_id: str = "", v
         "stations": stations,
         "allowed_variables": allowed,
         "selected_station": station_id,
+        "selected_station_a": station_id_a,
+        "selected_station_b": station_id_b,
+        "selected_station_c": station_id_c,
         "selected_variable": variable,
+        "selected_x_variable": x_variable,
+        "selected_y_variable": y_variable,
         "selected_units": units,
+        "selected_title": title,
         "selected_range_mode": range_mode,
         "selected_range_value": range_value,
         "selected_range_unit": range_unit,
@@ -1440,10 +1502,401 @@ def load_tests(request: Request, session: db.SessionDep, station_id: str = "", v
         "selected_end_date": end_date,
         "selected_test": test,
         "csv_url": csv_url,
+        "graph_url": graph_url,
+        "t_test": t_test,
         "timezone": cfg.time_zone_name
     }
 
     return templates.TemplateResponse(request, "testing.html", context=context)
+
+@app.get("/graph/lr/weather/{station_id}")
+def linear_regression(session: db.SessionDep, station_id: str, x_variable: str, y_variable: str, units: str="imperial", title: str="", range_mode: str = "relative", range_value: int | None = 24, range_unit: str | None = "hours", start_date: str | None = None, end_date: str | None = None, fig_width: int=6, fig_height: int=3):
+    # Relative Mode
+    if range_mode == "relative":
+        if not range_value or not range_unit:
+            raise HTTPException(status_code=400, detail="Range Value must at least be 1")
+
+
+        allowed_units = {"hours", "days", "weeks", "months", "years"}
+        if range_unit not in allowed_units:
+            raise HTTPException(status_code=400, detail="Must be valid unit")
+
+        now = datetime.now(pytz.UTC)
+
+        # Graph by last 24 hrs
+        if range_unit == "hours":
+            cutoff_start = now - timedelta(hours=range_value)
+
+        elif range_unit == "days":
+            cutoff_start = now - timedelta(days=range_value)
+
+        elif range_unit == "weeks":
+            cutoff_start = now - timedelta(weeks=range_value)
+
+        elif range_unit == "months":
+            cutoff_start = now - timedelta(days = 30 * range_value)
+
+        elif range_unit == "years":
+            cutoff_start = now - timedelta(days = 365 * range_value)
+
+        cutoff_end = now
+
+    # Date Mode
+    elif range_mode == "dates":
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="Start date and end date are required")
+
+        start_naive = datetime.strptime(start_date, "%Y-%m-%d")
+        end_naive = datetime.strptime(end_date, "%Y-%m-%d")
+
+        if end_naive < start_naive:
+            raise HTTPException(status_code=400, detail="End date must be after start date")
+
+        # Turn request into UTC to query db
+        eastern = pytz.timezone(cfg.timezone)
+        cutoff_start = eastern.localize(start_naive).astimezone(pytz.UTC)
+        cutoff_end = eastern.localize(end_naive.replace(hour=23, minute=59, second=59)).astimezone(pytz.UTC)
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid Range Mode")
+    
+
+    # Get data
+    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
+
+    if not weather:
+        raise HTTPException(status_code=404, detail="No Weather History Found")
+
+    # Define allowed variables
+    allowed = {
+        "temp": "Air Temperature",
+        "dewpoint": "Dew Point",
+        "humidity": "Humidity",
+        "pressure": "Pressure",
+        "wind_speed": "Wind Speed",
+        "wind_gust": "Wind Gust",
+        "wind_dir": "Wind Direction",
+        "precip_rate": "Precipitation Rate",
+        "precip_accum": "Precipitation Accumulation",
+        "uv": "UV Index",
+        "solar": "Solar Radiation"
+    }
+
+    if y_variable not in allowed or x_variable not in allowed:
+        raise HTTPException(status_code=400, detail="Invalid Variable")
+
+    # Units
+    if units == "metric":
+        labels = {
+            "temp": "°C",
+            "dewpoint": "°C",
+            "humidity": "%",
+            "pressure": "hPa",
+            "wind_speed": "knots",
+            "wind_gust": "knots",
+            "wind_dir": "°",
+            "precip_rate": "mm/hr",
+            "precip_accum": "mm",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
+    else:
+        labels = {
+            "temp": "°F",
+            "dewpoint": "°F",
+            "humidity": "%",
+            "pressure": "inHg",
+            "wind_speed": "mph",
+            "wind_gust": "mph",
+            "wind_dir": "°",
+            "precip_rate": "in/hr",
+            "precip_accum": "in",
+            "uv": "",
+            "solar": "watts/m²"
+            }
+
+        # Define Variable Groups
+    unit_groups = {
+        "temp": "temperature",
+        "dewpoint": "temperature",
+        "humidity": "humidity",
+        "pressure": "pressure",
+        "wind_speed": "wind",
+        "wind_gust": "wind",
+        "wind_dir": "direction",
+        "precip_rate": "precipitation",
+        "precip_accum": "precipitation",
+        "uv": "uv",
+        "solar": "solar"
+    }
+
+    x = []
+    y = []
+
+    for row in weather:
+        x_value = getattr(row, x_variable, None)
+        if x_value is None or row.observed_at is None:
+            continue
+
+        # Convert to metric
+        if units == "metric":
+            if x_variable in ["pressure"]:
+                x_value = cv.inhg_to_hpa(x_value)
+            elif x_variable in ["precip_rate", "precip_accum"]:
+                x_value = cv.in_to_mm(x_value)
+            
+
+        # Convert to Imperial
+        else:
+            if x_variable in ["temp", "dewpoint"]:
+                x_value = cv.c_to_f(x_value)
+            elif x_variable in ["wind_speed", "wind_gust"]:
+                x_value = cv.knots_to_mph(x_value)
+
+        y_value = getattr(row, y_variable, None)
+        if y_value is None or row.observed_at is None:
+            continue
+        # Convert to metric
+        if units == "metric":
+            if y_variable in ["pressure"]:
+                y_value = cv.inhg_to_hpa(y_value)
+            elif y_variable in ["precip_rate", "precip_accum"]:
+                y_value = cv.in_to_mm(y_value)
+            
+
+        # Convert to Imperial
+        else:
+            if y_variable in ["temp", "dewpoint"]:
+                y_value = cv.c_to_f(y_value)
+            elif y_variable in ["wind_speed", "wind_gust"]:
+                y_value = cv.knots_to_mph(y_value)
+            
+        x.append(x_value)
+        y.append(y_value)
+
+    if not x or not y:
+        raise HTTPException(status_code=404, detail="No Plottable Data Found")
+
+    if len(x) < 2 or len(y) < 2:
+        raise HTTPException(status_code=400, detail="Need at least two data points")
+
+    # Size
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+    # Mode title
+    if range_mode == "relative":
+        range_title = (f"(Past {range_value} {range_unit})")
+
+        if range_value == 1:
+            range_title = f"Past {range_unit[:-1]}"
+    else:
+        range_title = (f"{start_date} to {end_date}")
+
+    # Calc LR
+    slope, intercept = np.polyfit(x, y, 1)
+
+    if len(set(y)) <= 1:
+        r_squared = 0.0
+    else:
+        predicted_y = slope * np.array(x) + intercept
+        ss_residual = np.sum((np.array(y) - predicted_y) ** 2)
+        ss_total = np.sum((np.array(y) - np.mean(y)) ** 2)
+
+        r_squared = 1 - (ss_residual / ss_total)
+
+    # Scatter plot
+    ax.scatter(x, y, color="#005baa", marker="o", linewidth=2, s=3, label=f"{allowed[y_variable]} ({labels[y_variable]}) on {allowed[x_variable]} ({labels[x_variable]})")
+
+    # Slope Line
+    x_line = np.linspace(min(x), max(x), 100)
+    y_line = slope * x_line + intercept
+
+    ax.plot(x_line, y_line, color="#d1295b", label=f"Fit: y = {slope:.2f}x + {intercept:.2f}, R² = {r_squared:.3f}")
+
+    # Titles
+    ax.set_title(f"{station_id} {title or 'Linear Regression'} {range_title}", fontsize=16)
+    ax.set_xlabel(f"{allowed[x_variable]} ({labels[x_variable]})", fontsize=13)
+    ax.set_ylabel(f"{allowed[y_variable]} ({labels[y_variable]})", fontsize=13)
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+    ax.margins(x=0.05, y=0.10)
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.80)
+
+    # Download
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+
+    # Download link
+    filename = f"{station_id}_{title or 'graph'}_{range_title}.png"
+    safe_name = filename.replace(" ", "_")
+
+    headers = {"Content-Disposition": f'attachment; filename="{safe_name}"'}
+
+
+    return Response(content=buf.getvalue(), media_type="image/png", headers=headers)
+
+def run_t_test(session: db.SessionDep, units: str="imperial", range_mode: str = "relative", range_value: int | None = 24, range_unit: str | None = "hours", start_date: str | None = None, end_date: str | None = None, station_a: str | None = None, station_b: str | None = None, variable: str | None = None):
+    # Relative Mode
+    if range_mode == "relative":
+        if not range_value or not range_unit:
+            raise HTTPException(status_code=400, detail="Range Value must at least be 1")
+
+
+        allowed_units = {"hours", "days", "weeks", "months", "years"}
+        if range_unit not in allowed_units:
+            raise HTTPException(status_code=400, detail="Must be valid unit")
+
+        now = datetime.now(pytz.UTC)
+
+        # Graph by last 24 hrs
+        if range_unit == "hours":
+            cutoff_start = now - timedelta(hours=range_value)
+
+        elif range_unit == "days":
+            cutoff_start = now - timedelta(days=range_value)
+
+        elif range_unit == "weeks":
+            cutoff_start = now - timedelta(weeks=range_value)
+
+        elif range_unit == "months":
+            cutoff_start = now - timedelta(days = 30 * range_value)
+
+        elif range_unit == "years":
+            cutoff_start = now - timedelta(days = 365 * range_value)
+
+        cutoff_end = now
+
+    # Date Mode
+    elif range_mode == "dates":
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="Start date and end date are required")
+
+        start_naive = datetime.strptime(start_date, "%Y-%m-%d")
+        end_naive = datetime.strptime(end_date, "%Y-%m-%d")
+
+        if end_naive < start_naive:
+            raise HTTPException(status_code=400, detail="End date must be after start date")
+
+        # Turn request into UTC to query db
+        eastern = pytz.timezone(cfg.timezone)
+        cutoff_start = eastern.localize(start_naive).astimezone(pytz.UTC)
+        cutoff_end = eastern.localize(end_naive.replace(hour=23, minute=59, second=59)).astimezone(pytz.UTC)
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid Range Mode")
+    
+
+    # Get data
+    weather_a = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_a, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
+    weather_b = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_b, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
+    
+
+    if not weather_a or not weather_b:
+        raise HTTPException(status_code=404, detail="No Weather History Found")
+
+    # Define allowed variables
+    allowed = {
+        "temp": "Air Temperature",
+        "dewpoint": "Dew Point",
+        "humidity": "Humidity",
+        "pressure": "Pressure",
+        "wind_speed": "Wind Speed",
+        "wind_gust": "Wind Gust",
+        "wind_dir": "Wind Direction",
+        "precip_rate": "Precipitation Rate",
+        "precip_accum": "Precipitation Accumulation",
+        "uv": "UV Index",
+        "solar": "Solar Radiation"
+    }
+
+    if variable not in allowed:
+        raise HTTPException(status_code=400, detail="Invalid Variable")
+
+    # Units
+    if units == "metric":
+        labels = {
+            "temp": "°C",
+            "dewpoint": "°C",
+            "humidity": "%",
+            "pressure": "hPa",
+            "wind_speed": "knots",
+            "wind_gust": "knots",
+            "wind_dir": "°",
+            "precip_rate": "mm/hr",
+            "precip_accum": "mm",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
+    else:
+        labels = {
+            "temp": "°F",
+            "dewpoint": "°F",
+            "humidity": "%",
+            "pressure": "inHg",
+            "wind_speed": "mph",
+            "wind_gust": "mph",
+            "wind_dir": "°",
+            "precip_rate": "in/hr",
+            "precip_accum": "in",
+            "uv": "",
+            "solar": "watts/m²"
+            }
+
+    
+    values_a = []
+    values_b = []
+
+    # Get Values and convert them
+    for row in weather_a:
+        value = getattr(row, variable, None)
+        if value is None:
+            continue
+
+        if units == "metric":
+            if variable == "pressure":
+                value = cv.inhg_to_hpa(value)
+            elif variable in ["precip_rate", "precip_accum"]:
+                value = cv.in_to_mm(value)
+        else:
+            if variable in ["temp", "dewpoint"]:
+                value = cv.c_to_f(value)
+            elif variable in ["wind_speed", "wind_gust"]:
+                value = cv.knots_to_mph(value)
+
+        values_a.append(value)
+
+    for row in weather_b:
+        value = getattr(row, variable, None)
+        if value is None:
+            continue
+
+        if units == "metric":
+            if variable == "pressure":
+                value = cv.inhg_to_hpa(value)
+            elif variable in ["precip_rate", "precip_accum"]:
+                value = cv.in_to_mm(value)
+        else:
+            if variable in ["temp", "dewpoint"]:
+                value = cv.c_to_f(value)
+            elif variable in ["wind_speed", "wind_gust"]:
+                value = cv.knots_to_mph(value)
+
+        values_b.append(value)
+
+    if len(values_a) < 2 or len(values_b) < 2:
+        raise HTTPException(status_code=400, detail="Need at least two data points in each group")
+
+    result = stats.ttest_ind(values_a, values_b, equal_var=False, nan_policy="omit")
+
+    return {
+        "t_stat": round(result.statistic, 4),
+        "p_value": round(result.pvalue, 4)
+    }
 
 #---Maintenance---
 

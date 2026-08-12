@@ -16,22 +16,145 @@
             
             <!--Page Info-->
             <h1 class="graph_title">Statistical Testing</h1>
-            <p class="graph_subtitle">Choose a test, station, variable, unit, and time range to perform analysis.</p>
+            <p class="graph_subtitle">Choose a test, station, variable, unit, and time range to run a test.</p>
         
             <!-- Form -->
             <form method="get" action="/graph/test" class="graph_form_card">
-
-                    <!-- Select Station -->
+                    <!-- Choose the Test -->
                     <div class="graph_form_row">
-                        <label for="station_id" class="graph_label">Station:</label>
-                        <select name="station_id" id="station_id" class="graph_select">
-                            <option value="">Choose a station:</option>
-                            {% for station in stations %}
-                            <option value="{{ station.station_id }}"{% if selected_station == station.station_id %}selected{% endif %}>{{ station.station_id}} - {{ station.station_name }}</option>
-                            {% endfor %}
+                        <label for="test" class="graph_label">Test:</label>
+
+                        <select name="test" id="test" class="graph_select" onchange="toggleTest()" required>
+                            <option value="">Choose a Test to Perform:</option>
+
+                            <option value="linear_regression" {% if selected_test == "linear_regression" %}selected{% endif %}>Linear Regression - Model the relationship between two variables</option>
+                            <option value="t_test" {% if selected_test == "t_test" %}selected{% endif %}>T-Test (Independent Two Sample) - Compare the means of two groups (same variable)</option>
+                            <option value="anova" {% if selected_test == "anova" %}selected{% endif %}>ANOVA (One-Way) - Compare the means of three or more groups (same variable)</option>
                         </select>
                     </div>
 
+                    <div id="linear_regression_group" class="graph_form_row">
+                        <!-- Select Station -->
+                        <div class="graph_form_row">
+                            <label for="station_id" class="graph_label">Station:</label>
+                            <select name="station_id" id="station_id" class="graph_select">
+                                <option value="">Choose a station:</option>
+                                {% for station in stations %}
+                                <option value="{{ station.station_id }}"{% if selected_station == station.station_id %}selected{% endif %}>{{ station.station_id}} - {{ station.station_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Variables-->
+                        <div class="graph_form_row">
+                            <!-- X -->
+                            <label for="x_variable" class="graph_label">X Variable:</label>
+                            <select name="x_variable" id="x_variable" class="graph_select">
+                                <option value="">Choose a Variable:</option>
+                                {% for key, label in allowed_variables.items() %}
+                                <option value="{{ key }}"{% if selected_x_variable == key %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <!-- y -->
+                            <label for="y_variable" class="graph_label">Y Variable:</label>
+                            <select name="y_variable" id="y_variable" class="graph_select">
+                                <option value="">Choose a Variable:</option>
+                                {% for key, label in allowed_variables.items() %}
+                                <option value="{{ key }}"{% if selected_y_variable == key %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Graph Title-->
+                        <div class="graph_form_row">
+                            <label for="title" class="graph_label">Regression Graph Title:</label>
+                            <input type="text" id="title" name="title" class="graph_input" placeholder="Temperature, Wind, Pressure, etc." value="{{ selected_title or '' }}"> 
+                        </div>
+                        
+                    </div>
+
+                    <div id="t_test_group" class="graph_form_row">
+                        <!-- Variable -->
+                        <div class="graph_form_row">
+                            <label for="variable" class="graph_label">Outcome Variable</label>
+                            <select name="variable" id="t_variable" class="graph_select">
+                                <option value="">Choose a Variable</option>
+                                {% for key, label in allowed_variables.items() %}
+                                <option value="{{ key }}"{% if selected_variable == key %}selected{% endif %}>{{ label }} </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Select Station A -->
+                        <div class="graph_form_row">
+                            <label for="station_id_a" class="graph_label">Station A:</label>
+                            <select name="station_id_a" id="t_station_id_a" class="graph_select">
+                                <option value="">Choose a station:</option>
+                                {% for station in stations %}
+                                <option value="{{ station.station_id }}"{% if selected_station_a == station.station_id %}selected{% endif %}>{{ station.station_id }} - {{ station.station_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Select Station B -->
+                        <div class="graph_form_row">
+                            <label for="station_id_b" class="graph_label">Station B:</label>
+                            <select name="station_id_b" id="t_station_id_b" class="graph_select">
+                                <option value="">Choose a station:</option>
+                                {% for station in stations %}
+                                <option value="{{ station.station_id }}"{% if selected_station_b == station.station_id %}selected{% endif %}>{{ station.station_id}} - {{ station.station_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div id="anova_group" class="graph_form_row">
+                        <!-- Variable -->
+                        <div class="graph_form_row">
+                            <label for="variable" class="graph_label">Outcome Variable</label>
+                            <select name="variable" id="a_variable" class="graph_select">
+                                <option value="">Choose a Variable</option>
+                                {% for key, label in allowed_variables.items() %}
+                                <option value="{{ key }}"{% if selected_variable == key %}selected{% endif %}>{{ label }} </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Select Station A -->
+                        <div class="graph_form_row">
+                            <label for="station_id_a" class="graph_label">Station A:</label>
+                            <select name="station_id_a" id="a_station_id_a" class="graph_select">
+                                <option value="">Choose a station:</option>
+                                {% for station in stations %}
+                                <option value="{{ station.station_id }}"{% if selected_station_a == station.station_id %}selected{% endif %}>{{ station.station_id}} - {{ station.station_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Select Station B -->
+                        <div class="graph_form_row">
+                            <label for="station_id_b" class="graph_label">Station B:</label>
+                            <select name="station_id_b" id="a_station_id_b" class="graph_select">
+                                <option value="">Choose a station:</option>
+                                {% for station in stations %}
+                                <option value="{{ station.station_id }}"{% if selected_station_b == station.station_id %}selected{% endif %}>{{ station.station_id}} - {{ station.station_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Select Station C -->
+                        <div class="graph_form_row">
+                            <label for="station_id_c" class="graph_label">Station C:</label>
+                            <select name="station_id_c" id="a_station_id_c" class="graph_select">
+                                <option value="">Choose a station:</option>
+                                {% for station in stations %}
+                                <option value="{{ station.station_id }}"{% if selected_station_c == station.station_id %}selected{% endif %}>{{ station.station_id}} - {{ station.station_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>  
+                    
                     <!-- Range Mode -->
                     <div class="graph_form_row">
                         <label for="range_mode" class="graph_label">Range Mode:</label>
@@ -108,57 +231,59 @@
                         </select>
                     </div>
 
-                    <!-- Choose the Test -->
-                    <div class="graph_form_row">
-                        <label for="test" class="graph_label">Test:</label>
-
-                        <select name="test" id="test" class="graph_select" onchange="toggleTest()" required>
-                            <option value="">Choose a Test to Perform:</option>
-
-                            <option value="linear_regression" {% if selected_test == "linear_regression" %}selected{% endif %}>Linear Regression - Model the relationship between two variables</option>
-                            <option value="t_test" {% if selected_test == "t_test" %}selected{% endif %}>T-Test (Independent Two Sample) - Compare the means of two groups (same variable)</option>
-                            <option value="anova" {% if selected_test == "anova" %}selected{% endif %}>ANOVA (One-Way) - Compare the means of three or more groups (same variable)</option>
-                        </select>
+                    <!-- Submit -->
+                    <div class="analysis_button_row">
+                        <!-- Submit -->
+                        <button type="submit" class="graph_submit_button">Test</button>
                     </div>
-
-                    <div id="linear_regression_group" class="graph_form_row">
-                        <!-- Variables-->
-                        <div class="graph_form_row">
-                            <!-- X -->
-                            <label for="x_variable" class="graph_label">X Variable:</label>
-                            <select name="x_variable" id="x_variable" class="graph_select">
-                                <option value="">Choose a Variable:</option>
-                                {% for key, label in allowed_variables.items() %}
-                                <option value="{{ key }}"{% if selected_variable == key %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                            <!-- y -->
-                            <label for="y_variable" class="graph_label">Y Variable:</label>
-                            <select name="y_variable" id="y_variable" class="graph_select">
-                                <option value="">Choose a Variable:</option>
-                                {% for key, label in allowed_variables.items() %}
-                                <option value="{{ key }}"{% if selected_variable == key %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Graph Title-->
-                        <div class="graph_form_row">
-                            <label for="title" class="graph_label">Regression Graph Title:</label>
-                            <input type="text" id="title" name="title" class="graph_input" value="{{ selected_title }}" placeholder="Temperature, Wind, Pressure, etc."> 
-                        </div>
-                        
-                    </div>
-
-                    <div id="t_test_group" class="graph_form_row">
-
-                    </div>
-
-                    <div id="anova_group" class="graph_form_row">
-
-                    </div>
+                
             </form>
-        
+            
+            <!-- LR -->
+            {% if graph_url %}
+            <div class="graph_preview_card">
+                <h2 class="graph_preview_title" >Graph Preview:</h2>
+                <img src="{{ graph_url }}" alt="Weather Graph" class="graph_item">
+
+                <a href="{{ graph_url }}" title="Download Graph" id="graph" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_range_value}}_hours).png" class="graph_submit_button">Download Graph</a>
+                <a href="{{ csv_url }}" title="Download CSV" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_range_hour}}_hours).csv" class="graph_submit_button">Download Graph CSV</a>
+                <a href="/graph/test" class="graph_clear_button">Clear Graph</a>
+            </div>
+
+            <!-- T Test-->
+            {% elif t_test %}
+            <div class="analysis_summary_card">
+                <!-- Title -->
+                <div class="analysis_summary_header">
+                    <h2 class="analysis_section_title">{{ selected_variable }} at {{ selected_station_a}} and {{ selected_station_b }}:</h2>
+                    <p class="analysis_section_subtitle">{{ range_title }}</p>
+                </div>
+
+                <div class="analysis_stats_grid">
+                    <!-- P Value -->
+                    <div class="analysis_stat_card">
+                        <div class="analysis_stat_label">P-Value:</div>
+                        <div class="analysis_stat_value">{{ t_test["p_value"] }}</div>
+                        <div class="analysis_stat_meta">Measures Probability of Significance (Smaller is Better)</div>
+                    </div>
+
+                    <!-- T Value -->
+                    <div class="analysis_stat_card">
+                        <div class="analysis_stat_label">Test Statistic:</div>
+                        <div class="analysis_stat_value">{{ t_test["t_stat"] }}</div>
+                        <div class="analysis_stat_meta">Size of the difference between the groups. High values (Positive or negative) has a large difference, while a low value shows a small difference.</div>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="analysis_empty_card">
+                <h2 class="analysis_section_title">No Results Yet</h2>
+                <p class="analyssi_empty_text">Select Choose a test, station, variable, unit, and time range and click "Test" to run a test.</p>
+            </div>
+            {% endif %}
+
+
         </div>
     </div>
 
@@ -178,6 +303,15 @@
         const yVariable = document.getElementById("y_variable");
         const title = document.getElementById("title");
 
+        const tVariable = document.getElementById("t_variable");
+        const tStationA = document.getElementById("t_station_id_a");
+        const tStationB = document.getElementById("t_station_id_b");
+
+        const aVariable = document.getElementById("a_variable");
+        const aStationA = document.getElementById("a_station_id_a");
+        const aStationB = document.getElementById("a_station_id_b");
+        const aStationC = document.getElementById("a_station_id_c");
+
         /* Start off* */
         lRegressionGroup.style.display = "none";
         tTestGroup.style.display = "none";
@@ -194,7 +328,56 @@
             yVariable.disabled = false;
             title.disabled = false;
 
-            
+            tVariable.disabled = true;
+            tStationA.disabled = true;
+            tStationB.disabled = true;
+
+            aVariable.disabled = true;
+            aStationA.disabled = true;
+            aStationB.disabled = true;
+            aStationC.disabled = true;
+        }
+
+        else if (test.value === "t_test") {
+            tTestGroup.style.display = "flex";
+            tTestGroup.style.flexDirection = "column";
+
+            lRegressionGroup.style.display = "none";
+            anovaGroup.style.display = "none";
+
+            xVariable.disabled = true;
+            yVariable.disabled = true;
+            title.disabled = true;
+
+            tVariable.disabled = false;
+            tStationA.disabled = false;
+            tStationB.disabled = false;
+
+            aVariable.disabled = true;
+            aStationA.disabled = true;
+            aStationB.disabled = true;
+            aStationC.disabled = true;
+        }
+
+        else if (test.value === "anova") {
+            anovaGroup.style.display = "flex";
+            anovaGroup.style.flexDirection = "column";
+
+            lRegressionGroup.style.display = "none";
+            tTestGroup.style.display = "none";
+
+            xVariable.disabled = true;
+            yVariable.disabled = true;
+            title.disabled = true;
+
+            tVariable.disabled = true;
+            tStationA.disabled = true;
+            tStationB.disabled = true;
+
+            aVariable.disabled = false;
+            aStationA.disabled = false;
+            aStationB.disabled = false;
+            aStationC.disabled = false;
         }
     }
 
