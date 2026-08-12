@@ -255,7 +255,7 @@
             <div class="analysis_summary_card">
                 <!-- Title -->
                 <div class="analysis_summary_header">
-                    <h2 class="analysis_section_title">{{ selected_variable }} at {{ selected_station_a}} and {{ selected_station_b }}:</h2>
+                    <h2 class="analysis_section_title">{{ t_test["variable_label"] }} at {{ t_test["station_a_name"] }} and {{ t_test["station_b_name"] }}:</h2>
                     <p class="analysis_section_subtitle">{{ range_title }}</p>
                 </div>
 
@@ -271,7 +271,7 @@
                     <div class="analysis_stat_card">
                         <div class="analysis_stat_label">Test Statistic:</div>
                         <div class="analysis_stat_value">{{ t_test["t_stat"] }}</div>
-                        <div class="analysis_stat_meta">Size of the difference between the groups. High values (Positive or negative) has a large difference, while a low value shows a small difference.</div>
+                        <div class="analysis_stat_meta">Quantifies differences between groups. Distance from zero show differences size.</div>
                     </div>
                 </div>
             </div>

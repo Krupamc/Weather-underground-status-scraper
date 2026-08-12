@@ -1434,7 +1434,8 @@ def load_tests(request: Request, session: db.SessionDep, station_id: str = "", v
 
         t_test = run_t_test(session, units=units, range_mode=range_mode, range_value=range_value, range_unit=range_unit, start_date=start_date, end_date=end_date, station_a=station_id_a, station_b=station_id_b, variable=variable)
         t_test["variable_label"] = allowed.get(variable, variable)
-        t_test["station_a_name"] = station_name_map.get
+        t_test["station_a_name"] = stations_map.get(station_id_a, station_id_a)
+        t_test["station_b_name"] = stations_map.get(station_id_b, station_id_b)
     
         params = [
             f"test={test}",
