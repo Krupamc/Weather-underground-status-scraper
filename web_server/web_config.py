@@ -1,3 +1,5 @@
+
+# Weather Stations:
 stations = {
     "KNJBERKE13": "Island Beach State Park Bathhouse #1",
     "KNJWARET3": "Sedge Island",
@@ -12,11 +14,14 @@ stations = {
     "Ecocenter": "Ecocenter",
 }
 
+# Time Infomation:
 timezone = "US/Eastern"
 time_zone_name = "EST"
 
+# Weather Underground Base Url:
+wu_base_url = "https://preview.wunderground.com/dashboard/pws/"
 
-# Status History Query
+# Station Status History Query Default Values:
 default_history = 20
 limit_history = 1000
 

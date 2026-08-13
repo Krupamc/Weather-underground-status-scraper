@@ -22,8 +22,11 @@
     <!-- Online-->
     {% if status.last_status == "CONNECTED" %}
         <div class="status_bar">
-            <span class="online_dot"></span>
-            <span class="p_status_text">Online</span>
+            <a href={{ wu_base_url }}{{ station_id }} target="_blank" rel="noopener">
+                <span class="online_dot"></span>
+                <span class="p_status_text">Online</span>
+            </a>
+            
             <div class="unit_toggle" style="padding-top: 20px">
                 <a href="?units=imperial" class="{% if units == 'imperial' %}active_unit{% endif %}">Imperial</a>
                 <a href="?units=metric" class="{% if units == 'metric' %}active_unit{% endif%}">Metric</a>

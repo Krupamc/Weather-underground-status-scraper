@@ -23,7 +23,7 @@
             <!-- Choose Station-->
             <div class="graph_form_row">
                 <label for="station_id" class="graph_label">Station:</label>
-                <select name="station_id" id="station_id" class="graph_select">
+                <select name="station_id" id="station_id" required class="graph_select">
                     <option value="">Choose a station:</option>
                     {% for station in stations %}
                     <option value="{{ station.station_id }}"{% if selected_station == station.station_id %}selected{% endif %}>{{ station.station_id }} - {{ station.station_name }}</option>
@@ -34,7 +34,7 @@
             <!-- Variable-->
             <div class="graph_form_row">
                 <label for="variable" class="graph_label">Variable:</label>
-                <select name="variable" id="variable" class="graph_select">
+                <select name="variable" id="variable" required class="graph_select">
                     <option value="">Choose a Variable</option>
                     {% for key, label in allowed_variables.items() %}
                     <option value="{{ key }}"{% if selected_variable == key %}selected{% endif %}>{{ label }}</option>
@@ -56,7 +56,7 @@
                 <label class="graph_label">Relative Range:</label>
                 <div class="graph_range_row">
                     <!-- Number -->
-                    <input type="number" id="range_value" name="range_value" class="graph_input" min="1" max="365" value="{{ selected_range_value or 24 }}">
+                    <input type="number" id="range_value" name="range_value" class="graph_input" min="1" max="365" step="1" value="{{ selected_range_value or 24 }}">
 
                     <!-- Unit -->
                     <select name="range_unit" id="range_unit" class="graph_select">
@@ -343,6 +343,13 @@
         rangeUnit.disabled = false;
         startDate.disabled = true;
         endDate.disabled = true;
+
+        /* Make certain values reqeuired */
+        rangeValue.required = true;
+        rangeUnit.required = true;
+        startDate.required = false;
+        endDate.required = false;
+
         }
          
         else {
@@ -354,6 +361,11 @@
         rangeUnit.disabled = true;
         startDate.disabled = false;
         endDate.disabled = false;
+
+        rangeValue.required = false;
+        rangeUnit.required = false;
+        startDate.required = true;
+        endDate.required = true;
     }
 }
 

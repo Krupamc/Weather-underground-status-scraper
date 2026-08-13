@@ -381,6 +381,7 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
         "title": f"{station.station_name} Station Dashboard", 
         "active_page": "stations", 
         "station": station, 
+        "station_id": station_id,
         "weather": weather, 
         "status": status, 
         "date": date, 
@@ -393,6 +394,7 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
         "w_units": w_units,
         "converted": converted,
         "timezone": cfg.time_zone_name,
+        "wu_base_url": cfg.wu_base_url
     })
 
 #---Login---
