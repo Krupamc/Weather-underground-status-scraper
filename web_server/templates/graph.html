@@ -307,6 +307,12 @@ function toggleRangeMode() {
         rangeUnit.disabled = false;
         startDate.disabled = true;
         endDate.disabled = true;
+
+        /* Make certain values reqeuired */
+        rangeValue.required = true;
+        rangeUnit.required = true;
+        startDate.required = false;
+        endDate.required = false;
     } else {
         relativeGroup.style.display = "none";
         dateGroup.style.display = "flex";
@@ -316,6 +322,11 @@ function toggleRangeMode() {
         rangeUnit.disabled = true;
         startDate.disabled = false;
         endDate.disabled = false;
+
+        rangeValue.required = false;
+        rangeUnit.required = false;
+        startDate.required = true;
+        endDate.required = true;
     }
 }
 

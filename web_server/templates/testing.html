@@ -234,7 +234,7 @@
                     <!-- Submit -->
                     <div class="analysis_button_row">
                         <!-- Submit -->
-                        <button type="submit" class="graph_submit_button">Test</button>
+                        <button type="submit" class="graph_submit_button">Run the Test</button>
                     </div>
                 
             </form>
@@ -327,6 +327,7 @@
         const xVariable = document.getElementById("x_variable");
         const yVariable = document.getElementById("y_variable");
         const title = document.getElementById("title");
+        const station = document.getElementById("station_id");
 
         const tVariable = document.getElementById("t_variable");
         const tStationA = document.getElementById("t_station_id_a");
@@ -343,15 +344,18 @@
         anovaGroup.style.display = "none";
 
         if (test.value === "linear_regression") {
+            /* Make Visable */
             lRegressionGroup.style.display = "flex";
             lRegressionGroup.style.flexDirection = "column";
 
+            /* Invisable */
             tTestGroup.style.display = "none";
             anovaGroup.style.display = "none";
 
             xVariable.disabled = false;
             yVariable.disabled = false;
             title.disabled = false;
+            station.disable = false;
 
             tVariable.disabled = true;
             tStationA.disabled = true;
@@ -361,6 +365,12 @@
             aStationA.disabled = true;
             aStationB.disabled = true;
             aStationC.disabled = true;
+
+            /* Require */
+            xVariable.required = true;
+            yVariable.required = true;
+            title.required = true;
+            station.required = true;
         }
 
         else if (test.value === "t_test") {
@@ -373,6 +383,7 @@
             xVariable.disabled = true;
             yVariable.disabled = true;
             title.disabled = true;
+            station.disabled = true;
 
             tVariable.disabled = false;
             tStationA.disabled = false;
@@ -382,6 +393,10 @@
             aStationA.disabled = true;
             aStationB.disabled = true;
             aStationC.disabled = true;
+
+            tVariable.required = true;
+            tStationA.required = true;
+            tStationB.required = true;
         }
 
         else if (test.value === "anova") {
@@ -394,6 +409,7 @@
             xVariable.disabled = true;
             yVariable.disabled = true;
             title.disabled = true;
+            station.disabled = true;
 
             tVariable.disabled = true;
             tStationA.disabled = true;
@@ -403,6 +419,11 @@
             aStationA.disabled = false;
             aStationB.disabled = false;
             aStationC.disabled = false;
+            
+            aVariable.required = true;
+            aStationA.required = true;
+            aStationB.required = true;
+            aStationC.required = true;
         }
     }
 
@@ -497,6 +518,12 @@
         rangeUnit.disabled = false;
         startDate.disabled = true;
         endDate.disabled = true;
+
+        /* Make certain values reqeuired */
+        rangeValue.required = true;
+        rangeUnit.required = true;
+        startDate.required = false;
+        endDate.required = false;
         }
          
         else {
@@ -508,6 +535,11 @@
         rangeUnit.disabled = true;
         startDate.disabled = false;
         endDate.disabled = false;
+
+        rangeValue.required = false;
+        rangeUnit.required = false;
+        startDate.required = true;
+        endDate.required = true;
     }
 }
 
