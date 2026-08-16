@@ -37,7 +37,7 @@
                         <!-- Select Station -->
                         <div class="graph_form_row">
                             <label for="station_id" class="graph_label">Station:</label>
-                            <select name="station_id" id="station_id" class="graph_select">
+                            <select name="station_id" id="station" class="graph_select">
                                 <option value="">Choose a station:</option>
                                 {% for station in stations %}
                                 <option value="{{ station.station_id }}"{% if selected_station == station.station_id %}selected{% endif %}>{{ station.station_id}} - {{ station.station_name }}</option>

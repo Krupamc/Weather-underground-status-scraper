@@ -16,7 +16,7 @@ import web_config as cfg
 import security as s
 import pytz, csv, io, jwt, statistics
 from jwt import InvalidTokenError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import convert_metric as cv
 import matplotlib
 import numpy as np
@@ -183,12 +183,12 @@ def get_date_and_time(input_time):
     if input_time is None:
         return None, None
 
-    time = m.to_eastern(input_time)
+    timee = m.to_eastern(input_time)
     # Format
-    date = datetime.strftime(time, "%B %d, %Y")
-    time = datetime.strftime(time, "%I:%M %p")
+    r_date = datetime.strftime(timee, "%B %d, %Y")
+    r_time = datetime.strftime(timee, "%I:%M %p")
 
-    return date, time
+    return r_date, r_time
 
 #----Actual Web App-----
 
@@ -258,7 +258,7 @@ def my_stations(request: Request, session: db.SessionDep, current_user: Annotate
 
 # Public dashboard for the station:
 @app.get("/stations/public/{station_id}", response_class=HTMLResponse)
-def public_station(request: Request, session: db.SessionDep, station_id: str):
+def public_station(request: Request, session: db.SessionDep, station_id: str, selected_date: str | None = None):
 
     # Check units:
     units = request.query_params.get("units", "imperial")
@@ -273,15 +273,80 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
 
     # Time Expressions convert
     if weather is not None:
-        date, time = get_date_and_time(weather.observed_at)
+        d_date, d_time = get_date_and_time(weather.observed_at)
 
         # Wind dir label
         wind_label = degree_to_label(weather.wind_dir)
 
+    # - Table -
+    local_tz = pytz.timezone(cfg.timezone)
+
+    if not selected_date or selected_date == "None":
+        day_local = datetime.now(local_tz).date()
+    else:
+        try:
+            day_local = datetime.strptime(selected_date, "%Y-%m-%d").date()
+        except ValueError:
+            day_local = datetime.now(local_tz).date()
+
+    prev_day = (day_local - timedelta(days=1)).isoformat()
+    next_day = (day_local + timedelta(days=1)).isoformat()
+
+    day_start_local = local_tz.localize(datetime.combine(day_local, time.min))
+    day_end_local = local_tz.localize(datetime.combine(day_local, time.max))
+
+    day_start_utc = day_start_local.astimezone(pytz.UTC)
+    day_end_utc = day_end_local.astimezone(pytz.UTC)
+
+    # Get the history
+    history = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= day_start_utc, m.WeatherHistory.observed_at <= day_end_utc).order_by(m.WeatherHistory.observed_at)).all()
+
+    # Make the rows
+    table_rows = []
+
+    for row in history:
+        observed_at = row.observed_at
+
+        if observed_at.tzinfo is None:
+            observed_at = pytz.UTC.localize(observed_at)
+
+        local_time = observed_at.astimezone(local_tz)
+
+        # Convert
+        if units == "metric":
+            table_rows.append({
+                "time": local_time.strftime("%I:%M %p"),
+                "temp": row.temp,
+                "dewpoint": row.dewpoint,
+                "humidity": row.humidity,
+                "pressure": cv.inhg_to_hpa(row.pressure) if row.pressure is not None else None,
+                "wind_speed": row.wind_speed,
+                "wind_gust": row.wind_gust,
+                "wind_dir": row.wind_dir,
+                "precip_rate": cv.in_to_mm(row.precip_rate) if row.precip_rate is not None else None,
+                "precip_accum": cv.in_to_mm(row.precip_accum) if row.precip_accum is not None else None,
+                "uv": row.uv,
+                "solar": row.solar
+            })
+        else:
+            table_rows.append({
+                "time": local_time.strftime("%I:%M %p"),
+                "temp": cv.c_to_f(row.temp) if row.temp is not None else None,
+                "dewpoint": cv.c_to_f(row.dewpoint) if row.dewpoint is not None else None,
+                "humidity": row.humidity,
+                "pressure": row.pressure,
+                "wind_speed": cv.knots_to_mph(row.wind_speed) if row.wind_speed is not None else None,
+                "wind_gust": cv.knots_to_mph(row.wind_gust) if row.wind_gust is not None else None,
+                "wind_dir": row.wind_dir,
+                "precip_rate": row.precip_rate,
+                "precip_accum": row.precip_accum,
+                "uv": row.uv,
+                "solar": row.solar
+            })
 
     # Imperial
     if units == "metric":
-        
+
         # Temp Percent fill
         temp_pct = 0
         if weather and weather.temp is not None:
@@ -384,8 +449,8 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
         "station_id": station_id,
         "weather": weather, 
         "status": status, 
-        "date": date, 
-        "time": time,
+        "date": d_date, 
+        "time": d_time,
         "units": units,
         "pressure_labels": pressure_labels,
         "wind_label": wind_label, 
@@ -394,8 +459,122 @@ def public_station(request: Request, session: db.SessionDep, station_id: str):
         "w_units": w_units,
         "converted": converted,
         "timezone": cfg.time_zone_name,
-        "wu_base_url": cfg.wu_base_url
+        "wu_base_url": cfg.wu_base_url,
+        "table_rows": table_rows,
+        "selected_date": day_local.isoformat(),
+        "prev_day": prev_day,
+        "next_day": next_day,
     })
+
+# Download CSV for Selected Date
+@app.get("/stations/weather/{station_id}")
+def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial", selected_date: str | None = None):
+    # Get Data
+    local_tz = pytz.timezone(cfg.timezone)
+
+    if not selected_date or selected_date == "None":
+        day_local = datetime.now(local_tz).date()
+    else:
+        try:
+            day_local = datetime.strptime(selected_date, "%Y-%m-%d").date()
+        except ValueError:
+            day_local = datetime.now(local_tz).date()
+
+    prev_day = (day_local - timedelta(days=1)).isoformat()
+    next_day = (day_local + timedelta(days=1)).isoformat()
+
+    day_start_local = local_tz.localize(datetime.combine(day_local, time.min))
+    day_end_local = local_tz.localize(datetime.combine(day_local, time.max))
+
+    day_start_utc = day_start_local.astimezone(pytz.UTC)
+    day_end_utc = day_end_local.astimezone(pytz.UTC)
+
+    # Set Units:
+    if units == "metric":
+        labels = {
+            "temp": "°C",
+            "dewpoint": "°C",
+            "humidity": "%",
+            "pressure": "hPa",
+            "wind_speed": "knots",
+            "wind_gust": "knots",
+            "wind_dir": "°",
+            "precip_rate": "mm/hr",
+            "precip_accum": "mm",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
+    else:
+        labels = {
+            "temp": "°F",
+            "dewpoint": "°F",
+            "humidity": "%",
+            "pressure": "inHg",
+            "wind_speed": "mph",
+            "wind_gust": "mph",
+            "wind_dir": "°",
+            "precip_rate": "in/hr",
+            "precip_accum": "in",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
+    # FIX THIS CSV TOOOO
+
+    # Get the history
+    history = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= day_start_utc, m.WeatherHistory.observed_at <= day_end_utc).order_by(m.WeatherHistory.observed_at)).all()
+
+    # Make the rows
+    table_rows = []
+
+    # Write CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write Headers
+    writer.writerow([
+        "station_id", f"observed_at_{cfg.time_zone_name}", f"temp"
+    ])
+
+    for row in history:
+
+        # Convert
+        if units == "metric":
+            table_rows.append({
+                "time": m.to_eastern(row.observed_at).isoformat(),
+                "temp": row.temp,
+                "dewpoint": row.dewpoint,
+                "humidity": row.humidity,
+                "pressure": cv.inhg_to_hpa(row.pressure) if row.pressure is not None else None,
+                "wind_speed": row.wind_speed,
+                "wind_gust": row.wind_gust,
+                "wind_dir": row.wind_dir,
+                "precip_rate": cv.in_to_mm(row.precip_rate) if row.precip_rate is not None else None,
+                "precip_accum": cv.in_to_mm(row.precip_accum) if row.precip_accum is not None else None,
+                "uv": row.uv,
+                "solar": row.solar
+            })
+
+        else:
+            table_rows.append({
+                "time": m.to_eastern(row.observed_at).isoformat(),
+                "temp": cv.c_to_f(row.temp) if row.temp is not None else None,
+                "dewpoint": cv.c_to_f(row.dewpoint) if row.dewpoint is not None else None,
+                "humidity": row.humidity,
+                "pressure": row.pressure,
+                "wind_speed": cv.knots_to_mph(row.wind_speed) if row.wind_speed is not None else None,
+                "wind_gust": cv.knots_to_mph(row.wind_gust) if row.wind_gust is not None else None,
+                "wind_dir": row.wind_dir,
+                "precip_rate": row.precip_rate,
+                "precip_accum": row.precip_accum,
+                "uv": row.uv,
+                "solar": row.solar
+            })
+
+    
+    return {"ok"}
+
 
 #---Login---
 
@@ -494,7 +673,7 @@ def owner_station(request: Request, session: db.SessionDep, station_id: str, req
 
     # Time Expressions
     if weather is not None:
-        date, time = get_date_and_time(weather.observed_at)
+        d_date, d_time = get_date_and_time(weather.observed_at)
 
         # Wind dir label
         wind_label = degree_to_label(weather.wind_dir)
@@ -622,8 +801,8 @@ def owner_station(request: Request, session: db.SessionDep, station_id: str, req
         "weather": weather, 
         "status": status,
         "station_id": station_id, 
-        "date": date, 
-        "time": time,
+        "date": d_date, 
+        "time": d_time,
         "units": units,
         "pressure_labels": pressure_labels,
         "wind_label": wind_label,
@@ -789,7 +968,7 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
             "precip_accum": "in",
             "uv": "",
             "solar": "watts/m²"
-            }
+        }
 
      # Define Variable Groups
     unit_groups = {
@@ -936,6 +1115,37 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
         "solar": "Solar Radiation"
     }
 
+    # Units
+    if units == "metric":
+        labels = {
+            "temp": "°C",
+            "dewpoint": "°C",
+            "humidity": "%",
+            "pressure": "hPa",
+            "wind_speed": "knots",
+            "wind_gust": "knots",
+            "wind_dir": "°",
+            "precip_rate": "mm/hr",
+            "precip_accum": "mm",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
+    else:
+        labels = {
+            "temp": "°F",
+            "dewpoint": "°F",
+            "humidity": "%",
+            "pressure": "inHg",
+            "wind_speed": "mph",
+            "wind_gust": "mph",
+            "wind_dir": "°",
+            "precip_rate": "in/hr",
+            "precip_accum": "in",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
     for var in variables:
         if var not in allowed:
             raise HTTPException(status_code=400, detail="Invalid Variable")
@@ -966,6 +1176,16 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
     writer = csv.DictWriter(output, fieldnames=fieldnames)
     writer.writeheader()
 
+    # Print units
+    unit_row = {
+        "station_id": station_id,
+        f"observed_at_{cfg.time_zone_name}": "units",
+    }
+
+    for var in variables:
+        unit_row[var] = labels[var]
+    writer.writerow(unit_row)
+
     wrote_rows = False
 
     for row in weather:
@@ -974,7 +1194,7 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
 
         csv_row = {
             "station_id": station_id,
-            f"observed_at_{cfg.time_zone_name}": m.to_eastern(row.observed_at).isoformat()
+            f"observed_at_{cfg.time_zone_name}": m.to_eastern(row.observed_at).isoformat(),
         }
 
         has_value = False
@@ -987,7 +1207,7 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
                 has_value = True
 
         if has_value:
-            writer.writerow(csv_row)
+            writer.writerow(csv_row, )
             wrote_rows = True
 
     if not wrote_rows:

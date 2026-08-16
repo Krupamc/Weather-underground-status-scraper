@@ -195,19 +195,19 @@
 
 .status_bar {
     position: fixed;
+    display: flex;
     top: 230px;
     left: 0;
     width: 100%;
-    min-height: 56px;
-    display: flex;
+    height: 50px;
     justify-content: center;
     align-items: center;
-    gap: 18px;
-    padding: 8px 16px;
-    box-sizing: border-box;
+    gap: 10px;
+    text-align: center;
     z-index: 1003;
     background-color: white;
-    border-bottom: 1px solid #e6e6e6;
+    color: black;
+    font-weight: 600;
 }
 
 .status_link {
@@ -218,24 +218,25 @@
     color: #1f2937;
     font-weight: 600;
     background: #f7f7f8;
-    border: 1px solid #dddddf;
+    border: 3px solid #d3cfcf;
     border-radius: 999px;
-    padding: 8px 14px;
+    padding: 6px 14px;
     line-height: 1;
 }
 
 .status_link:hover {
-    background: #f0f4f8;
+    background: #005baa;
+    color: white;
+    border: 2px solid #d3cfcf
 }
 
 .online_dot,
 .offline_dot {
-    width: 18px;
-    height: 18px;
+    width: 25px;
+    height: 25px;
     border-radius: 50%;
     border: 2px solid #333;
     display: inline-block;
-    flex-shrink: 0;
 }
 
 .online_dot {
@@ -252,6 +253,7 @@
     font-size: 16px;
     line-height: 1;
 }
+
 
 .p_time_bar {
     position: fixed;
@@ -1053,6 +1055,112 @@
 .graph_preset_color:hover {
     background-color: #d63c45;
     color: white;
+}
+
+.dashboard_table_card {
+    margin-top: 28px;
+    background: white;
+    border: 2px solid #d3cfcf;
+    border-radius: 18px;
+    padding: 22px;
+    box-sizing: border-box;
+}
+
+.dashboard_table_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.dashboard_table_header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #111827;
+}
+
+.day_switcher {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.day_picker_form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.day_input {
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #cfd4dc;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    background: white;
+}
+
+.day_button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid #005baa;
+    border-radius: 10px;
+    background: white;
+    color: #005baa;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: 0.2s ease;
+}
+
+.day_button:hover {
+    background: #005baa;
+    color: white;
+}
+
+.dashboard_table_wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+}
+
+.dashboard_table {
+    width: 100%;
+    min-width: 1200px;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.dashboard_table thead th {
+    background: #f3f6fa;
+    color: #1f2937;
+    font-weight: 700;
+    text-align: center;
+    padding: 14px 12px;
+    white-space: nowrap;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.dashboard_table tbody td {
+    text-align: center;
+    padding: 12px;
+    border-bottom: 1px solid #eceff3;
+    white-space: nowrap;
+}
+
+.dashboard_table tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+.dashboard_table tbody tr:hover {
+    background: #eef5ff;
 }
 
 /* Analysis Page */

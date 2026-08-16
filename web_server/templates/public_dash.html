@@ -3,7 +3,7 @@
 {% block content %}
     <!-- If the station is no public, provide no data -->
     {% if not station.is_public or station.is_in_maintenance or not status or status.last_status == "OFFLINE" %}
-        <div class="p_station_content" style="padding-top: 270px; justify-content: center">
+        <div class="p_station_content" style="padding-top: 280px; justify-content: center">
             <div style="border: 3px solid #d3cfcf; background: white; border-radius: 16px; padding: 20px 18px; gap: 28px;">
                 <h1>Station not Available</h1>
                 <div class="error_page">
@@ -22,7 +22,8 @@
     <!-- Online-->
     {% if status.last_status == "CONNECTED" %}
         <div class="status_bar">
-            <a href={{ wu_base_url }}{{ station_id }} target="_blank" rel="noopener">
+            <!-- Link to WU -->
+            <a href={{ wu_base_url }}{{ station_id }} target="_blank" rel="noopener" class="status_link">
                 <span class="online_dot"></span>
                 <span class="p_status_text">Online</span>
             </a>
@@ -39,7 +40,7 @@
         </div>
     {% endif %}
 
-    <div class="p_station_content" style="padding-top: 270px; padding-left: 30px;">
+    <div class="p_station_content" style="padding-top: 280px; padding-left: 30px;">
         
         <!-- Temperature -->
         <div class="p_station_card p_temp_card">
@@ -213,6 +214,92 @@
         {% if converted.precip_a > 0.0 %}
                 <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Precipitation&variables=precip_rate&variables=precip_accum" alt="Precipitation Graph" class="graph_border">
         {% endif %}
+
+        <!-- Table of Data -->
+        <div class="dashboard_table_card">
+            <div class="dashboard_table_header">
+                <h2>Daily Observations for {{ selected_date }}</h2>
+
+                <div class="day_switcher">
+                    <a href="?units={{ units }}&selected_date={{ prev_day if prev_day is not none else selected_date }}" class="day_button">Previous Day</a>
+
+                    <form method="get" class="day_picker_form">
+                        <input type="hidden" name="units" value="{{ units }}">
+                        <input type="date" name="selected_date" value="{{ selected_date }}" class="day_input">
+                        <button type="submit" class="day_button">Go</button>
+                    </form>
+
+                    <a href="?units={{ units }}&selected_date={{ next_day if prev_day is not none else selected_date  }}" class="day_button">Next Day</a>
+                </div>
+            </div>
+
+            <div class="dashboard_table_wrap">
+                <table class="dashboard_table">
+                    <thead>
+                        <tr id="table">
+                            <th>Time ({{ timezone }}):</th>
+                            <th>Temperature ({{ w_units.temp }}):</th>
+                            <th>Dew Point ({{ w_units.temp }}):</th>
+                            <th>Humidity (%):</th>
+                            <th>Pressure ({{ w_units.pressure }}):</th>
+                            <th>Wind Speed ({{ w_units.wind }}):</th>
+                            <th>Wind Gust ({{ w_units.wind }}):</th>
+                            <th>Wind Direction (°):</th>
+                            <th>Precipitation Rate ({{ w_units.precip_r }}):</th>
+                            <th>Precipitation Accumulation ({{ w_units.precip_a }}):</th>
+                            {% if weather.uv != None or weather.solar != None %}
+                                <th>UV Index:</th>
+                                <th>Solar Radiation (watts/m²):</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for row in table_rows %}
+                        <tr>
+                            <td>{{ row.time }}</td>
+                            <td>{{ row.temp if row.temp is not none else "-" }}</td>
+                            <td>{{ row.dewpoint if row.dewpoint is not none else "-" }}</td>
+                            <td>{{ row.humidity if row.humidity is not none else "-" }}</td>
+                            <td>{{ row.pressure if row.pressure is not none else "-" }}</td>
+                            <td>{{ row.wind_speed if row.wind_speed is not none else "-" }}</td>
+                            <td>{{ row.wind_gust if row.wind_gust is not none else "-" }}</td>
+                            <td>{{ row.wind_dir if row.wind_dir is not none else "-" }}</td>
+                            <td>{{ row.precip_rate if row.precip_rate is not none else "-" }}</td>
+                            <td>{{ row.precip_accum if row.precip_accum is not none else "-" }}</td>
+                            {% if weather.uv != None or weather.solar != None %}
+                                <td>{{ row.uv if row.uv is not none else "-" }}</td>
+                                <td>{{ row.solar if row.solar is not none else "-" }}</td>
+                            {% endif %}
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="12">No data found for this day.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+
     </div>
     {% endif %}
+
+    <script>
+    /* Listener */
+    document.addEventListener("DOMContentLoaded", function () {
+        {% if selected_date %}
+        const graphEl = document.getElementById("table");
+        setTimeout(function() {
+            if (graphEl) {
+            graphEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        }, 1000);
+        
+        {% endif %}
+
+});
+
+</script>
 {% endblock %}
