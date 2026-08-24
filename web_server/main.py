@@ -216,11 +216,13 @@ def home(request: Request):
 async def not_found(request: Request, exc: StarletteHTTPException):
     # HTTP Errors
     if exc.status_code == 404:
-        return templates.TemplateResponse(request, "404.html", {"request": request, "title": "404"})
+        return templates.TemplateResponse(request, "404.html", {"request": request, "title": "404", "detail": exc.detail})
     elif exc.status_code == 403:
-        return templates.TemplateResponse(request, "403.html", {"request": request, "title": "403"})
+        return templates.TemplateResponse(request, "403.html", {"request": request, "title": "403", "detail": exc.detail})
     elif exc.status_code == 401:
-        return templates.TemplateResponse(request, "401.html", {"request": request, "title": "401"})
+        return templates.TemplateResponse(request, "401.html", {"request": request, "title": "401", "detail": exc.detail})
+    elif exc.status_code == 400:
+        return templates.TemplateResponse(request, "400.html", {"request": request, "title": "400", "detail": exc.detail})
     
     return await http_exception_handler(request, exc)
     

@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="error_page">
+        <h1>Error 400</h1>
+        <h3>Bad Request: {{ detail }}</h3>
+        <a href="/">Go Back Home</a>
+    </div>
+{% endblock %}
