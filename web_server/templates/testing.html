@@ -235,7 +235,9 @@
                     <div class="analysis_button_row">
                         <!-- Submit -->
                         <button type="submit" class="graph_submit_button">Run the Test</button>
+                        <a href="/graph/test" class="graph_clear_button">Clear Test</a>
                     </div>
+                    
                 
             </form>
             
@@ -247,7 +249,7 @@
                 <p></p>
                 <a href="{{ graph_url }}" title="Download Graph" id="graph" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_range_value}}_hours).png" class="graph_submit_button">Download Graph</a>
                 <a href="{{ csv_url }}" title="Download CSV" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_range_hour}}_hours).csv" class="graph_submit_button">Download Graph CSV</a>
-                <a href="/graph/test" class="graph_clear_button">Clear Graph</a>
+                
             </div>
 
             <!-- T Test-->
@@ -274,6 +276,10 @@
                         <div class="analysis_stat_meta">Quantifies differences a group. Distance from zero show differences size.</div>
                     </div>
                 </div>
+
+                <!-- Download CSV-->
+                <p></p>
+                <a href="{{ csv_url }}" title="Download CSV" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_range_hour}}_hours).csv" class="graph_submit_button">Download Graph CSV</a>
             </div>
 
             <!-- Anova -->
@@ -299,6 +305,10 @@
                             <div class="analysis_stat_meta">Quantifies differences between groups. Distance from zero show differences size.</div>
                         </div>
                     </div>
+
+                    <!-- Download CSV -->
+                    <p></p>
+                    <a href="{{ csv_url }}" title="Download CSV" download="{{selected_station}}_{{selected_title}}_(Past_{{selected_range_hour}}_hours).csv" class="graph_submit_button">Download Graph CSV</a>
                 </div>
 
             {% else %}
@@ -307,8 +317,6 @@
                 <p class="analyssi_empty_text">Select Choose a test, station, variable, unit, and time range and click "Test" to run a test.</p>
             </div>
             {% endif %}
-
-
         </div>
     </div>
 

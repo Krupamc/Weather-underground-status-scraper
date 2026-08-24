@@ -344,6 +344,12 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, se
                 "solar": row.solar
             })
 
+    # Get CSV
+    csv_url = None
+
+    if day_local:
+        csv_url = f"/stations/weather/csv/{station_id}?selected_date={day_local.isoformat()}&units={units}"
+
     # Imperial
     if units == "metric":
 
@@ -464,10 +470,11 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, se
         "selected_date": day_local.isoformat(),
         "prev_day": prev_day,
         "next_day": next_day,
+        "csv_url": csv_url
     })
 
 # Download CSV for Selected Date
-@app.get("/stations/weather/{station_id}")
+@app.get("/stations/weather/csv/{station_id}")
 def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial", selected_date: str | None = None):
     # Get Data
     local_tz = pytz.timezone(cfg.timezone)
@@ -479,9 +486,6 @@ def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial
             day_local = datetime.strptime(selected_date, "%Y-%m-%d").date()
         except ValueError:
             day_local = datetime.now(local_tz).date()
-
-    prev_day = (day_local - timedelta(days=1)).isoformat()
-    next_day = (day_local + timedelta(days=1)).isoformat()
 
     day_start_local = local_tz.localize(datetime.combine(day_local, time.min))
     day_end_local = local_tz.localize(datetime.combine(day_local, time.max))
@@ -501,7 +505,7 @@ def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial
             "wind_dir": "°",
             "precip_rate": "mm/hr",
             "precip_accum": "mm",
-            "uv": "",
+            "uv": "index",
             "solar": "watts/m²"
         }
 
@@ -516,65 +520,110 @@ def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial
             "wind_dir": "°",
             "precip_rate": "in/hr",
             "precip_accum": "in",
-            "uv": "",
+            "uv": "index",
             "solar": "watts/m²"
         }
 
-    # FIX THIS CSV TOOOO
+    fields = [
+        "temp",
+        "dewpoint",
+        "humidity",
+        "pressure",
+        "wind_speed",
+        "wind_gust",
+        "wind_dir",
+        "precip_rate",
+        "precip_accum",
+        "uv",
+        "solar",
+    ]
 
     # Get the history
     history = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= day_start_utc, m.WeatherHistory.observed_at <= day_end_utc).order_by(m.WeatherHistory.observed_at)).all()
 
-    # Make the rows
-    table_rows = []
+    if not history:
+        raise HTTPException(status_code=404, detail="No Weather History Found")
 
+    # Convert
+    def convert_row_value(var, value):
+        if value is None:
+            return None
+
+        if units == "metric":
+            if var == "pressure":
+                return cv.inhg_to_hpa(value)
+            if var in ["precip_rate", "precip_accum"]:
+                return cv.in_to_mm(value)
+            return value
+
+        if var in ["temp", "dewpoint"]:
+            return cv.c_to_f(value)
+        if var in ["wind_speed", "wind_gust"]:
+            return cv.knots_to_mph(value)
+        return value
+    
     # Write CSV
     output = io.StringIO()
-    writer = csv.writer(output)
+    fieldnames = ["station_id", f"observed_at_{cfg.time_zone_name}"] + fields
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
 
-    # Write Headers
-    writer.writerow([
-        "station_id", f"observed_at_{cfg.time_zone_name}", f"temp"
-    ])
+    writer.writeheader()
+
+    # Print units
+    unit_row = {
+        "station_id": station_id,
+        f"observed_at_{cfg.time_zone_name}": "units",
+    }
+
+    for var in fields:
+        unit_row[var] = labels[var]
+    writer.writerow(unit_row)
+
+    wrote_rows = False
 
     for row in history:
+        # Get time and convert to timezone
+        observed_at = row.observed_at
+        if observed_at is None:
+            continue
 
-        # Convert
-        if units == "metric":
-            table_rows.append({
-                "time": m.to_eastern(row.observed_at).isoformat(),
-                "temp": row.temp,
-                "dewpoint": row.dewpoint,
-                "humidity": row.humidity,
-                "pressure": cv.inhg_to_hpa(row.pressure) if row.pressure is not None else None,
-                "wind_speed": row.wind_speed,
-                "wind_gust": row.wind_gust,
-                "wind_dir": row.wind_dir,
-                "precip_rate": cv.in_to_mm(row.precip_rate) if row.precip_rate is not None else None,
-                "precip_accum": cv.in_to_mm(row.precip_accum) if row.precip_accum is not None else None,
-                "uv": row.uv,
-                "solar": row.solar
-            })
+        if observed_at.tzinfo is None:
+            observed_at = pytz.UTC.localize(observed_at)
 
-        else:
-            table_rows.append({
-                "time": m.to_eastern(row.observed_at).isoformat(),
-                "temp": cv.c_to_f(row.temp) if row.temp is not None else None,
-                "dewpoint": cv.c_to_f(row.dewpoint) if row.dewpoint is not None else None,
-                "humidity": row.humidity,
-                "pressure": row.pressure,
-                "wind_speed": cv.knots_to_mph(row.wind_speed) if row.wind_speed is not None else None,
-                "wind_gust": cv.knots_to_mph(row.wind_gust) if row.wind_gust is not None else None,
-                "wind_dir": row.wind_dir,
-                "precip_rate": row.precip_rate,
-                "precip_accum": row.precip_accum,
-                "uv": row.uv,
-                "solar": row.solar
-            })
+        local_time = observed_at.astimezone(local_tz)
 
-    
-    return {"ok"}
+        csv_row = {
+            "station_id": station_id,
+            f"observed_at_{cfg.time_zone_name}": local_time.isoformat()
+        }
 
+        has_value = False
+
+        for var in fields:
+            value = getattr(row, var, None)
+            value = convert_row_value(var, value)
+            csv_row[var] = value
+            if value is not None:
+                has_value = True
+
+        if has_value:
+            writer.writerow(csv_row)
+            wrote_rows = True
+
+    if not wrote_rows:
+        raise HTTPException(status_code=404, detail="No Explortable Data Found")
+
+    csv_data = output.getvalue()
+    output.close()
+
+    date_part = day_local.isoformat()
+    filename = f"{station_id}_weather_data_{day_local.isoformat()}_{units}.csv"
+    filename = filename.replace(" ", "_")
+
+    # Download titles
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+    return Response(content=csv_data, media_type="text/csv", headers=headers)
 
 #---Login---
 
@@ -1091,12 +1140,59 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
 
 # CSV Download
 @app.get("/graph/weather/{station_id}/csv")
-def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], session: db.SessionDep, units: str="imperial", title: str="", hours: int=24):
-    # Data from...
-    cutoff = datetime.now(pytz.UTC) - timedelta(hours=hours)
+def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], session: db.SessionDep, units: str="imperial", title: str="", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
+    # Relative Mode
+    if range_mode == "relative":
+        if not range_value or not range_unit:
+            raise HTTPException(status_code=400, detail="Range Value must at least be 1")
 
-    # Weather data
-    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff).order_by(m.WeatherHistory.observed_at)).all()
+
+        allowed_units = {"hours", "days", "weeks", "months", "years"}
+        if range_unit not in allowed_units:
+            raise HTTPException(status_code=400, detail="Must be valid unit")
+
+        now = datetime.now(pytz.UTC)
+
+        # Graph by last 24 hrs
+        if range_unit == "hours":
+            cutoff_start = now - timedelta(hours=range_value)
+
+        elif range_unit == "days":
+            cutoff_start = now - timedelta(days=range_value)
+
+        elif range_unit == "weeks":
+            cutoff_start = now - timedelta(weeks=range_value)
+
+        elif range_unit == "months":
+            cutoff_start = now - timedelta(days = 30 * range_value)
+
+        elif range_unit == "years":
+            cutoff_start = now - timedelta(days = 365 * range_value)
+
+        cutoff_end = now
+
+    # Date Mode
+    elif range_mode == "dates":
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="Start date and end date are required")
+
+        start_naive = datetime.strptime(start_date, "%Y-%m-%d")
+        end_naive = datetime.strptime(end_date, "%Y-%m-%d")
+
+        if end_naive < start_naive:
+            raise HTTPException(status_code=400, detail="End date must be after start date")
+
+        # Turn request into UTC to query db
+        eastern = pytz.timezone(cfg.timezone)
+        cutoff_start = eastern.localize(start_naive).astimezone(pytz.UTC)
+        cutoff_end = eastern.localize(end_naive.replace(hour=23, minute=59, second=59)).astimezone(pytz.UTC)
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid Range Mode")
+
+    # Get data
+    weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
+    
 
     if not weather:
         raise HTTPException(status_code=404, detail="No Weather History Found")
@@ -1217,7 +1313,7 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
     output.close()
 
     safe_title = title.strip().replace(" ", "_") if title.strip() else "weather_graph"
-    filename = f"{station_id}_{safe_title}_past_{hours}_hours.csv"
+    filename = f"{station_id}_{safe_title}_past_{range_value}_{range_unit}_{units}.csv"
 
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
@@ -1505,6 +1601,7 @@ def analysis_page(request: Request, session: db.SessionDep, station_id: str = ""
 
     return templates.TemplateResponse(request, "analysis.html", context=context)
 
+# Download Analysis
 @app.get("/analyze/weather/{station_id}/csv")
 def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
     # Get Data
@@ -1708,8 +1805,6 @@ def load_tests(request: Request, session: db.SessionDep, station_id: str = "", v
                 params.append(f"end_date={end_date}")
 
         csv_url = f"/test/weather/csv?{'&'.join(params)}"
-
-
 
     context = {
         "request": request,
@@ -2311,6 +2406,312 @@ def run_anova(session: db.SessionDep, units: str="imperial", range_mode: str = "
         "f_stat": round(result.statistic, 4),
         "p_value": round(result.pvalue, 4)
     }
+
+# CSV Test Download
+@app.get("/test/weather/csv")
+def test_csv(session: db.SessionDep, units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None, title: str = "", station_id: str = "", variable: str = "", test: str | None = None, x_variable: str | None = None, y_variable: str | None = None, station_id_a: str | None = None, station_id_b: str | None = None, station_id_c: str | None = None):
+    # Relative Mode
+    if range_mode == "relative":
+        if not range_value or not range_unit:
+            raise HTTPException(status_code=400, detail="Range Value must at least be 1")
+
+        allowed_units = {"hours", "days", "weeks", "months", "years"}
+        if range_unit not in allowed_units:
+            raise HTTPException(status_code=400, detail="Must be valid unit")
+
+        now = datetime.now(pytz.UTC)
+
+        # Graph by last 24 hrs
+        if range_unit == "hours":
+            cutoff_start = now - timedelta(hours=range_value)
+
+        elif range_unit == "days":
+            cutoff_start = now - timedelta(days=range_value)
+
+        elif range_unit == "weeks":
+            cutoff_start = now - timedelta(weeks=range_value)
+
+        elif range_unit == "months":
+            cutoff_start = now - timedelta(days = 30 * range_value)
+
+        elif range_unit == "years":
+            cutoff_start = now - timedelta(days = 365 * range_value)
+
+        cutoff_end = now
+        range_label = f"Past {range_value} {range_unit}"
+
+    # Date Mode
+    elif range_mode == "dates":
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="Start date and end date are required")
+
+        start_naive = datetime.strptime(start_date, "%Y-%m-%d")
+        end_naive = datetime.strptime(end_date, "%Y-%m-%d")
+
+        if end_naive < start_naive:
+            raise HTTPException(status_code=400, detail="End date must be after start date")
+
+        # Turn request into UTC to query db
+        eastern = pytz.timezone(cfg.timezone)
+        cutoff_start = eastern.localize(start_naive).astimezone(pytz.UTC)
+        cutoff_end = eastern.localize(end_naive.replace(hour=23, minute=59, second=59)).astimezone(pytz.UTC)
+
+        range_label = f"{start_date} to {end_date}"
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid Range Mode")
+    
+    allowed = {
+            "temp": "Air Temperature",
+            "dewpoint": "Dew Point",
+            "humidity": "Humidity",
+            "pressure": "Pressure",
+            "wind_speed": "Wind Speed",
+            "wind_gust": "Wind Gust",
+            "wind_dir": "Wind Direction",
+            "precip_rate": "Precipitation Rate",
+            "precip_accum": "Precipitation Accumulation",
+            "uv": "UV Index",
+            "solar": "Solar Radiation"
+        }
+
+    # Units
+    if units == "metric":
+        labels = {
+            "temp": "°C",
+            "dewpoint": "°C",
+            "humidity": "%",
+            "pressure": "hPa",
+            "wind_speed": "knots",
+            "wind_gust": "knots",
+            "wind_dir": "°",
+            "precip_rate": "mm/hr",
+            "precip_accum": "mm",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
+    else:
+        labels = {
+            "temp": "°F",
+            "dewpoint": "°F",
+            "humidity": "%",
+            "pressure": "inHg",
+            "wind_speed": "mph",
+            "wind_gust": "mph",
+            "wind_dir": "°",
+            "precip_rate": "in/hr",
+            "precip_accum": "in",
+            "uv": "",
+            "solar": "watts/m²"
+        }
+
+    def convert_value(var, value):
+        if value is None:
+            return None
+
+        # Convert to metric
+        if units == "metric":
+            if var == "pressure":
+                return cv.inhg_to_hpa(value)
+            if var in ["precip_rate", "precip_accum"]:
+                return cv.in_to_mm(value)
+            return value
+
+        # convert to imperial
+        else:
+            if var in ["temp", "dewpoint"]:
+                return cv.c_to_f(value)
+            if var in ["wind_speed", "wind_gust"]:
+                return cv.knots_to_mph(value)
+            return value
+
+    local_tz = pytz.timezone(cfg.timezone)
+    output = io.StringIO()
+
+    if test == "linear_regression":
+        if not station_id or not x_variable or not y_variable:
+            raise HTTPException(status_code=400, detail="Missing Linear Regression Inputs")
+
+        if x_variable not in allowed or y_variable not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid Variable")
+
+        # Get Weather
+        weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
+
+        x = []
+        y = []
+        cleaned = []
+
+        # Convert
+        for row in weather:
+            x_value = convert_value(x_variable, getattr(row, x_variable, None))
+            y_value = convert_value(y_variable, getattr(row, y_variable, None))
+            observed_at = row.observed_at
+
+            if x_value is None or y_value is None or observed_at is None:
+                continue
+
+            if observed_at.tzinfo is None:
+                observed_at = pytz.UTC.localize(observed_at)
+            local_time = observed_at.astimezone(local_tz)
+
+            x.append(x_value)
+            y.append(y_value)
+            cleaned.append((local_time.isoformat(), x_value, y_value))
+
+        if len(x) < 2:
+            raise HTTPException(status_code=400, detail="Need at least two data points")
+
+        # Run Stats
+        slope, intercept = np.polyfit(x, y, 1)
+
+        if len(set(y)) <= 1:
+            r_squared = 0.0
+        else:
+            predicted_y = slope * np.array(x) + intercept
+            ss_residual = np.sum((np.array(y) - predicted_y) ** 2)
+            ss_total = np.sum((np.array(y) - np.mean(y)) ** 2)
+            r_squared = 1 - (ss_residual / ss_total)
+
+        fieldnames = [
+            "test_type", "station_id", "range", "x_label", "y_label",
+            "slope", "intercept", "r_squared",
+            f"observed_at_{cfg.time_zone_name}", "x_value", "y_value"
+        ]
+
+        # Write Summary
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for observed_at, x_value, y_value in cleaned:
+            writer.writerow({
+                "test_type": "linear_regression",
+                "station_id": station_id,
+                "range": range_label,
+                "x_label": f"{allowed[x_variable]} ({labels[x_variable]})",
+                "y_label": f"{allowed[y_variable]} ({labels[y_variable]})",
+                "slope": round(slope, 4),
+                "intercept": round(intercept, 4),
+                "r_squared": round(r_squared, 4),
+                f"observed_at_{cfg.time_zone_name}": observed_at,
+                "x_value": x_value,
+                "y_value": y_value,
+            })
+
+    # T Test
+    elif test == "t_test":
+        if not variable or not station_id_a or not station_id_b:
+            raise HTTPException(status_code=400, detail="Missing T-Test Inputs")
+        if variable not in allowed:
+            raise HTTPException(status_code=400, detail="INvalid Variable")
+
+        result = run_t_test(session, units=units, range_mode=range_mode, range_value=range_value, range_unit=range_unit, start_date=start_date, end_date=end_date, station_a=station_id_a, station_b=station_id_b, variable=variable)
+
+        fieldnames = [
+            "test_type", "variable", "range", "station_a", "station_b",
+            "t_stat", "p_value", "station_id",
+            f"observed_at_{cfg.time_zone_name}", "value"
+        ]
+
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+
+        wrote_rows = False
+        for sid in [station_id_a, station_id_b]:
+            weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == sid, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
+        
+            for row in weather:
+                value = convert_value(variable, getattr(row, variable, None))
+                observed_at = row.observed_at
+
+                if value is None or observed_at is None:
+                    continue
+
+                if observed_at.tzinfo is None:
+                    observed_at = pytz.UTC.localize(observed_at)
+                local_time = observed_at.astimezone(local_tz)
+
+                writer.writerow({
+                    "test_type": "independent_two_sample_t_test",
+                    "variable": f"{allowed[variable]} ({labels[variable]})",
+                    "range": range_label,
+                    "station_a": station_id_a,
+                    "station_b": station_id_b,
+                    "t_stat": result["t_stat"],
+                    "p_value": result["p_value"],
+                    "station_id": sid,
+                    f"observed_at_{cfg.time_zone_name}": observed_at.astimezone(local_tz).isoformat(),
+                    "value": value,
+                })
+                wrote_rows = True
+
+        if not wrote_rows:
+            raise HTTPException(status_code=404, detail="No Exportable Data Found")
+
+    elif test == "anova":
+        if not variable or not station_id_a or not station_id_b or not station_id_c:
+            raise HTTPException(status_code=400, detail="Missing ANOVA Inputs")
+
+        if variable not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid Variable")
+
+        result = run_anova(session, units=units, range_mode=range_mode, range_value=range_value, range_unit=range_unit, start_date=start_date, end_date=end_date, station_a=station_id_a, station_b=station_id_b, station_c=station_id_c, variable=variable)
+
+        fieldnames = [
+            "test_type", "variable", "range", "station_a", "station_b", "station_c",
+            "f_stat", "p_value", "station_id",
+            f"observed_at_{cfg.time_zone_name}", "value"
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+
+        wrote_rows = False
+        for sid in [station_id_a, station_id_b, station_id_c]:
+            weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == sid, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
+
+            for row in weather:
+                value = convert_value(variable, getattr(row, variable, None))
+                observed_at = row.observed_at
+
+                if value is None or observed_at is None:
+                    continue
+
+                if observed_at.tzinfo is None:
+                    observed_at = pytz.UTC.localize(observed_at)
+                local_time = observed_at.astimezone(local_tz)
+
+                writer.writerow({
+                    "test_type": "one_way_anova",
+                    "variable": f"{allowed[variable]} ({labels[variable]})",
+                    "range": range_label,
+                    "station_a": station_id_a,
+                    "station_b": station_id_b,
+                    "station_c": station_id_c,
+                    "f_stat": result["f_stat"],
+                    "p_value": result["p_value"],
+                    "station_id": sid,
+                    f"observed_at_{cfg.time_zone_name}": observed_at.astimezone(local_tz).isoformat(),
+                    "value": value,
+                })
+                wrote_rows = True
+
+            if not wrote_rows:
+                    raise HTTPException(status_code=404, detail="No Exportable Data Found")
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid Test type")
+
+    csv_data = output.getvalue()
+    output.close()
+
+    safe_title = title.strip().replace(" ", "_") if title.strip() else (test or "weather_test")
+    filename = f"{safe_title}_{range_label}_{units}.csv"
+    filename = filename.strip().replace(" ", "_") if filename.strip() else (f"{test}.csv" or "weather_test.csv")
+
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+    return Response(content=csv_data, media_type="text/csv", headers=headers)
 
 #---Maintenance---
 

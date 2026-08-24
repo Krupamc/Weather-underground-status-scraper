@@ -221,6 +221,9 @@
                 <h2>Daily Observations for {{ selected_date }}</h2>
 
                 <div class="day_switcher">
+                    {% if csv_url %}
+                        <a href="{{ csv_url }}" title="Download CSV" class="graph_submit_button" style="font-size: 14px;">Download Data CSV</a>
+                    {% endif %}
                     <a href="?units={{ units }}&selected_date={{ prev_day if prev_day is not none else selected_date }}" class="day_button">Previous Day</a>
 
                     <form method="get" class="day_picker_form">

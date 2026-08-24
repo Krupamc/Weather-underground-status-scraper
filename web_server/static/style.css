@@ -711,6 +711,22 @@
 .wind_tick_nw { transform: translateX(-50%) rotate(315deg)}
 .wind_tick_nnw { transform: translateX(-50%) rotate(337.5deg)}
 
+.p_button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    background-color: #005baa;
+    border: none;
+    border-radius: 10px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
 /* Owner Dashboard */
 .toggle_button button{
     margin-top: 10px;
@@ -1377,3 +1393,41 @@
     color: #b00020;
     font-weight: 600;
 }
+
+/*---Smooth Transition Between Pages---*/
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-group(root) {
+    animation-duration: 0.25s;
+}
+
+
+/* Enable for page translate out and in
+::view-transition-group(root) {
+    animation-duration: 1s;
+    animation-timing-function: ease;
+}
+
+::view-transition-old(root) {
+    animation-name: slide-out;
+}
+
+::view-transition-new(root) {
+    animation-name: slide-in;
+}
+
+@keyframes slide-out {
+    to {
+        translate: -100vw;
+    }
+}
+
+@keyframes slide-in {
+    from {
+        translate: 100vw;
+    }
+}
+
+*/
