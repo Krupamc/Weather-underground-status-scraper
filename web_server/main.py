@@ -28,6 +28,9 @@ import matplotlib.dates as mdates
 
 app = FastAPI(title="SBB Mesonet Notification System")
 
+# Turn off docs
+#app = FastAPI(title="SBB Mesonet Notification System", docs_url=None, redoc_url=None, openapi_url=None)
+
 # Graph text
 roboto_path = "web_server/static/fonts/Roboto-Regular.ttf"
 fm.fontManager.addfont(roboto_path)
@@ -225,7 +228,6 @@ async def not_found(request: Request, exc: StarletteHTTPException):
         return templates.TemplateResponse(request, "400.html", {"request": request, "title": "400", "detail": exc.detail})
     
     return await http_exception_handler(request, exc)
-    
 
 # List of Stations
 @app.get("/stations", response_class=HTMLResponse)
@@ -675,6 +677,19 @@ def logout():
     response.delete_cookie(key="access_token", path="/", samesite="lax")
     return response
 
+# Admin Settings
+@app.get("/settings", response_class=HTMLResponse)
+def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)]):
+    # list of users
+    users = read_users(session, offset=0, current_user=current_user)
+
+    return templates.TemplateResponse(request, "w_settings.html", {
+        "request": request,
+        "title": "Settings",
+        "active_page": "settings",
+        "users": users,
+    }) 
+
 # Owner dashboard for the station:
 @app.get("/stations/dashboard/{station_id}", response_class=HTMLResponse)
 def owner_station(request: Request, session: db.SessionDep, station_id: str, required_user: Annotated[m.User, Depends(require_station_access)], current_user: Annotated[m.User, Depends(get_current_user)]):
@@ -864,7 +879,8 @@ def owner_station(request: Request, session: db.SessionDep, station_id: str, req
         "converted": converted,
         "maintenance": maintenance,
         "timezone": cfg.time_zone_name,
-        "success": success
+        "success": success,
+        "wu_base_url": cfg.wu_base_url,
     })
 
 #---Graphing---
@@ -2859,7 +2875,20 @@ def read_users_me(current_user: Annotated[m.User, Depends(get_current_user)]):
 def read_users(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], current_user: Annotated[m.User, Depends(require_admin)], limit: Annotated[int, Query(gt=0, le=100)] = 100,):
    users = session.exec(select(m.User).offset(offset).limit(limit)).all()
    return users
- 
+
+# Delete User
+@app.delete("/users/{user_id}")
+def delete_user(session: db.SessionDep, user_id: int, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Check id
+    id = session.exec(select(m.User).where(m.User.id == user_id)).first()
+    if not id:
+        raise HTTPException(status_code=404, detail="User Not Found")
+
+    # Delete
+    session.delete(id)
+    session.commit()
+    return {"ok": True, "Detail": f"{id.username} deleted"}
+
 #---Access---
 
 # Read what stations a user can affect
@@ -2941,6 +2970,39 @@ def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdat
     session.commit()
     session.refresh(user_db)
     return user_db
+
+# Update user from settings form
+@app.post("/users/update")
+def update_user_from_form(session: db.SessionDep, user_id: int = Form(), username: str | None = Form(None), password: str | None = Form(None), role: str | None = Form(None)):
+    # Select User
+    user_db = session.exec(select(m.User).where(m.User.id == user_id)).first()
+    if not user_db:
+        raise HTTPException(status_code=404, detail="No User Exist")
+
+    # Update
+    payload = {}
+    if username and username.strip():
+        payload["username"] = username.strip()
+    if password and password.strip():
+        payload["password"] = password.strip()
+    if role and role.strip():
+        payload["role"] = role.strip()
+
+    if not payload:
+        raise HTTPException(status_code=400, detail="No changes submitted")
+
+    user = m.UserUpdate(**payload)
+    user_data = user.model_dump(exclude_unset=True)
+
+    if "password" in user_data:
+        user_db.password_hash = s.hash_password(user_data.pop("password"))
+
+    user_db.sqlmodel_update(user_data)
+    session.add(user_db)
+    session.commit()
+    session.refresh(user_db)
+
+    return RedirectResponse(url="/settings", status_code=status.HTTP_303_SEE_OTHER)
 
 # Update User
 @app.patch("/users/{user_id}")

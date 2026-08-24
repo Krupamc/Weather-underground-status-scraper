@@ -289,10 +289,11 @@
     </div>
     {% endif %}
 
+    <!--
     <script>
     /* Listener */
     document.addEventListener("DOMContentLoaded", function () {
-        {% if selected_date %}
+        {% if csv_url %}
         const graphEl = document.getElementById("table");
         setTimeout(function() {
             if (graphEl) {
@@ -302,7 +303,8 @@
         
         {% endif %}
 
-});
+    });
+    -->
 
 </script>
 {% endblock %}

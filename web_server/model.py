@@ -200,9 +200,9 @@ class UserCreate(SQLModel):
     role: str
 
 class UserUpdate(SQLModel):
-    username: str
+    username: str | None = None
     password: str | None = None
-    role: str
+    role: str | None = None
 
 # ---User Access---
 

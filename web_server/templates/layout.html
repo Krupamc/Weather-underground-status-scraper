@@ -89,9 +89,21 @@
                     <a href="/stations" class="nav_item {% if active_page == 'stations' %}active{% endif %}">WEATHER STATIONS ▼</a>
                     <a href="/graph" class="nav_item {% if active_page == 'graph' %}active{% endif %}">GRAPHING AND ANALYSIS ▼</a>
                     <!-- If user is signed in-->
-                    {% if current_user%}
+                    {% if current_user %}
+                        <!-- My Stations-->
                         <a href="/my-stations" class="nav_item {% if active_page == 'my_stations' %}active{% endif %}">MY STATIONS ▼</a>
+                        
+                        <!-- If admin -->
+                        {% if current_user["role"] == "admin" %}
+                            <a href="/settings" class="nav_item {% if active_page == 'settings' %}active{% endif %}">SETTINGS ▼</a>
+                        {% endif %}
+                        
+                        <!-- Logout and Profile-->
                         <a href="/logout" class="nav_item">LOGOUT ▼</a>
+                        <a href="/my-stations" class="nav_item nav_profile">
+                            <img src="{{ url_for('static', path='/icons/blank_pfp.png')}}">
+                            <span>{{ current_user["username"] }}</span>
+                        </a>
 
                         <!-- Public -->
                         {% else %}

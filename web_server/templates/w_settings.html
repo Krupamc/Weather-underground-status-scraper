@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="settings_page">
+        <div class="settings_container">
+            <h1 class="graph_title">Settings</h1>
+            <p class="graph_subtitle">Configure the Mesonet System</p>
+            
+            <!-----USERS----->
+            <details class="graph_form_card">
+                <summary>Configure Users</summary>
+
+                <!-- Update-->
+                <details>
+                    <summary>Reset Username, Password, or Role</summary>
+                    <form method="post" action="/users/update" class="graph_form_card">
+                        <p class="graph_subtitle">Leave Items Blank to Remain Unchanged.</p>
+                        <!--Select User-->
+                        <div class="graph_form_row">
+                            <label for="user_id" class="graph_label">User:</label>
+                            <select name="user_id" id="user_id" class="graph_select">
+                                <option value="">Choose A User to Modify</option>
+                                {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.username }} - {{ user.role.capitalize() }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- New Username -->
+                        <div class="graph_form_row">
+                            <label for="username" class="graph_label">New Username:</label>
+                            <input type="text" name="username" id="username" class="graph_input">
+                        </div>
+                        
+                        <!-- New Password -->
+                        <div class="graph_form_row">
+                            <label for="password" class="graph_label">New Password:</label>
+                            <input type="text" name="password" id="password" class="graph_input">
+                        </div>
+
+                        <!-- Role -->
+                        <div class="graph_form_row">
+                            <label for="role" class="graph_label">Role:</label>
+                            <select name="role" id="role" class="graph_select">
+                                <option value="">Keep Current Role</option>
+                                <option value="admin">Admin</option>
+                                <option value="public">Public</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="graph_submit_button">Modify User</button>
+                    </form>
+                </details>
+
+                <!-- Register -->
+                <details>
+                    <summary>Register User</summary>
+                    <div class="login_card">
+                        <!-- If there is any error, mention it-->
+                        {% if error %}
+                            <p class="login_error">{{ error }}</p>
+                        {% endif %}
+
+                        <p class="graph_subtitle">Register a User:</p>
+                        <form action="/register" method="post" class="login_form">
+                            <label for="username">Username:</label>
+                            <input type="text" placeholder="Enter Username" id="register_username" name="username" required>
+
+                            <label for="password">Password:</label>
+                            <input type="password" placeholder="Enter Password" id="password" name="password" required>
+                            <button type="submit">Register</button>
+                        </form>
+                    </div>
+                </details>
+
+            </details>
+
+            <!-----STATIONS----->
+            <details>
+                
+            </details>
+
+        </div>
+    </div>
+{% endblock %}
