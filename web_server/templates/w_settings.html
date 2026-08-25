@@ -1,84 +1,264 @@
 {% extends "layout.html" %}
 
 {% block content %}
+
+    <!-- Pop ups -->
+    {% if success or error %}
+    <div class="popup_overlay">
+        <div class="popup_box">
+            {% if success %}
+                <h3>Success:</h3>
+                {% if success == "deleted" %}
+                    <p>User <b>{{ username if username else "" }}</b> was deleted successfully.</p>
+                {% elif success == "updated" %}
+                    <p>User changes were saved successfully.</p>
+                {% elif success == "registered" %}
+                    <p>User <b>{{ username if username else "" }}</b> registered successfully.</p>
+                {% elif success == "granted" %}
+                    <p>Station Access Granted</p>
+                {% else %}
+                    <p>Action completed successfully.</p>
+                {% endif %}
+            {% elif error %}
+                <h3>Error:</h3>
+                {% if error == "duplicate" %}
+                    <p>Station is already assigned to User.</p>
+                {% elif error == "404" %}
+                    <p>Station or User does not exist.</p>
+                {% else %}
+                    <p>Error Occurred.</p>
+                {% endif %}
+            {% endif %}
+            <a href="/settings" class="graph_submit_button">Close</a>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="settings_page">
         <div class="settings_container">
-            <h1 class="graph_title">Settings</h1>
-            <p class="graph_subtitle">Configure the Mesonet System</p>
+            <div class="settings_header">
+                <h1 class="settings_title">Settings</h1>
+                <p class="settings_subtitle">Configure the Mesonet System</p>
+            </div>
             
             <!-----USERS----->
-            <details class="graph_form_card">
-                <summary>Configure Users</summary>
+            <section class="settings_section">
+                <div class="settings_section_head">
+                    <h2>User Management</h2>
+                    <p>Manage accounts, passwords, and roles.</p>
+                </div>
+                
+                <div class="settings_grid">
+                    <!-- Modify -->
+                    <div class="settings_card">
+                        <h3>Modify User</h3>
+                        <p class="settings_help">Leave any field blank to keep its current value.</p>
 
-                <!-- Update-->
-                <details>
-                    <summary>Reset Username, Password, or Role</summary>
-                    <form method="post" action="/users/update" class="graph_form_card">
-                        <p class="graph_subtitle">Leave Items Blank to Remain Unchanged.</p>
-                        <!--Select User-->
-                        <div class="graph_form_row">
-                            <label for="user_id" class="graph_label">User:</label>
-                            <select name="user_id" id="user_id" class="graph_select">
-                                <option value="">Choose A User to Modify</option>
-                                {% for user in users %}
-                                    <option value="{{ user.id }}">{{ user.username }} - {{ user.role.capitalize() }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        <form method="post" action="/users/update" class="settings_form">
+                            <!--Select User-->
+                            <div class="form_group">
+                                <label for="update_user_id">User:</label>
+                                <select name="user_id" id="update_user_id" class="graph_select" required>
+                                    <option value="">Choose A User to Modify</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.username }} - {{ user.role.capitalize() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-                        <!-- New Username -->
-                        <div class="graph_form_row">
-                            <label for="username" class="graph_label">New Username:</label>
-                            <input type="text" name="username" id="username" class="graph_input">
-                        </div>
-                        
-                        <!-- New Password -->
-                        <div class="graph_form_row">
-                            <label for="password" class="graph_label">New Password:</label>
-                            <input type="text" name="password" id="password" class="graph_input">
-                        </div>
+                            <!-- New Username -->
+                            <div class="form_group">
+                                <label for="update_username" class="graph_label">New Username:</label>
+                                <input type="text" name="username" id="update_username" class="graph_input">
+                            </div>
+                            
+                            <!-- New Password -->
+                            <div class="form_group">
+                                <label for="update_password">New Password:</label>
+                                <input type="password" name="password" id="update_password" class="graph_input">
+                            </div>
 
-                        <!-- Role -->
-                        <div class="graph_form_row">
-                            <label for="role" class="graph_label">Role:</label>
-                            <select name="role" id="role" class="graph_select">
-                                <option value="">Keep Current Role</option>
-                                <option value="admin">Admin</option>
-                                <option value="public">Public</option>
-                            </select>
-                        </div>
+                            <!-- Role -->
+                            <div class="form_group">
+                                <label for="update_role">Role:</label>
+                                <select name="role" id="update_role" class="graph_select">
+                                    <option value="">Keep Current Role</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="public">Public</option>
+                                </select>
+                            </div>
 
-                        <button type="submit" class="graph_submit_button">Modify User</button>
-                    </form>
-                </details>
-
-                <!-- Register -->
-                <details>
-                    <summary>Register User</summary>
-                    <div class="login_card">
-                        <!-- If there is any error, mention it-->
-                        {% if error %}
-                            <p class="login_error">{{ error }}</p>
-                        {% endif %}
-
-                        <p class="graph_subtitle">Register a User:</p>
-                        <form action="/register" method="post" class="login_form">
-                            <label for="username">Username:</label>
-                            <input type="text" placeholder="Enter Username" id="register_username" name="username" required>
-
-                            <label for="password">Password:</label>
-                            <input type="password" placeholder="Enter Password" id="password" name="password" required>
-                            <button type="submit">Register</button>
+                            <button type="submit" class="graph_submit_button">Modify User</button>
                         </form>
                     </div>
-                </details>
 
-            </details>
+                    <!--Register-->
+                    <div class="settings_card">
+                        <h3>Register User</h3>
+                        <p class="settings_help">Create a new account.</p>
+
+                        {% if error %}
+                            <p class="login_error">{{ login_error }}</p>
+                        {% endif %}
+
+                        <form action="/settings/register" method="post" class="settings_form">
+                            <div class="form_group">
+                                <label for="register_username">Username</label>
+                                <input type="text" placeholder="Enter username" id="register_username" name="username" class="graph_input" required>
+                            </div>
+
+                            <div class="form_group">
+                                <label for="register_password">Password</label>
+                                <input type="password" placeholder="Enter password" id="register_password" name="password" class="graph_input" required>
+                            </div>
+
+                            <button type="submit" class="graph_submit_button">Register User</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Delete -->
+                    <div class="settings_card">
+                        <h3>Delete User</h3>
+                        <p class="settings_help">Delete a account. This action is permanent, proceed with caution.</p>
+
+                        <form action="/users/delete" method="post" class="settings_form">
+                            <div class="form_group">
+                                <label for="delete_user_id">User:</label>
+                                <select name="user_id" id="delete_user_id" class="graph_select">
+                                    <option value="">Choose A User to Delete</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.username }} - {{ user.role.capitalize() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button type="submit" class="graph_clear_button">Delete User</button>
+                        </form>
+                    </div>
+
+                    <!-- Read Assigned -->
+                    <div class="settings_card">
+                        <h3>Read User-Assigned Station</h3>
+                        <p class="settings_help">Lists all stations a user can interact with.</p>
+                        
+                        <form action="/settings" method="get" class="settings_form">
+                            <div class="form_group">
+                                <label for="stations_user_id">User:</label>
+                                <select name="stations_user_id" id="stations_user_id" class="graph_select" required>
+                                    <option value="">Choose A User</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.username }} - {{ user.role.capitalize() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button type="submit" class="graph_submit_button">Read User Stations</button>
+                        </form>
+
+                        <!-- Result Table-->
+                        {% if user_stations %}
+                            <div class="settings_results">
+                                <h4>Assigned Stations</h4>
+
+                                <div class="settings_table_wrap">
+                                    <table class="settings_table">
+                                        <tbody>
+                                            {% for row in user_stations %}
+                                            <div class="station_access_row">
+                                                <strong>{{ row.station_id }} - {{ row.station_name }}</strong>
+                                                <span>View: {{ "Yes" if row.can_view else "No" }}</span>
+                                                <span>Maintenance: {{ "Yes" if row.can_toggle_maintenance else "No" }}</span>
+                                            </div>
+                                            {% endfor %}    
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% elif stations_user_id %}
+                            <p class="settings_help">This user has no assigned stations. Admin Accounts are assigned all stations.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="settings_card">
+                        <h3>Grant Station Access</h3>
+                        <p class="settings_help">Give User Access to a Station's Owner Dashboard.</p>
+                        
+                        <form method="post" action="/users/stations/grant" class="settings_form">
+                            <div class="form_group">
+                                <label for="grant_user_id">User:</label>
+                                <select name="user_id" id="grant_user_id" class="graph_select" required>
+                                        <option value="">Choose A User</option>
+                                        {% for user in users %}
+                                            <option value="{{ user.id }}">{{ user.username }} - {{ user.role.capitalize() }}</option>
+                                        {% endfor %}
+                                    </select>
+                            </div>
+
+                            <div class="form_group">
+                                <label for="grant_station_id">Station:</label>
+                                <select name="station_id" id="grant_station_id" class="graph_select" required>
+                                    <option value="">Choose a Station</option>
+                                    {% for station in stations %}
+                                    <option value="{{ station.station_id }}">{{ station.station_id }} - {{ station.station_name}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button type="submit" class="graph_submit_button">Grant User Station Access</button>
+                        </form>
+                    </div>
+
+                    <div class="settings_card">
+                        <h3>Revoke Station Access</h3>
+                        <p class="settings_help">Remove User Access to a Station's Owner Dashboard.</p>
+
+                        <form method="get" action="/settings" class="settings_form">
+                            <div class="form_group">
+                                <label for="stations_user_id">User:</label>
+                                <select name="stations_user_id" id="stations_user_id" class="graph_select" onchange="this.form.submit()" required>
+                                    <option value="">Choose a User</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}" {% if stations_user_id == user.id %}selected{% endif %}>
+                                            {{ user.username }} - {{ user.role.capitalize() }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+
+                        <form method="post" action="/users/stations/revoke" class="settings_form">
+                            <input type="hidden" name="user_id" value="{{ stations_user_id or '' }}">
+
+                            <div class="form_group">
+                                <label for="revoke_station_id">Station:</label>
+                                <select name="station_id" id="revoke_station_id" class="graph_select" required>
+                                    <option value="">Choose a Station</option>
+                                    {% for station in access_stations %}
+                                        <option value="{{ station.station_id }}">
+                                            {{ station.station_id }} - {{ station.station_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button type="submit" class="graph_clear_button" {% if not stations_user_id %}disabled{% endif %}>Revoke Access</button>
+                        </form>
+                    </div>
+
+                    <div class="settings_card">
+                        <h3>Update User Access</h3>
+                        <p class="settings_help">Update a User's permissions for a specific station.</p>
+                    </div>
+                </div>
+
+            </section>
 
             <!-----STATIONS----->
-            <details>
-                
-            </details>
+            <section class="settings_section">
+                <div class="settings_section_head">
+                    <h2></h2>
+                </div>
+            </section>
 
         </div>
     </div>

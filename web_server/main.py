@@ -241,11 +241,11 @@ def stations(request: Request):
 def my_stations(request: Request, session: db.SessionDep, current_user: Annotated[m.User, Depends(get_current_user)]):
     # Admin pass
     if current_user.role == "admin":
-        stations = session.exec(select(m.Station)).all()
+        stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
         return templates.TemplateResponse(request, "my_stations.html", context={"request": request, "title": "My Stations", "active_page": "my_stations", "station_rows": stations})
 
     # Load stations
-    stations = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True)).all()
+    stations = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True).order_by(m.Station.station_name)).all()
 
     # Add names to list
     station_rows = []
@@ -679,16 +679,54 @@ def logout():
 
 # Admin Settings
 @app.get("/settings", response_class=HTMLResponse)
-def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)]):
+def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None):
     # list of users
     users = read_users(session, offset=0, current_user=current_user)
+    # List of station
+    stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
+    # User Stations
+    access_stations = session.exec(select(m.Station).join(m.UserAccess, m.UserAccess.station_id == m.Station.station_id).where(m.UserAccess.user_id == current_user.id).order_by(m.Station.station_name)).all()
+
+
+    login_error = ""
+    # Errors
+    if error == "user_exists":
+        login_error = "User already exists"
+
+
+    # Read Users Stations
+    user_stations = []
+    access_stations = []
+
+    if stations_user_id is not None:
+        rows = session.exec(select(m.UserAccess, m.Station).join(m.Station, m.UserAccess.station_id == m.Station.station_id).where(m.UserAccess.user_id == stations_user_id).order_by(m.Station.station_name)).all()
+
+        user_stations = [
+            {
+                "station_id": station.station_id,
+                "station_name": station.station_name,
+                "can_view": access.can_view,
+                "can_toggle_maintenance": access.can_toggle_maintenance,
+            }
+            for access, station in rows
+        ]
+
+        access_stations = [station for access, station in rows]
 
     return templates.TemplateResponse(request, "w_settings.html", {
         "request": request,
         "title": "Settings",
         "active_page": "settings",
         "users": users,
-    }) 
+        "stations": stations,
+        "access_stations": access_stations,
+        "success": success,
+        "username": username,
+        "error": error,
+        "login_error": login_error,
+        "user_stations": user_stations,
+        "stations_user_id": stations_user_id
+    })
 
 # Owner dashboard for the station:
 @app.get("/stations/dashboard/{station_id}", response_class=HTMLResponse)
@@ -2865,6 +2903,36 @@ def register(request: Request, session: db.SessionDep, username: str = Form(), p
 
     return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login"})
 
+# Form Response for register
+@app.post("/settings/register")
+def register(request: Request, session: db.SessionDep, username: str = Form(), password: str = Form()): #make this require admin later
+    # Check for existing user:
+    existing_user = session.exec(select(m.User).where(m.User.username == username)).first()
+
+    if existing_user:
+        return RedirectResponse(url="/settings?error=user_exists", status_code=303)
+
+    # Table Entry
+    db_user = m.User(
+        username=username,
+        role="public",
+        password_hash=s.hash_password(password),
+    )
+    # Save to db
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+
+    # First account is A admin account
+    if db_user.id == 1:
+        db_user.role = "admin"
+        session.add(db_user)
+        session.commit()
+        session.refresh(db_user)
+
+    return RedirectResponse(url="/settings?success=registered", status_code=303)
+
+
 # Read your user
 @app.get("/users/me")
 def read_users_me(current_user: Annotated[m.User, Depends(get_current_user)]):
@@ -2889,6 +2957,19 @@ def delete_user(session: db.SessionDep, user_id: int, current_user: Annotated[m.
     session.commit()
     return {"ok": True, "Detail": f"{id.username} deleted"}
 
+# Delete using Settings html
+@app.post("/users/delete")
+def delete_user_from_html(session: db.SessionDep, user_id: int = Form(), current_user: Annotated[m.User, Depends(require_admin)] = None):
+    user_db = session.exec(select(m.User).where(m.User.id == user_id)).first()
+    if not user_db:
+        raise HTTPException(status_code=404, detail="User not Found")
+
+    username = user_db.username
+
+    session.delete(user_db)
+    session.commit()
+
+    return RedirectResponse(url=f"/settings?success=deleted&username={username}", status_code=status.HTTP_303_SEE_OTHER)
 #---Access---
 
 # Read what stations a user can affect
@@ -2934,6 +3015,29 @@ def grant_station_access(user_id: int, station_id: str, session: db.SessionDep, 
     session.commit()
     return {"Ok": True}
 
+@app.post("/users/stations/grant")
+def grant_station_access_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], user_id: int = Form(), station_id: str = Form()):
+    # Open station
+    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    if not station:
+        return RedirectResponse(url=f"/settings?error=404", status_code=303)
+
+    # Find user
+    id = session.exec(select(m.User).where(m.User.id == user_id)).first()
+    if not id:
+        return RedirectResponse(url=f"/settings?error=404", status_code=303)
+
+    # Check for duplicate
+    existing = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id, m.UserAccess.station_id == station_id)).first()
+    if existing:
+        return RedirectResponse(url=f"/settings?error=duplicate", status_code=303)
+
+    # Add access
+    access = m.UserAccess(user_id=user_id, station_id=station_id, can_view=True)
+    session.add(access)
+    session.commit()
+    return RedirectResponse(url=f"/settings?success=granted", status_code=303)
+
 # Delete Access
 @app.delete("/users/{user_id}/stations/{station_id}")
 def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
@@ -2954,6 +3058,29 @@ def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep,
     session.delete(access)
     session.commit()
     return {"ok": True}
+
+# Delete Access from form
+@app.post("/users/stations/revoke")
+def revoke_station_access_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], user_id: int = Form(), station_id: str = Form()):
+    # Open station
+    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    if not station:
+        return RedirectResponse(url=f"/settings?error=404", status_code=303)
+
+    # Check id
+    id = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id)).first()
+    if not id:
+        return RedirectResponse(url=f"/settings?error=404", status_code=303)
+
+    # Select
+    access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id, m.UserAccess.station_id == station_id)).first()
+    if not access:
+        return RedirectResponse(url=f"/settings?error=404", status_code=303)
+
+    # Delete
+    session.delete(access)
+    session.commit()
+    return RedirectResponse(url=f"/settings?success=revoke", status_code=303)
 
 # Update access
 @app.patch("/users/{user_id}/stations/{station_id}")
@@ -3002,7 +3129,7 @@ def update_user_from_form(session: db.SessionDep, user_id: int = Form(), usernam
     session.commit()
     session.refresh(user_db)
 
-    return RedirectResponse(url="/settings", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/settings?success=updated", status_code=status.HTTP_303_SEE_OTHER)
 
 # Update User
 @app.patch("/users/{user_id}")

@@ -1404,6 +1404,7 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: 700;
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -1419,15 +1420,134 @@
 
 /*---Settings Page---*/
 .settings_page {
-    padding-top: 180px;
-    padding-bottom: 40px;
+    padding: 180px 24px 48px;
     display: flex;
     justify-content: center;
+    background: #f8fafc;
 }
 
-
 .settings_container {
-    width: min(1100px, 92%);
+    width: min(1100px, 100%);
+}
+
+.settings_header {
+    margin-bottom: 28px;
+}
+
+.settings_title {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 6px;
+}
+
+.settings_subtitle {
+    font-size: 1rem;
+    color: #6b7280;
+}
+
+.settings_section {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    padding: 28px;
+}
+
+.settings_section_head {
+    margin-bottom: 24px;
+}
+
+.settings_section_head h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.settings_section_head p {
+    color: #6b7280;
+    margin: 0;
+}
+
+.settings_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.settings_card {
+    background: #fcfcfd;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.settings_card h3 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+    color: #111827;
+}
+
+.settings_help {
+    margin-bottom: 18px;
+    color: #6b7280;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.settings_form {
+    display: grid;
+    gap: 16px;
+}
+
+.form_group {
+    display: grid;
+    gap: 7px;
+}
+
+.form_group label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.95rem;
+}
+
+.settings_results {
+    margin-top: 24px;
+    min-width: 0;
+}
+
+.settings_results h4 {
+    margin: 0 0 12px;
+    color: #111827;
+    font-size: 1rem;
+}
+
+.settings_table_wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.station_access_row {
+    display: grid;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.station_access_row + .station_access_row {
+    margin-top: 10px;
+}
+
+.station_access_row span {
+    color: #6b7280;
+    font-size: 0.9rem;
 }
 
 

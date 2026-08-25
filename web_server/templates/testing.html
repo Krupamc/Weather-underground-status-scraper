@@ -37,7 +37,7 @@
                         <!-- Select Station -->
                         <div class="graph_form_row">
                             <label for="station_id" class="graph_label">Station:</label>
-                            <select name="station_id" id="station" class="graph_select">
+                            <select name="station_id" id="station_id" class="graph_select">
                                 <option value="">Choose a station:</option>
                                 {% for station in stations %}
                                 <option value="{{ station.station_id }}"{% if selected_station == station.station_id %}selected{% endif %}>{{ station.station_id}} - {{ station.station_name }}</option>
@@ -351,6 +351,30 @@
         tTestGroup.style.display = "none";
         anovaGroup.style.display = "none";
 
+        xVariable.disabled = true;
+        yVariable.disabled = true;
+        title.disabled = true;
+        station.disabled = true;
+        tVariable.disabled = true;
+        tStationA.disabled = true;
+        tStationB.disabled = true;
+        aVariable.disabled = true;
+        aStationA.disabled = true;
+        aStationB.disabled = true;
+        aStationC.disabled = true;
+
+        xVariable.required = false;
+        yVariable.required = false;
+        title.required = false;
+        station.required = false;
+        tVariable.required = false;
+        tStationA.required = false;
+        tStationB.required = false;
+        aVariable.required = false;
+        aStationA.required = false;
+        aStationB.required = false;
+        aStationC.required = false;
+
         if (test.value === "linear_regression") {
             /* Make Visable */
             lRegressionGroup.style.display = "flex";
@@ -363,7 +387,7 @@
             xVariable.disabled = false;
             yVariable.disabled = false;
             title.disabled = false;
-            station.disable = false;
+            station.disabled = false;
 
             tVariable.disabled = true;
             tStationA.disabled = true;
