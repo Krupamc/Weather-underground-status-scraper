@@ -232,3 +232,19 @@ class UserAccessUpdate(SQLModel):
     station_id: str | None = None
     can_view: bool = Field(default=True)
     can_toggle_maintenance: bool = Field(default=True)
+
+
+# ---Email List---
+class WeatherEmailListBase(SQLModel):
+    email: str = Field(index=True)
+    name: str = Field(index=True)
+
+class WeatherEmailList(WeatherEmailListBase):
+    id: int | None = Field(default=None, primary_key=True)
+
+class WeatherEmailListPubic(WeatherEmailListBase):
+    id: int
+
+class WeatherEmailListUpdate(WeatherEmailList):
+    email: str | None = None
+    name: str | None = None

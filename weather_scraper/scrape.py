@@ -2,6 +2,7 @@
 
 from bs4 import BeautifulSoup as bs 
 import requests
+from requests import RequestException
 from requests.exceptions import HTTPError
 import convert_metric as cv
 from pathlib import Path
@@ -214,24 +215,61 @@ def scrape(station_id):
             print(f"Failed to get data for {station_id}. Error: {e}")
             scrape_time = api_timestamp()
             return empty_result(station_id, scrape_time) # Return empty
-    
 
+# Get Update Stations
+def get_stations_list(http: requests.Session) -> list[dict]:
+    for attempt in range(cfg.max_retries):
+        try:
+            url = f"{cfg.API_BASE}/scraper/stations"
+
+            # Get Json from API
+            r = http.get(url, timeout=10)
+            r.raise_for_status()
+            return r.json()
+
+        # Errors
+        except HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else None
+            last_error = f"API HTTP Error: {e}"
+
+            if status_code and 400 <= status_code < 500:
+                print(f"[API HTTP ERROR] {e} not retrying")
+                break
+
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[API HTTP ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+
+        except RequestException as e:
+            last_error = f"API Request Error: {e}"
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[API REQUEST ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+    return []
+
+# Requests
 
 api_header = {
     "x-api-key" : cfg.API_KEY
 }
 
-for station in cfg.stations:
-    results = scrape(station)
+session_http = requests.Session()
+session_http.headers.update({"x-api-key": cfg.API_KEY})
+
+stations = get_stations_list(session_http)
+
+for station in stations:
+    station_id = station["station_id"]
+    results = scrape(station_id)
 
     # If we get station error, continue
     if results is None:
         continue
 
-    print(f"\nSaving data...{results["station_id"]}")
+    print(f"\nSaving data...{results['station_id']}")
     save_data(results, now=results["observed_at"])
 
-    print(f"Sending data...{results["station_id"]}\n")
-    requests.post(f"{cfg.API_base}/weather/stations", json=results, headers=api_header)
+    print(f"Sending data...{results['station_id']}\n")
+    session_http.post(f"{cfg.API_BASE}/weather/stations", json=results)
 
 print("Scraping Complete! All data Saved")

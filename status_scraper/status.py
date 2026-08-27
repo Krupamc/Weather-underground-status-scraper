@@ -13,10 +13,12 @@ import time
 import csv
 
 # Main scraping loop
-def check_station(station_id, station_info):
+def check_station(station_id, station_info, http: requests.Session):
 
     station_name = station_info["station_name"]
     maintenance = station_info.get("is_in_maintenance", False)
+
+    ensure_station_exists(station_id, station_name)
 
     # Time
     now = get_time(station_id, station_name, station_info["is_in_maintenance"])
@@ -26,7 +28,7 @@ def check_station(station_id, station_info):
     for attempt in range(cfg.max_retries): # Try the scraping for configured 
         try:
             url = f"https://preview.wunderground.com/dashboard/pws/{station_id}" # Base url
-            r = requests.get(url, timeout=10)
+            r = http.get(url, timeout=10)
             r.raise_for_status()
 
             soup = bs(r.content, "html.parser")
@@ -47,7 +49,13 @@ def check_station(station_id, station_info):
         
         # If there HTTP Error, save and email
         except HTTPError as e:
+            # Skip 4XX errors
+            status_code = e.response.status_code if e.response is not None else None
             last_error = f"HTTP error: {e}"
+            if status_code and 400 <= status_code < 500:
+                print(f"[HTTP ERROR]: {e} not retrying")
+                break
+
             wait_time = cfg.backoff_factor ** attempt
             print(f"[HTTP ERROR]: {e}\nRetrying in {wait_time} seconds")
             
@@ -70,7 +78,7 @@ def check_station(station_id, station_info):
         data = read_json_file()
         log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "request_error", last_error)
 
-        if not maintenance:
+        if not maintenance and should_send_cooldown_alert(f"scrape_error:{station_id}", 60):
             email(
                 subject=cfg.scrape_e_subject,
                 body=cfg.e_body.format(err=last_error),
@@ -94,7 +102,7 @@ def check_station(station_id, station_info):
     
         # First Alert email
         if consec_offline >= cfg.consecutive_offline and not data[station_id]["alert_sent"] and not maintenance:
-            stat_name = cfg.stations[station_id]
+            stat_name = station_name
             stat_id = station_id
             offline_alert(
                 stat_id,
@@ -132,6 +140,7 @@ def check_station(station_id, station_info):
             station_id=station_id,
             station_name=station_name,
             maintenance = maintenance,
+            http = http,
             now=now,
             last_status=data[station_id]["last_status"],
             consecutive_offline=data[station_id]["consecutive_offline"],
@@ -194,7 +203,8 @@ def check_station(station_id, station_info):
         r = post_status_to_api(
             station_id=station_id,
             station_name=station_name,
-            maintenance = maintenance,
+            maintenance=maintenance,
+            http=http,
             now=now,
             last_status=data[station_id]["last_status"],
             consecutive_offline=data[station_id]["consecutive_offline"],
@@ -222,7 +232,7 @@ def get_time(station_id, station_name, maintenance) -> datetime:
             log_data(None, station_id, station_name, "error", data[station_id]["consecutive_offline"], "Time_error", f"{e}")
 
             # Email
-            if not maintenance:
+            if not maintenance and should_send_cooldown_alert(f"time_error:{station_id}", 60):
                 email(
                     subject=cfg.time_e_subject,
                     body=cfg.time_e_body.format(err = e),
@@ -241,9 +251,9 @@ def recover_alert(stat_id, stat_name, url, start, duration, now):
 
     else:
         recipients = cfg.global_recipients
-
+    
     email(
-        subject =cfg.r_subject.format(station_name=stat_name, station_id=stat_id, now=now),
+        subject = cfg.r_subject.format(station_name=stat_name, station_id=stat_id, now=now),
         body = cfg.r_body.format(station_name=stat_name, station_id=stat_id, url=url, outage_start=start, outage_duration=duration, now=now),
         recipients = recipients
     )
@@ -311,9 +321,9 @@ def send_report(now: datetime, period_start, period_end, stations_with_outages, 
     report["last_report"] = now.isoformat()
     write_report_file(report)
 
-def write_report(now: datetime):
+def write_report(now: datetime, stations: list[dict]):
     period_start, period_end = get_previous_month_period(now)
-    stats, station_summary = compute_monthly_stats(period_start, period_end)
+    stats, station_summary = compute_monthly_stats(period_start, period_end, stations)
     stations_with_outages = sum(1 for s in stats.values() if s["outage_count"] > 0)
 
     # longest outage
@@ -343,11 +353,13 @@ def get_previous_month_period(now: datetime):
     
     return period_start, period_end
 
-def compute_monthly_stats(period_start: datetime, period_end: datetime):
+def compute_monthly_stats(period_start: datetime, period_end: datetime, stations: list[dict]):
     stats = {}
 
     # per station
-    for station_id, station_name in cfg.stations.items():
+    for station in stations:
+        station_id = station["station_id"]
+        station_name = station["station_name"]
         stats[station_id] = {
             "station_id": station_id,
             "station_name": station_name,
@@ -357,7 +369,7 @@ def compute_monthly_stats(period_start: datetime, period_end: datetime):
             "outage_count": 0,
         }
 
-    path = Path("status_log.csv")
+    path = Path("status_scraper/status_log.csv")
     if not path.exists():
         return stats, "No station data available.\n"
     
@@ -454,7 +466,7 @@ def email(subject: str, body: str, recipients: list[str]) -> None:
 
 # Log the data
 def log_data(now: str, station_id, station_name, status, consec_offline, event_type: str, message: str):
-    path = Path("status_log.csv")
+    path = Path("status_scraper/status_log.csv")
     with path.open("a", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
         writer.writerow([
@@ -465,35 +477,42 @@ def log_data(now: str, station_id, station_name, status, consec_offline, event_t
 
 
 # Read/write to file
+
+def ensure_data_dir():
+    Path("status_scraper").mkdir(parents=True, exist_ok=True)
+
 def read_json_file():
-    with open("status.json", "r", encoding="utf-8") as file:
+    with open("status_scraper/status.json", "r", encoding="utf-8") as file:
          data = json.load(file)
     return data
 
 def write_json_file(data):
-    with open("status.json", "w", encoding="utf-8") as file:
+    with open("status_scraper/status.json", "w", encoding="utf-8") as file:
         json.dump(data, file, indent = 2)
 
-def read_maintenance_file():
-    with open("maintenance.json", "r", encoding="utf-8") as file:
-        data = json.load(file)
-    return data
-
-def write_maintenance_file(data):
-    with open("maintenance.json", "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2)
-
 def read_report_file():
-    with open("report.json", "r", encoding="utf-8") as file:
+    with open("status_scraper/report.json", "r", encoding="utf-8") as file:
         data = json.load(file)
     return data
 
 def write_report_file(data):
-    with open("report.json", "w", encoding="utf-8") as file:
+    with open("status_scraper/report.json", "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=2)
+
+def read_alert_cooldown_file():
+    path = Path("status_scraper/alert_cooldowns.json")
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+def write_alert_cooldown_file(data):
+    path = Path("status_scraper/alert_cooldowns.json")
+    with path.open("w", encoding="utf-8") as file:
         json.dump(data, file, indent=2)
 
 # Send JSON over Post
-def post_status_to_api(station_id: str, station_name: str, maintenance: bool, now: datetime, last_status, consecutive_offline, first_offline, last_connected, alert_sent):
+def post_status_to_api(station_id: str, station_name: str, maintenance: bool, http: requests.Session, now: datetime, last_status, consecutive_offline, first_offline, last_connected, alert_sent):
     for attempt in range(cfg.max_retries):
         try:
             # Create payload:
@@ -507,14 +526,20 @@ def post_status_to_api(station_id: str, station_name: str, maintenance: bool, no
                 "alert_sent": alert_sent
             }
 
-            r = requests.post(cfg.api_post_url, json=payload, headers={"x-api-key": cfg.api_key}, timeout=10)
+            r = http.post(cfg.api_post_url, json=payload, timeout=10)
 
             r.raise_for_status()
 
             return r
 
         except HTTPError as e:
+            # Skip 4XX errors
+            status_code = e.response.status_code if e.response is not None else None
             last_error = f"POST error: {e}"
+            if status_code and 400 <= status_code < 500:
+                print(f"[POST ERROR]: {e} not retrying")
+                break
+
             wait_time = cfg.backoff_factor ** attempt
             print(f"[POST ERROR]: {e}\nRetrying in {wait_time} seconds")
             time.sleep(wait_time)
@@ -533,9 +558,9 @@ def post_status_to_api(station_id: str, station_name: str, maintenance: bool, no
             break
     else:
         data = read_json_file()
-        log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "post_error", last_error)
+        log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "http_error", last_error)
 
-        if not maintenance:
+        if not maintenance and should_send_cooldown_alert(f"post_error:{station_id}", 60):
             email(
                 subject=cfg.post_e_subject,
                 body=cfg.e_body.format(err=last_error),
@@ -546,7 +571,7 @@ def post_status_to_api(station_id: str, station_name: str, maintenance: bool, no
     
 # Create base csv data file
 def start_log():
-    path = Path("status_log.csv")
+    path = Path("status_scraper/status_log.csv")
     if not path.exists():
         with path.open("w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
@@ -560,7 +585,7 @@ def start_log():
 # Create base json status file
 def write_start():
 
-    status_json_file = Path("status.json")
+    status_json_file = Path("status_scraper/status.json")
     
     if not status_json_file.exists():
 
@@ -587,7 +612,7 @@ def write_start():
 
 # Create Report json file:
 def report_write_start(now: datetime):
-    report_json = Path("report.json")
+    report_json = Path("status_scraper/report.json")
 
     if not report_json.exists():
         
@@ -598,23 +623,60 @@ def report_write_start(now: datetime):
         write_report_file(data)
         print(f"\nReport File Created\n")
 
-# Create maintence json status file:
-def maintenance_write_start():
-    maintenance_json_file = Path("maintenance.json")
+# Base Status
+def build_station_status(station_id, station_name):
+    return {
+        "station_id": station_id,
+        "station_name": station_name,
+        "last_status": "Not Checked",
+        "consecutive_offline": 0,
+        "alert_sent": False,
+        "last_connected": None,
+        "first_offline": None,
+        "since_first_alert": None,
+        "last_reminder_sent": None,
+        "http_e": None,
+        "time_e": None,
+        "error": None,
+    }
 
-    if not maintenance_json_file.exists():
+# Exist?
+def ensure_station_exists(station_id, station_name):
+    data = read_json_file()
 
-        data = {}
+    if station_id not in data:
+        data[station_id] = build_station_status(station_id, station_name)
+        write_json_file(data)
+        print(f"[STATUS INIT]: Added missing station {station_name} ({station_id})")
 
-        for station, station_name in cfg.stations.items():
-            data[station] = {
-                "station_id": station,
-                "station_name": station_name,
-                "enabled": False,
-                "changed_at": None
-            }
-        write_maintenance_file(data)
-        print(f"\nMaintenance File Created\n")
+    return data
+
+# Sync Files
+def sync_status_file(stations: list[dict]):
+    data = read_json_file()
+    changed = False
+
+    for station in stations:
+        station_id = station["station_id"]
+        station_name = station["station_name"]
+
+        if station_id not in data:
+            data[station_id] = build_station_status(station_id, station_name)
+            changed = True
+
+    if changed:
+        write_json_file(data)
+        print("\nStatus file synced with station API\n")
+
+
+
+# Create alert cooldown file
+def alert_cooldown_write_start():
+    path = Path("status_scraper/alert_cooldowns.json")
+    if not path.exists():
+        with path.open("w", encoding="utf-8") as file:
+            json.dump({}, file, indent=2)
+        print("\nAlert Cooldown File Created\n")
 
 # Check if we should send a reminder
 def should_send_reminder(station, now):
@@ -636,8 +698,26 @@ def should_send_reminder(station, now):
     else:
         return False
 
+# Check if send alert
+def should_send_cooldown_alert(key: str, cooldown_minutes: int = cfg.error_email_cooldown) -> bool:
+    now = datetime.now(pytz.UTC)
+    data = read_alert_cooldown_file()
 
-# Check if it it 
+    last_sent_str = data.get(key)
+
+    if last_sent_str:
+        try:
+            last_sent = datetime.fromisoformat(last_sent_str)
+            if now - last_sent < timedelta(minutes=cooldown_minutes):
+                return False
+        except ValueError:
+            pass
+
+    data[key] = now.isoformat()
+    write_alert_cooldown_file(data)
+    return True
+
+# Check if it it is the report day
 def check_if_report_day(now: datetime):
     # Email send on the first of the month at 8 AM
     if now.day == cfg.monthly_email_day:
@@ -667,13 +747,13 @@ def should_send_report(now: datetime):
     return not (last_dt.year == now.year and last_dt.month == now.month)
 
 # Get Stations
-def get_stations_list() -> list[dict]:
+def get_stations_list(http: requests.Session) -> list[dict]:
     for attempt in range(cfg.max_retries):
         try:
             url = f"{cfg.api_base}/scraper/stations"
 
             # Get Json from API
-            r = requests.get(url, headers={"x-api-key": cfg.api_key}, timeout=10)
+            r = http.get(url, timeout=10)
             r.raise_for_status()
             return r.json()
 
@@ -698,21 +778,28 @@ def get_stations_list() -> list[dict]:
 
     log_data(datetime.now(pytz.UTC).isoformat(), "", "", "error", "", "station_api_error", last_error)
     # Send Error Email
-    email(
-        subject=cfg.api_e_subject,
-        body=cfg.e_body.format(err=last_error),
-        recipients=cfg.admin
-    )
+    if should_send_cooldown_alert("station_api_error", 60):
+        email(
+            subject=cfg.api_e_subject,
+            body=cfg.e_body.format(err=last_error),
+            recipients=cfg.admin
+        )
     return []
 
 #---Program---
 
+# Single Session Request
+session_http = requests.Session()
+session_http.headers.update({"x-api-key": cfg.api_key})
+
 # Intializers
-maintenance_write_start()
+ensure_data_dir()
+alert_cooldown_write_start()
 write_start()
 start_log()
-stations = get_stations_list()
-station_map = {s["station_id"]: s for s in stations}
+stations = get_stations_list(session_http)
+sync_status_file(stations)
+#station_map = {s["station_id"]: s for s in stations}
 
 now = get_time("Report", "Report", False)
 if now is not None:
@@ -723,11 +810,11 @@ print("Start of Status Check")
 # Scrape/email/save loop/POST
 for station in stations:
     if station.get("collect_enabled", False):
-        check_station(station["station_id"], station)
+        check_station(station["station_id"], station, session_http)
     
 # Monthy Report
 if should_send_report(now):
-    write_report(now)
+    write_report(now, stations)
 
 
 # Print everything

@@ -3262,7 +3262,7 @@ def delete_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
     # Delete
     session.delete(station)
     session.commit()
-    return RedirectResponse(url="/settings?success=deleted", status_code=303)
+    return RedirectResponse(url="/settings?success=station_deleted", status_code=303)
 
 
 # Update Station (MAIN METHOD)

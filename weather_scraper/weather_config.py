@@ -20,5 +20,5 @@ pytz_timezone = "US/Eastern"
 max_retries = 5
 backoff_factor = 3
 
-API_base = "http://127.0.0.1:8000"
-API_KEY = "smth"
+API_BASE = "http://127.0.0.1:8000"
+API_KEY = "test"

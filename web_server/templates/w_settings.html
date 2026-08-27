@@ -20,8 +20,8 @@
                     <p>Station Access Revoked</p>
                 {% elif success == "station_created" %}
                     <p>Station <b>{{username if username else ""}}</b> created successfully.</p>
-                {% elif success == "deleted"%}
-                    <p>Changes were saved successfully.</p>
+                {% elif success == "station_ deleted"%}
+                    <p>Station deleted successfully.</p>
                 {% else %}
                     <p>Action completed successfully.</p>
                 {% endif %}
@@ -381,7 +381,7 @@
 
                             <!-- Maintenance -->
                             <div class="form_group">
-                                <label><input type="checkbox" name=can_toggle_maintenance value=True>Is in maintenance mode?</label>
+                                <label><input type="checkbox" name=is_in_maintenance value=True>Is in maintenance mode?</label>
                             </div>
 
                             <!-- Public -->
@@ -432,7 +432,6 @@
                                         {% for row in stations %}
                                         <div class="station_access_row">
                                             <strong>{{ row.station_id }} - {{ row.station_name }}</strong>
-                                            <span>View: {{ "Yes" if row.can_view else "No" }}</span>
                                             <span>Maintenance: {{ "Yes" if row.can_toggle_maintenance else "No" }}</span>
                                         </div>
                                         {% endfor %}    
