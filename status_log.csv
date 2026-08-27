@@ -52,3 +52,104 @@ timestamp,station_id,station_name,status,consecutive_offline,event_type,message
 2026-07-25T21:03:18.245380+00:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
 2026-07-25T21:03:18.799078+00:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
 2026-07-25T21:03:19.157136+00:00,Ecocenter,Ecocenter,OFFLINE,5,check,ok
+2026-08-27T03:44:49.760447+00:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-08-27T03:44:50.643516+00:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-08-27T03:44:51.121754+00:00,KNJMANAH111,Stafford Municipal Complex,CONNECTED,0,check,ok
+2026-08-27T03:44:52.838596+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T03:44:53.369698+00:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-08-27T03:44:53.861885+00:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-08-27T03:44:54.392258+00:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:44:55.028991+00:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:44:55.617321+00:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:45:36.783046+00:00,,,error,,active_station_api_error,Active Station API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:45:37.734065+00:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-08-27T03:45:38.195068+00:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-08-27T03:45:38.570501+00:00,KNJMANAH111,Stafford Municipal Complex,CONNECTED,0,check,ok
+2026-08-27T03:45:38.939831+00:00,KNJMANAH7,MATES/Stafford,OFFLINE,7,check,ok
+2026-08-27T03:45:39.222975+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T03:45:39.640744+00:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-08-27T03:45:39.998204+00:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-08-27T03:45:40.408504+00:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:45:40.731336+00:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:45:41.135201+00:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:45:41.620429+00:00,Ecocenter,Ecocenter,OFFLINE,7,check,ok
+2026-08-27T03:47:01.392007+00:00,,,error,,active_station_api_error,Active Station API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:47:02.382956+00:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-08-27T03:47:02.753062+00:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-08-27T03:47:03.175539+00:00,KNJMANAH111,Stafford Municipal Complex,CONNECTED,0,check,ok
+2026-08-27T03:47:03.524341+00:00,KNJMANAH7,MATES/Stafford,OFFLINE,8,check,ok
+2026-08-27T03:47:03.830632+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T03:47:04.237175+00:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-08-27T03:47:04.693537+00:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-08-27T03:47:05.314456+00:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:47:05.734543+00:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:47:06.130423+00:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:47:06.503850+00:00,Ecocenter,Ecocenter,OFFLINE,8,check,ok
+2026-08-27T03:59:12.363157+00:00,KNJBERKE13,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:12.271788+00:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-08-27T03:59:13.858929+00:00,KNJWARET3,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:13.781955+00:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-08-27T03:59:15.210002+00:00,KNJMANAH111,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:15.125927+00:00,KNJMANAH111,Stafford Municipal Complex,CONNECTED,0,check,ok
+2026-08-27T03:59:16.533550+00:00,KNJMANAH7,,error,8,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:16.461227+00:00,KNJMANAH7,MATES/Stafford,OFFLINE,9,check,ok
+2026-08-27T03:59:17.829713+00:00,KNJBAYHE18,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:17.751504+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T03:59:19.386416+00:00,KNJLONGB89,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:19.300406+00:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-08-27T03:59:20.990465+00:00,KNJLONGB21,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:20.901691+00:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-08-27T03:59:22.622475+00:00,KNJBEACH64,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:22.543376+00:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:59:23.992503+00:00,KNJOCEAN178,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:23.913586+00:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:59:25.382905+00:00,KNJSEASI44,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:25.304658+00:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-08-27T03:59:26.991587+00:00,Ecocenter,,error,8,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:26.901894+00:00,Ecocenter,Ecocenter,OFFLINE,9,check,ok
+2026-08-27T03:59:28.723474+00:00,KNJBERKE13,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:29.703229+00:00,KNJWARET3,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:30.773104+00:00,KNJMANAH111,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:31.751295+00:00,KNJMANAH7,,error,9,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:32.772581+00:00,KNJBAYHE18,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:33.734505+00:00,KNJLONGB89,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:34.705696+00:00,KNJLONGB21,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:35.781499+00:00,KNJBEACH64,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:36.746156+00:00,KNJOCEAN178,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:37.703487+00:00,KNJSEASI44,,error,0,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T03:59:38.679600+00:00,Ecocenter,,error,9,maintenance_api_error,Maintenance API Request Error: Expecting value: line 1 column 1 (char 0)
+2026-08-27T04:35:52.441353+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T04:36:03.409851+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T04:38:27.633470+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T04:38:28.080016+00:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:38:28.400001+00:00,Ecocenter,Ecocenter,OFFLINE,10,check,ok
+2026-08-27T04:38:28.790692+00:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-08-27T04:38:29.175053+00:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-08-27T04:38:29.604545+00:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-08-27T04:38:30.020959+00:00,KNJMANAH7,MATES/Stafford,OFFLINE,10,check,ok
+2026-08-27T04:38:30.388420+00:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:38:31.020252+00:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:38:31.503901+00:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-08-27T04:38:31.987613+00:00,KNJMANAH111,Stafford Municipal Complex,CONNECTED,0,check,ok
+2026-08-27T04:41:44.318810+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T04:41:44.772047+00:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:41:45.252755+00:00,Ecocenter,Ecocenter,OFFLINE,11,check,ok
+2026-08-27T04:41:45.740979+00:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-08-27T04:41:46.070709+00:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-08-27T04:41:46.566011+00:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-08-27T04:41:46.940033+00:00,KNJMANAH7,MATES/Stafford,OFFLINE,11,check,ok
+2026-08-27T04:41:47.236771+00:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:41:47.745512+00:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:41:48.211675+00:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-08-27T04:41:48.541929+00:00,KNJMANAH111,Stafford Municipal Complex,CONNECTED,0,check,ok
+2026-08-27T04:43:38.747763+00:00,KNJBAYHE18,Bayhead Fire Company #1,CONNECTED,0,check,ok
+2026-08-27T04:43:39.166115+00:00,KNJBEACH64,Beachwood Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:43:39.470591+00:00,Ecocenter,Ecocenter,OFFLINE,12,check,ok
+2026-08-27T04:43:39.865830+00:00,KNJBERKE13,Island Beach State Park Bathhouse #1,CONNECTED,0,check,ok
+2026-08-27T04:43:40.247885+00:00,KNJLONGB21,LBI Foundation,CONNECTED,0,check,ok
+2026-08-27T04:43:40.632087+00:00,KNJLONGB89,LBT Marine Field Station,CONNECTED,0,check,ok
+2026-08-27T04:43:41.033628+00:00,KNJMANAH7,MATES/Stafford,OFFLINE,12,check,ok
+2026-08-27T04:43:41.395327+00:00,KNJOCEAN178,Ocean Gate Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:43:41.763997+00:00,KNJSEASI44,Seaside Park Yacht Club,CONNECTED,0,check,ok
+2026-08-27T04:43:42.202212+00:00,KNJWARET3,Sedge Island,CONNECTED,0,check,ok
+2026-08-27T04:43:42.566490+00:00,KNJMANAH111,Stafford Municipal Complex,CONNECTED,0,check,ok

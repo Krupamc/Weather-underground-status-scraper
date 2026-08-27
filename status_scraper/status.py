@@ -13,18 +13,17 @@ import time
 import csv
 
 # Main scraping loop
-def check_station(station_id):
+def check_station(station_id, station_info):
 
-    station_name = cfg.stations[station_id]
+    station_name = station_info["station_name"]
+    maintenance = station_info.get("is_in_maintenance", False)
 
     # Time
-    now = get_time(station_id, station_name)
+    now = get_time(station_id, station_name, station_info["is_in_maintenance"])
     if now is None:
         return
 
-    maintenance = is_in_maintenance(station_id)
-
-    for attempt in range(cfg.max_retries): # Try the scraping for configered 
+    for attempt in range(cfg.max_retries): # Try the scraping for configured 
         try:
             url = f"https://preview.wunderground.com/dashboard/pws/{station_id}" # Base url
             r = requests.get(url, timeout=10)
@@ -36,7 +35,7 @@ def check_station(station_id):
             
             status_header = soup.find("pws-status")
             if status_header is None:
-                raise ValueError("pws-status tag not found") # logging scrap erro
+                raise ValueError("pws-status tag not found") # logging scrap error
 
             status = status_header["data-status"]
             
@@ -132,12 +131,13 @@ def check_station(station_id):
         r = post_status_to_api(
             station_id=station_id,
             station_name=station_name,
+            maintenance = maintenance,
             now=now,
-            last_status=data[station]["last_status"],
-            consecutive_offline=data[station]["consecutive_offline"],
-            first_offline=data[station]["first_offline"],
-            last_connected=data[station]["last_connected"],
-            alert_sent=data[station]["alert_sent"] 
+            last_status=data[station_id]["last_status"],
+            consecutive_offline=data[station_id]["consecutive_offline"],
+            first_offline=data[station_id]["first_offline"],
+            last_connected=data[station_id]["last_connected"],
+            alert_sent=data[station_id]["alert_sent"] 
         ) 
         if r is not None:
             print(f"[POSTED]: {station_id}: {r.status_code}")
@@ -194,18 +194,19 @@ def check_station(station_id):
         r = post_status_to_api(
             station_id=station_id,
             station_name=station_name,
+            maintenance = maintenance,
             now=now,
-            last_status=data[station]["last_status"],
-            consecutive_offline=data[station]["consecutive_offline"],
-            first_offline=data[station]["first_offline"],
-            last_connected=data[station]["last_connected"],
-            alert_sent=data[station]["alert_sent"] 
+            last_status=data[station_id]["last_status"],
+            consecutive_offline=data[station_id]["consecutive_offline"],
+            first_offline=data[station_id]["first_offline"],
+            last_connected=data[station_id]["last_connected"],
+            alert_sent=data[station_id]["alert_sent"] 
         )
         if r is not None:
             print(f"[POSTED]: {station_id}: {r.status_code}")
  
 # time - error protected
-def get_time(station_id, station_name) -> datetime:
+def get_time(station_id, station_name, maintenance) -> datetime:
     for attempt in range(cfg.max_retries):
         try:
             now = datetime.now(pytz.UTC)
@@ -221,7 +222,7 @@ def get_time(station_id, station_name) -> datetime:
             log_data(None, station_id, station_name, "error", data[station_id]["consecutive_offline"], "Time_error", f"{e}")
 
             # Email
-            if not is_in_maintenance():
+            if not maintenance:
                 email(
                     subject=cfg.time_e_subject,
                     body=cfg.time_e_body.format(err = e),
@@ -464,7 +465,6 @@ def log_data(now: str, station_id, station_name, status, consec_offline, event_t
 
 
 # Read/write to file
-
 def read_json_file():
     with open("status.json", "r", encoding="utf-8") as file:
          data = json.load(file)
@@ -492,52 +492,8 @@ def write_report_file(data):
     with open("report.json", "w", encoding="utf-8") as file:
         json.dump(data, file, indent=2)
 
-# Check if a station is in maintenance
-def is_in_maintenance(station_id: str) -> bool:
-    for attempt in range(cfg.max_retries):
-        try:
-            # Url
-            url = f"{cfg.api_base}/scraper/stations/{station_id}"
-
-            # GET json from API
-            r = requests.get(url, headers={"x-api-key": cfg.api_key}, timeout=10)
-            r.raise_for_status()
-            data = r.json()
-            return bool(data.get("is_in_maintenance", False))
-
-        except HTTPError as e:
-            last_error = f"Maintenance API HTTP Error: {e}"
-            wait_time = cfg.backoff_factor ** attempt
-            print(f"[MAINTENANCE HTTP ERROR] {e} retrying in {wait_time} seconds")
-            time.sleep(wait_time)
-            continue
-
-        except RequestException as e:
-            last_error = f"Maintenance API Request Error: {e}"
-            wait_time = cfg.backoff_factor ** attempt
-            print(f"[MAINTENANCE API REQUEST ERROR] {e} retrying in {wait_time} seconds")
-
-        except Exception as e:
-            last_error = f"Maintenance API Error: {e}"
-            print(f"[MAINTENANCE ERROR]: Failed to get maintenance data for {station_id}. Error {e}")
-            break
-
-    else:
-        data = read_json_file()
-        now = get_time()
-
-        log_data(now.isoformat(), station_id, "", "error", data[station_id]["consecutive_offline"], "maintenance_api_error", last_error)
-
-        # Send Error Email
-        email(
-            subject=cfg.maintenance_e_subject,
-            body=cfg.e_body.format(err=last_error),
-            recipients=cfg.admin
-        )
-# Finish mainteance rewplacement
-
 # Send JSON over Post
-def post_status_to_api(station_id: str, station_name: str, now: datetime, last_status, consecutive_offline, first_offline, last_connected, alert_sent):
+def post_status_to_api(station_id: str, station_name: str, maintenance: bool, now: datetime, last_status, consecutive_offline, first_offline, last_connected, alert_sent):
     for attempt in range(cfg.max_retries):
         try:
             # Create payload:
@@ -579,7 +535,7 @@ def post_status_to_api(station_id: str, station_name: str, now: datetime, last_s
         data = read_json_file()
         log_data(now.isoformat(), station_id, station_name, "error", data[station_id]["consecutive_offline"], "post_error", last_error)
 
-        if not is_in_maintenance(station_id):
+        if not maintenance:
             email(
                 subject=cfg.post_e_subject,
                 body=cfg.e_body.format(err=last_error),
@@ -628,7 +584,6 @@ def write_start():
             }
         print(f"\nJson Status File Created\n")
         write_json_file(data)
-        
 
 # Create Report json file:
 def report_write_start(now: datetime):
@@ -711,6 +666,44 @@ def should_send_report(now: datetime):
 
     return not (last_dt.year == now.year and last_dt.month == now.month)
 
+# Get Stations
+def get_stations_list() -> list[dict]:
+    for attempt in range(cfg.max_retries):
+        try:
+            url = f"{cfg.api_base}/scraper/stations"
+
+            # Get Json from API
+            r = requests.get(url, headers={"x-api-key": cfg.api_key}, timeout=10)
+            r.raise_for_status()
+            return r.json()
+
+        # Errors
+        except HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else None
+            last_error = f"API HTTP Error: {e}"
+
+            if status_code and 400 <= status_code < 500:
+                print(f"[API HTTP ERROR] {e} not retrying")
+                break
+
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[API HTTP ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+
+        except RequestException as e:
+            last_error = f"API Request Error: {e}"
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[API REQUEST ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+
+    log_data(datetime.now(pytz.UTC).isoformat(), "", "", "error", "", "station_api_error", last_error)
+    # Send Error Email
+    email(
+        subject=cfg.api_e_subject,
+        body=cfg.e_body.format(err=last_error),
+        recipients=cfg.admin
+    )
+    return []
 
 #---Program---
 
@@ -718,15 +711,19 @@ def should_send_report(now: datetime):
 maintenance_write_start()
 write_start()
 start_log()
-now = get_time("Report", "Report")
+stations = get_stations_list()
+station_map = {s["station_id"]: s for s in stations}
+
+now = get_time("Report", "Report", False)
 if now is not None:
     report_write_start(now)
 
 print("Start of Status Check")
 
 # Scrape/email/save loop/POST
-for station in cfg.stations:
-    check_station(station)
+for station in stations:
+    if station.get("collect_enabled", False):
+        check_station(station["station_id"], station)
     
 # Monthy Report
 if should_send_report(now):
@@ -736,13 +733,15 @@ if should_send_report(now):
 # Print everything
 print(f"\n\n\nSUMMARY:\n")
 data = read_json_file()
-for station, station_names in cfg.stations.items():
-    if data[station]["last_status"] == "OFFLINE":
-        print(f"[OFFLINE]: {station_names} ({station})")
+for station in stations:
+    station_id = station["station_id"]
+    station_name = station["station_name"]
 
-    if data[station]["last_status"] == "RECOVERED":
-        print(f"[RECOVERED]: {station_names} ({station})")
-  
-    if is_in_maintenance(station):
-        print(f"[MAINTENANCE]: {station_names} ({station})")
+    if data[station_id]["last_status"] == "OFFLINE":
+        print(f"[OFFLINE]: {station_name} ({station_id})")
 
+    if data[station_id]["last_status"] == "RECOVERED":
+        print(f"[RECOVERED]: {station_name} ({station_id})")
+
+    if station.get("is_in_maintenance", False):
+        print(f"[MAINTENANCE]: {station_name} ({station_id})")

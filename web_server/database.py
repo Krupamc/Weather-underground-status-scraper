@@ -1,4 +1,4 @@
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, text
 from typing import Annotated
 from fastapi import Depends
 
@@ -19,3 +19,15 @@ def get_session():
         yield session
 
 SessionDep = Annotated[Session, Depends(get_session)]
+
+def migrate_add_collect_enabled():
+    with Session(engine) as session:
+        columns = session.exec(text("PRAGMA table_info(station)")).all()
+        column_names = [col[1] for col in columns]
+
+        if "collect_enabled" not in column_names:
+            session.exec(
+                text("ALTER TABLE station ADD COLUMN collect_enabled BOOLEAN NOT NULL DEFAULT 1")
+            )
+            session.commit()
+

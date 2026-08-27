@@ -679,14 +679,22 @@ def logout():
 
 # Admin Settings
 @app.get("/settings", response_class=HTMLResponse)
-def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None):
+def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None):
+    # If blank user:
+    if stations_user_id == "":
+        stations_user_id = None
+    elif stations_user_id is not None:
+        stations_user_id = int(stations_user_id)
+
     # list of users
     users = read_users(session, offset=0, current_user=current_user)
     # List of station
     stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
-    # User Stations
-    access_stations = session.exec(select(m.Station).join(m.UserAccess, m.UserAccess.station_id == m.Station.station_id).where(m.UserAccess.user_id == current_user.id).order_by(m.Station.station_name)).all()
-
+   
+    # What permissions users have at a stations
+    selected_access = None
+    if stations_user_id is not None and access_station_id:
+        selected_access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == stations_user_id, m.UserAccess.station_id == access_station_id,)).first()
 
     login_error = ""
     # Errors
@@ -720,12 +728,16 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
         "users": users,
         "stations": stations,
         "access_stations": access_stations,
+        "stations_user_id": stations_user_id,
+        "access_station_id": access_station_id,
+        "selected_access": selected_access,
         "success": success,
         "username": username,
         "error": error,
         "login_error": login_error,
         "user_stations": user_stations,
-        "stations_user_id": stations_user_id
+        "stations_user_id": stations_user_id,
+        "read_stations": read_stations
     })
 
 # Owner dashboard for the station:
@@ -2769,27 +2781,22 @@ def test_csv(session: db.SessionDep, units: str = "imperial", range_mode: str = 
 
     return Response(content=csv_data, media_type="text/csv", headers=headers)
 
-#---Maintenance---
+#---API Read---
 
-# API Maintenance Read
-@app.get("/scraper/stations/{station_id}")
-def scraper_station_state(station_id: str, session: db.SessionDep, x_api_key: Annotated[str, Header()]):
+# API Active Station Read
+@app.get("/scraper/stations", response_model=list[m.Station])
+def scraper_station_active(session: db.SessionDep, x_api_key: Annotated[str, Header()]):
     # Check if api key is correct
     if x_api_key != cfg.scraper_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Open station
-    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
-
-    if not station:
+    # Open Station and check if active
+    stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
+    if not stations:
         raise HTTPException(status_code=404, detail="Station Not Found")
-
-    return {
-        "station_id": station_id,
-        "is_in_maintenance": station.is_in_maintenance,
-    }
-
-
+    
+    return stations
+    
 
 # Toggle maintenance with a form
 @app.post("/maintenance/{station_id}", response_class=HTMLResponse)
@@ -3080,7 +3087,7 @@ def revoke_station_access_from_form(session: db.SessionDep, current_user: Annota
     # Delete
     session.delete(access)
     session.commit()
-    return RedirectResponse(url=f"/settings?success=revoke", status_code=303)
+    return RedirectResponse(url=f"/settings?success=revoked", status_code=303)
 
 # Update access
 @app.patch("/users/{user_id}/stations/{station_id}")
@@ -3098,13 +3105,37 @@ def update_station_access(user_id: int, station_id: str, user: m.UserAccessUpdat
     session.refresh(user_db)
     return user_db
 
+# Update access from form
+@app.post("/users/stations/update")
+def update_station_access_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], user_id: int = Form(), station_id: str = Form(), can_view: bool | None = Form(False), can_toggle_maintenance: bool | None = Form(False)):
+
+    # select user
+    access_db = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id,m.UserAccess.station_id == station_id)).first()
+    if not access_db:
+        return RedirectResponse(url="/settings?error=404", status_code=303)
+
+    payload = {
+        "can_view": can_view,
+        "can_toggle_maintenance": can_toggle_maintenance,
+    }
+    if not payload:
+        return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
+
+    # Open and update
+    access_db.sqlmodel_update(payload)
+    session.add(access_db)
+    session.commit()
+    session.refresh(access_db)
+
+    return RedirectResponse(url="/settings?success=updated", status_code=status.HTTP_303_SEE_OTHER)
+
 # Update user from settings form
 @app.post("/users/update")
 def update_user_from_form(session: db.SessionDep, user_id: int = Form(), username: str | None = Form(None), password: str | None = Form(None), role: str | None = Form(None)):
     # Select User
     user_db = session.exec(select(m.User).where(m.User.id == user_id)).first()
     if not user_db:
-        raise HTTPException(status_code=404, detail="No User Exist")
+        return RedirectResponse(url=f"/settings?error=404", status_code=303)
 
     # Update
     payload = {}
@@ -3116,7 +3147,7 @@ def update_user_from_form(session: db.SessionDep, user_id: int = Form(), usernam
         payload["role"] = role.strip()
 
     if not payload:
-        raise HTTPException(status_code=400, detail="No changes submitted")
+        return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
 
     user = m.UserUpdate(**payload)
     user_data = user.model_dump(exclude_unset=True)
@@ -3165,6 +3196,31 @@ def create_station(station: m.StationCreate, session: db.SessionDep, current_use
     session.refresh(db_station)
     return db_station
 
+# Create Station Rows in DB from form:
+@app.post("/stations/create/form")
+def create_station_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form(), station_name: str = Form(), is_in_maintenance: bool = Form(False), is_public: bool = Form(True)):
+    # Get data
+    payload = {
+        "station_id": station_id.strip(),
+        "station_name": station_name.strip(),
+        "is_in_maintenance": is_in_maintenance,
+        "is_public": is_public
+    }
+
+    if not payload:
+        return RedirectResponse(url="/settings?error=no_payload", status_code=303)
+
+    station = m.StationCreate(**payload)
+    db_station = m.Station.model_validate(station)
+
+    # Create
+    session.add(db_station)
+    session.commit()
+    session.refresh(db_station)
+
+    return RedirectResponse(url=f"/settings?success=station_created&username={station_name}", status_code=303)    
+
+
 # Read all stations:
 @app.get("/read/stations/", response_model=list[m.StationPublic])
 def read_all_stations(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=100)] = 100,):
@@ -3195,6 +3251,20 @@ def delete_station(station_id: str, session: db.SessionDep, current_user: Annota
     session.commit()
     return {"ok": True}
 
+# Delete Station from form
+@app.post("/delete/stations")
+def delete_station_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form()):
+    # Get Station
+    station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    if not station:
+        return RedirectResponse(url="/settings?error=404", status_code=303)
+
+    # Delete
+    session.delete(station)
+    session.commit()
+    return RedirectResponse(url="/settings?success=deleted", status_code=303)
+
+
 # Update Station (MAIN METHOD)
 @app.patch("/update/stations/{station_id}", response_model=m.StationPublic)
 def update_station(station_id: str, station: m.StationUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
@@ -3206,6 +3276,30 @@ def update_station(station_id: str, station: m.StationUpdate, session: db.Sessio
     session.commit()
     session.refresh(station_db)
     return station_db
+
+# Update Station (form)
+@app.post("/update/stations")
+def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form(), station_name: str = Form()):
+    # Open Data
+    station_db = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
+    if not station_db:
+        return RedirectResponse(url="/settings?error=404", status_code=303)
+
+    # Update
+    payload = {}
+    if station_name and station_name.strip():
+        payload["station_name"] = station_name.strip()
+    if not payload:
+            return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
+
+    station = m.StationUpdate(**payload)
+    station_data = station.model_dump(exclude_unset=True)
+
+    station_db.sqlmodel_update(station_data)
+    session.add(station_db)
+    session.commit()
+    session.refresh(station_db)
+    return RedirectResponse(url="/settings?success=updated", status_code=303)
 
 #---Status---
 

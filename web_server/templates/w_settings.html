@@ -11,11 +11,17 @@
                 {% if success == "deleted" %}
                     <p>User <b>{{ username if username else "" }}</b> was deleted successfully.</p>
                 {% elif success == "updated" %}
-                    <p>User changes were saved successfully.</p>
+                    <p>Changes were saved successfully.</p>
                 {% elif success == "registered" %}
                     <p>User <b>{{ username if username else "" }}</b> registered successfully.</p>
                 {% elif success == "granted" %}
                     <p>Station Access Granted</p>
+                {% elif success == "revoked" %}
+                    <p>Station Access Revoked</p>
+                {% elif success == "station_created" %}
+                    <p>Station <b>{{username if username else ""}}</b> created successfully.</p>
+                {% elif success == "deleted"%}
+                    <p>Changes were saved successfully.</p>
                 {% else %}
                     <p>Action completed successfully.</p>
                 {% endif %}
@@ -25,6 +31,8 @@
                     <p>Station is already assigned to User.</p>
                 {% elif error == "404" %}
                     <p>Station or User does not exist.</p>
+                {% elif error == "no_payload" %}
+                    <p>No changes were submitted.</p>
                 {% else %}
                     <p>Error Occurred.</p>
                 {% endif %}
@@ -45,7 +53,7 @@
             <section class="settings_section">
                 <div class="settings_section_head">
                     <h2>User Management</h2>
-                    <p>Manage accounts, passwords, and roles.</p>
+                    <p>Manage accounts, passwords, roles, and station access.</p>
                 </div>
                 
                 <div class="settings_grid">
@@ -97,16 +105,18 @@
                         <h3>Register User</h3>
                         <p class="settings_help">Create a new account.</p>
 
+                        <!-- Error Message -->
                         {% if error %}
                             <p class="login_error">{{ login_error }}</p>
                         {% endif %}
-
+                        
                         <form action="/settings/register" method="post" class="settings_form">
+                            <!-- Username -->
                             <div class="form_group">
                                 <label for="register_username">Username</label>
                                 <input type="text" placeholder="Enter username" id="register_username" name="username" class="graph_input" required>
                             </div>
-
+                            <!-- Password-->
                             <div class="form_group">
                                 <label for="register_password">Password</label>
                                 <input type="password" placeholder="Enter password" id="register_password" name="password" class="graph_input" required>
@@ -119,10 +129,11 @@
                     <!-- Delete -->
                     <div class="settings_card">
                         <h3>Delete User</h3>
-                        <p class="settings_help">Delete a account. This action is permanent, proceed with caution.</p>
+                        <p class="settings_help">Delete an account. This action is permanent, proceed with caution.</p>
 
                         <form action="/users/delete" method="post" class="settings_form">
                             <div class="form_group">
+                                <!-- Users-->
                                 <label for="delete_user_id">User:</label>
                                 <select name="user_id" id="delete_user_id" class="graph_select">
                                     <option value="">Choose A User to Delete</option>
@@ -142,9 +153,10 @@
                         <p class="settings_help">Lists all stations a user can interact with.</p>
                         
                         <form action="/settings" method="get" class="settings_form">
+                            <!-- User -->
                             <div class="form_group">
-                                <label for="stations_user_id">User:</label>
-                                <select name="stations_user_id" id="stations_user_id" class="graph_select" required>
+                                <label for="read_stations_user_id">User:</label>
+                                <select name="stations_user_id" id="read_stations_user_id" class="graph_select" required>
                                     <option value="">Choose A User</option>
                                     {% for user in users %}
                                         <option value="{{ user.id }}">{{ user.username }} - {{ user.role.capitalize() }}</option>
@@ -155,23 +167,22 @@
                             <button type="submit" class="graph_submit_button">Read User Stations</button>
                         </form>
 
-                        <!-- Result Table-->
+                        <!-- Results -->
                         {% if user_stations %}
                             <div class="settings_results">
-                                <h4>Assigned Stations</h4>
+                                <h4>Assigned Stations:</h4>
 
                                 <div class="settings_table_wrap">
-                                    <table class="settings_table">
-                                        <tbody>
-                                            {% for row in user_stations %}
-                                            <div class="station_access_row">
-                                                <strong>{{ row.station_id }} - {{ row.station_name }}</strong>
-                                                <span>View: {{ "Yes" if row.can_view else "No" }}</span>
-                                                <span>Maintenance: {{ "Yes" if row.can_toggle_maintenance else "No" }}</span>
-                                            </div>
-                                            {% endfor %}    
-                                        </tbody>
-                                    </table>
+                                    <div class="settings_table">
+
+                                        {% for row in user_stations %}
+                                        <div class="station_access_row">
+                                            <strong>{{ row.station_id }} - {{ row.station_name }}</strong>
+                                            <span>View: {{ "Yes" if row.can_view else "No" }}</span>
+                                            <span>Maintenance: {{ "Yes" if row.can_toggle_maintenance else "No" }}</span>
+                                        </div>
+                                        {% endfor %}    
+                                    </div>
                                 </div>
                             </div>
                         {% elif stations_user_id %}
@@ -179,11 +190,13 @@
                         {% endif %}
                     </div>
 
+                    <!-- Grant Station Access-->
                     <div class="settings_card">
                         <h3>Grant Station Access</h3>
                         <p class="settings_help">Give User Access to a Station's Owner Dashboard.</p>
                         
                         <form method="post" action="/users/stations/grant" class="settings_form">
+                            <!-- User -->
                             <div class="form_group">
                                 <label for="grant_user_id">User:</label>
                                 <select name="user_id" id="grant_user_id" class="graph_select" required>
@@ -194,6 +207,7 @@
                                     </select>
                             </div>
 
+                            <!-- Stations -->
                             <div class="form_group">
                                 <label for="grant_station_id">Station:</label>
                                 <select name="station_id" id="grant_station_id" class="graph_select" required>
@@ -208,15 +222,17 @@
                         </form>
                     </div>
 
+                    <!-- Revoke -->
                     <div class="settings_card">
                         <h3>Revoke Station Access</h3>
                         <p class="settings_help">Remove User Access to a Station's Owner Dashboard.</p>
 
+                        <!-- Get User and then thier stations-->
                         <form method="get" action="/settings" class="settings_form">
                             <div class="form_group">
-                                <label for="stations_user_id">User:</label>
-                                <select name="stations_user_id" id="stations_user_id" class="graph_select" onchange="this.form.submit()" required>
-                                    <option value="">Choose a User</option>
+                                <label for="revoke_stations_user_id">User:</label>
+                                <select name="stations_user_id" id="revoke_stations_user_id" class="graph_select" onchange="if (this.value) this.form.submit();" required>
+                                    <option value="" disabled {% if not stations_user_id %}selected{% endif %}>Choose a User</option>
                                     {% for user in users %}
                                         <option value="{{ user.id }}" {% if stations_user_id == user.id %}selected{% endif %}>
                                             {{ user.username }} - {{ user.role.capitalize() }}
@@ -228,7 +244,7 @@
 
                         <form method="post" action="/users/stations/revoke" class="settings_form">
                             <input type="hidden" name="user_id" value="{{ stations_user_id or '' }}">
-
+                            <!-- Choose Station-->
                             <div class="form_group">
                                 <label for="revoke_station_id">Station:</label>
                                 <select name="station_id" id="revoke_station_id" class="graph_select" required>
@@ -245,9 +261,65 @@
                         </form>
                     </div>
 
+                    <!-- Updat access permissions -->
                     <div class="settings_card">
                         <h3>Update User Access</h3>
                         <p class="settings_help">Update a User's permissions for a specific station.</p>
+                        
+                        <!-- Get user then stations-->
+                        <form method="get" action="/settings" class="settings_form">
+                            <div class="form_group">
+                                <label for="access_stations_user_id">User:</label>
+                                <select name="stations_user_id" id="access_stations_user_id" class="graph_select" onchange="if (this.value) this.form.submit();" required>
+                                    <option value="">Choose a User</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}" {% if stations_user_id == user.id %}selected{% endif %}>
+                                            {{ user.username }} - {{ user.role.capitalize() }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+
+                        <form method="get" action="/settings" class="settings_form">
+                            <input type="hidden" name="stations_user_id" value="{{ stations_user_id or '' }}">
+
+                            <!-- Choose Stations-->
+                            <div class="form_group">
+                                <label for="update_station_id">Station:</label>
+                                <select name="access_station_id" id="update_station_id" class="graph_select" onchange="if (this.value) this.form.submit();" required {% if not stations_user_id %}disabled{% endif %}>
+                                    <option value="">Choose a Station</option>
+                                    {% for station in access_stations %}
+                                        <option
+                                            value="{{ station.station_id }}"
+                                            {% if access_station_id == station.station_id %}selected{% endif %}>{{ station.station_id }} - {{ station.station_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+
+                        <!-- Change permissions-->
+                        <form method="post" action="/users/stations/update" class="settings_form">
+                            <input type="hidden" name="user_id" value="{{ stations_user_id or '' }}">
+                            <input type="hidden" name="station_id" value="{{ access_station_id }}">
+
+                            <!-- View -->
+                            <div class="form_group">
+                                <label><input type="checkbox" name="can_view" value="True" {% if selected_access and selected_access.can_view %}checked{% endif %} {% if not selected_access %}disabled{% endif %}>
+                                    Can View
+                                </label>
+                            </div>
+
+                            <!-- Maintenance -->
+                            <div class="form_group">
+                                <label><input type="checkbox" name="can_toggle_maintenance" value="True" {% if selected_access and selected_access.can_toggle_maintenance %}checked{% endif %} {% if not selected_access %}disabled{% endif %}>
+                                    Can Toggle Maintenance
+                                </label>
+                            </div>
+
+                            <button type="submit" class="graph_submit_button" {% if not selected_access %}disabled{% endif %}>Update Access</button>
+                        </form>
                     </div>
                 </div>
 
@@ -256,7 +328,121 @@
             <!-----STATIONS----->
             <section class="settings_section">
                 <div class="settings_section_head">
-                    <h2></h2>
+                    <h2>Station Management</h2>
+                    <p>Manage Stations</p>
+                </div>
+
+                <div class="settings_grid">
+                    
+                    <!-- Modify Station -->
+                    <div class="settings_card">
+                        <h3>Modify Station</h3>
+                        <p class="settings_help">Leave any field blank to keep to keep its current value.</p>
+                    
+                        <form method="post" action="/update/stations" class="settings_form">
+                            <!-- Station -->
+                            <div class="form_group">
+                                <label for="update_station_name_id">Station:</label>
+                                <select name="station_id" id="update_name_station_id" class="graph_select" required>
+                                    <option value="">Choose a Station</option>
+                                    {% for station in stations %}
+                                    <option value="{{ station.station_id }}">{{ station.station_id }} - {{ station.station_name}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- New Name -->
+                            <div class="form_group">
+                                <label for="update_station_name">Station Name:</label>
+                                <input type="text" placeholder="Enter new station name" id="update_station_name" name="station_name" class="graph_input" required>
+                            </div>
+
+                            <button type="submit" class="graph_submit_button">Modify Station</button>
+                        </form>
+                    </div>
+
+                    <!-- Create Station -->
+                    <div class="settings_card">
+                        <h3>Create Station</h3>
+                        <p class="settings_help">Create a Weather Station.</p>
+
+                        <form method="post" action="/stations/create/form" class="settings_form">
+                            <!-- Station Name -->
+                            <div class="form_group">
+                                <label for="create_station_name">Station Name:</label>
+                                <input type="text" placeholder="Enter new station name" id="create_station_name" name="station_name" class="graph_input" required>
+                            </div>
+
+                            <!-- Station Id -->
+                            <div class="form_group">
+                                <label for="create_station_id">Station ID:</label>
+                                <input type="text" placeholder="Enter new station ID" id="create_station_id" name="station_id" class="graph_input" required>
+                            </div>
+
+                            <!-- Maintenance -->
+                            <div class="form_group">
+                                <label><input type="checkbox" name=can_toggle_maintenance value=True>Is in maintenance mode?</label>
+                            </div>
+
+                            <!-- Public -->
+                            <div class="form_group">
+                                <label><input type="checkbox" name=is_public value=True checked>Is public?</label>
+                            </div>
+                            
+                            <button type="submit" class="graph_submit_button">Create Station</button>
+                        </form>
+                    </div>
+
+                    <!-- Delete Stations -->
+                    <div class="settings_card">
+                        <h3>Delete Stations</h3>
+                        <p class="settings_help">Delete an station. This action is permanent, proceed with caution.</p>
+
+                        <form action="/delete/stations" method="post" class="settings_form">
+                            <div class="form_group">
+                                <!-- Station -->
+                                <label for="delete_station_id" class="graph_label">Station:</label>
+                                <select name="station_id" id="delete_station_id" class="graph_select" required>
+                                    <option value="">Choose a Station</option>
+                                    {% for station in stations %}
+                                    <option value="{{ station.station_id }}">{{ station.station_id }} - {{ station.station_name}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button type="submit" class="graph_clear_button">Delete Station</button>
+                        </form>
+                    </div>
+
+                    <!-- Read Stations -->
+                    <div class="settings_card">
+                        <h3>Read Stations</h3>
+                        <p class="settings_help">Lists all stations.</p>
+
+                        <a href="/settings?read_stations=true" class="graph_submit_button">Read Stations</a>
+                    
+                        <!-- Results -->
+                        {% if read_stations %}
+                            <div class="settings_results">
+                                <h4>Stations:</h4>
+
+                                <div class="settings_table_wrap">
+                                    <div class="settings_table">
+
+                                        {% for row in stations %}
+                                        <div class="station_access_row">
+                                            <strong>{{ row.station_id }} - {{ row.station_name }}</strong>
+                                            <span>View: {{ "Yes" if row.can_view else "No" }}</span>
+                                            <span>Maintenance: {{ "Yes" if row.can_toggle_maintenance else "No" }}</span>
+                                        </div>
+                                        {% endfor %}    
+                                    </div>
+                                </div>
+
+                                <a href="/settings" class="graph_submit_button">Close Stations</a>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </section>
 

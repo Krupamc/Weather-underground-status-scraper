@@ -44,6 +44,7 @@ class StationBase(SQLModel):
     station_name: str = Field(index=True)
     is_in_maintenance: bool = Field(default=False)
     is_public: bool = Field(default=True)
+    collect_enabled: bool = Field(default=True)
 
 # Model For Database (Table Model):
 class Station(StationBase, table=True):
@@ -60,6 +61,7 @@ class StationUpdate(SQLModel):
     station_name: str | None = None
     is_in_maintenance: bool | None = None
     is_public: bool | None = None
+    collect_enabled: bool | None = None
 
 # ---Status---
 
@@ -85,6 +87,7 @@ class Status(StatusBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
 class StatusPublic(StatusBase):
+
     id: int
 
 class StatusCreate(StatusBase):
