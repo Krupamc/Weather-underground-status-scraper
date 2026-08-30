@@ -29,6 +29,7 @@
 - [Future Work](#future-work)
 - [Notes](#notes)
 - [Setup](#setup)
+---
 
 ## Why did I create this?
 Hey! My name is Krupam, and I am a nerd. If you are reading this, you are most likely one as well. I love weather, and learning about it. Other people who love weather will create and host Personal Weather Stations (PWS) and post the data to websites like [Weather Underground](https://www.wunderground.com). I have used these stations for my own research projects. [Check one out!](https://github.com/Krupamc/Research-2026-LSTM). In my area, there is a mesonet (regional network of PWS's) from the [Save Barnegat Bay non-profit (check them out, they are awesome!)](https://savebarnegatbay.org/). I have used plenty of their stations in my research. I was given the amazing opportunity to present my research at one of their meetings regarding their mesonet. It was eye-opening! As I listened into the meeting, they discussed one of the current issues; they could never tell when a weather station went down. The station owners would find out days after if not weeks. This program is the solution to that and more.
