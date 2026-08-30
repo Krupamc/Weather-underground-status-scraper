@@ -16,10 +16,10 @@
 
             <form action="/register" method="post" class="login_form">
                 <label for="username">Username:</label>
-                <input type="text" placeholder="Enter Username" id="username" name="username" required>
+                <input type="text" placeholder="Enter Username" id="username" name="username" required minlength="3" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Username must be 3-15 characters long and contain only letters, numbers, or underscores." autocomplete="username" spellcheck="false">
 
                 <label for="password">Password:</label>
-                <input type="password" placeholder="Enter Password" id="password" name="password" required>
+                <input type="password" placeholder="Enter Password" id="password" name="password" required minlength="12" maxlength="64" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{12,}" autocomplete="new-password" passwordrules="minlength: 12; required: lower, upper, digit, special;" title="Password must be at least 12 characters long and include uppercase, lowercase, numbers, and special characters.">
                 <button type="submit">Register</button>
                 <span>Did you mean to <a href="/login">log in?</a></span>
             </form>

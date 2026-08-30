@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="error_page" style="text-align: center; padding-top: 200px">
+        <h1>Error 500</h1>
+        <h3>Internal Server Error: {{ detail }}</h3>
+        <a href="/" class="button">Go Back Home</a>
+    </div>
+{% endblock %}

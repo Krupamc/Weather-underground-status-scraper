@@ -60,10 +60,10 @@ def seed_stations(): # perhaps add auto delete if not in dict?
                 )
         
         # If there is a extra station in the db, delete it
-        for station in db_station:
-            if station.station_id not in config_ids:
-                session.delete(station)
-                # make it delet its other models...
+        #for station in db_station:
+        #    if station.station_id not in config_ids:
+        #        session.delete(station)
+        #        # make it delet its other models...
 
         session.commit()
 
@@ -226,6 +226,8 @@ async def not_found(request: Request, exc: StarletteHTTPException):
         return templates.TemplateResponse(request, "401.html", {"request": request, "title": "401", "detail": exc.detail})
     elif exc.status_code == 400:
         return templates.TemplateResponse(request, "400.html", {"request": request, "title": "400", "detail": exc.detail})
+    elif exc.status_code == 500:
+        return templates.TemplateResponse(request, "500.html", {"request": request, "title": "500", "detail": exc.detail})
     
     return await http_exception_handler(request, exc)
 
@@ -2943,7 +2945,7 @@ def register(request: Request, session: db.SessionDep, username: str = Form(), p
 # Read your user
 @app.get("/users/me")
 def read_users_me(current_user: Annotated[m.User, Depends(get_current_user)]):
-    return current_user
+    return current_user["username"], current_user["role"]
 
 # All users
 @app.get("/users/")
