@@ -368,6 +368,9 @@ A blank profile (generic empty user) shows up next to your username. Pressing it
 ## Notes:
 This is my first time ever using FastAPI, Jinja, HTML (properly), CSS, and JS. I apologise for any bugs/weird behavior :D.
 
+## Acknowledgements:
+Thank you to Jermal Smith for taking a look at my code and for providing helpful advise. He left a few issues and was able to be me a direct pull request for me for all the requirements.
+
 # Setup
 ## This system is fairly straight forward, create a venv with the packages (insert link to below packages), make a cron job (or similar scheduler) to run `scrape.py` and `status.py` in that venv every `5` mins or so (up to you).
 - `python -m venv venv`
