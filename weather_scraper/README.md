@@ -16,3 +16,6 @@ It is a bit of a sore topic for me, but Weather Underground discontinued their p
 - Converts all imperial measurements into metric
 - timestamps in UTC for the API to then turn back into ETC
 - Send it to my configered PostgreSEQ API
+
+## License
+This project is licensed under the MIT License. See the LICENCE file for more info.
