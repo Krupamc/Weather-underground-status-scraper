@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header, Form, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.templating import Jinja2Templates
@@ -231,6 +231,27 @@ async def not_found(request: Request, exc: StarletteHTTPException):
     
     return await http_exception_handler(request, exc)
 
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+def robots_txt():
+    return """\
+User-agent: *
+Disallow: /users/
+Disallow: /read/
+Disallow: /scraper/
+Disallow: /status/
+Disallow: /weather/
+Disallow: /maintenance/
+Disallow: /public/
+Disallow: /seed/
+Disallow: /delete/
+Disallow: /update/
+Disallow: /token
+Disallow: /settings/
+
+
+Allow: /
+"""
+
 # List of Stations
 @app.get("/stations", response_class=HTMLResponse)
 def stations(request: Request):
@@ -247,7 +268,7 @@ def my_stations(request: Request, session: db.SessionDep, current_user: Annotate
         return templates.TemplateResponse(request, "my_stations.html", context={"request": request, "title": "My Stations", "active_page": "my_stations", "station_rows": stations})
 
     # Load stations
-    stations = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True).order_by(m.Station.station_name)).all()
+    stations = session.exec(select(m.UserAccess).join(m.Station, m.UserAccess.station_id == m.Station.station_id).where(m.UserAccess.user_id == current_user.id, m.UserAccess.can_view == True).order_by(m.Station.station_name)).all()
 
     # Add names to list
     station_rows = []
@@ -652,8 +673,10 @@ def login_for_access_token(session: db.SessionDep, form_data: OAuth2PasswordRequ
 
 # Page for people
 @app.get("/login", response_class=HTMLResponse)
-def load_login(request: Request):
-    return templates.TemplateResponse(request, "login.html", context={"request": request, "title": "Login", "active_page": "login"})
+def load_login(request: Request, error: str | None = None):
+    if error =="forgot":
+        error = "Contact example@example.com to have your password reset."
+    return templates.TemplateResponse(request, "login.html", context={"request": request, "title": "Login", "active_page": "login", "error": error})
 
 # From Response with creds.
 @app.post("/login")
@@ -2914,7 +2937,7 @@ def register(request: Request, session: db.SessionDep, username: str = Form(), p
 
 # Form Response for register
 @app.post("/settings/register")
-def register(request: Request, session: db.SessionDep, username: str = Form(), password: str = Form()): #make this require admin later
+def register(request: Request, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], username: str = Form(), password: str = Form()): #make this require admin later
     # Check for existing user:
     existing_user = session.exec(select(m.User).where(m.User.username == username)).first()
 
@@ -2945,15 +2968,22 @@ def register(request: Request, session: db.SessionDep, username: str = Form(), p
 # Read your user
 @app.get("/users/me")
 def read_users_me(current_user: Annotated[m.User, Depends(get_current_user)]):
-    return current_user["username"], current_user["role"]
+    if current_user.role == "admin":
+        return {"role":  current_user.role, "username": current_user.username}
+    return {"message": "nuh uh"}
 
 # All users
 @app.get("/users/")
 def read_users(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], current_user: Annotated[m.User, Depends(require_admin)], limit: Annotated[int, Query(gt=0, le=100)] = 100,):
-   users = session.exec(select(m.User).offset(offset).limit(limit)).all()
-   return users
+    users = session.exec(select(m.User).offset(offset).limit(limit)).all()
+    result = []
 
-# Delete User
+    for user in users:
+        result.append({"role": user.role, "username": user.username})
+    
+    return result
+
+# Delete Users
 @app.delete("/users/{user_id}")
 def delete_user(session: db.SessionDep, user_id: int, current_user: Annotated[m.User, Depends(require_admin)]):
     # Check id
@@ -3133,7 +3163,7 @@ def update_station_access_from_form(session: db.SessionDep, current_user: Annota
 
 # Update user from settings form
 @app.post("/users/update")
-def update_user_from_form(session: db.SessionDep, user_id: int = Form(), username: str | None = Form(None), password: str | None = Form(None), role: str | None = Form(None)):
+def update_user_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], user_id: int = Form(), username: str | None = Form(None), password: str | None = Form(None), role: str | None = Form(None)):
     # Select User
     user_db = session.exec(select(m.User).where(m.User.id == user_id)).first()
     if not user_db:
@@ -3225,7 +3255,7 @@ def create_station_form(session: db.SessionDep, current_user: Annotated[m.User, 
 
 # Read all stations:
 @app.get("/read/stations/", response_model=list[m.StationPublic])
-def read_all_stations(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=100)] = 100,):
+def read_all_stations(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=100)] = 100):
     stations = session.exec(select(m.Station).offset(offset).limit(limit)).all()
     return stations
 

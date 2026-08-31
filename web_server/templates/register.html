@@ -21,7 +21,10 @@
                 <label for="password">Password:</label>
                 <input type="password" placeholder="Enter Password" id="password" name="password" required minlength="12" maxlength="64" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{12,}" autocomplete="new-password" passwordrules="minlength: 12; required: lower, upper, digit, special;" title="Password must be at least 12 characters long and include uppercase, lowercase, numbers, and special characters.">
                 <button type="submit">Register</button>
-                <span>Did you mean to <a href="/login">log in?</a></span>
+                <div class="login_links"></div>
+                <div class="login_links">
+                    <a href="/login" class="login_option_button">Did you mean to log in?</a>
+                </div>    
             </form>
         </div>
     </div>
