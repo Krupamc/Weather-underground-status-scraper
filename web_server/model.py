@@ -45,6 +45,7 @@ class StationBase(SQLModel):
     is_in_maintenance: bool = Field(default=False)
     is_public: bool = Field(default=True)
     collect_enabled: bool = Field(default=True)
+    hardware: str | None = Field(default=None)
 
 # Model For Database (Table Model):
 class Station(StationBase, table=True):

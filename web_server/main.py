@@ -704,7 +704,7 @@ def logout():
 
 # Admin Settings
 @app.get("/settings", response_class=HTMLResponse)
-def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None):
+def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None, update_station_id: str | None = None):
     # If blank user:
     if stations_user_id == "":
         stations_user_id = None
@@ -721,8 +721,9 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
     if stations_user_id is not None and access_station_id:
         selected_access = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == stations_user_id, m.UserAccess.station_id == access_station_id,)).first()
 
-    login_error = ""
+    
     # Errors
+    login_error = ""
     if error == "user_exists":
         login_error = "User already exists"
 
@@ -746,6 +747,10 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
 
         access_stations = [station for access, station in rows]
 
+    # Return stations current values to be updated
+    update_station = session.exec(select(m.Station).where(m.Station.station_id == update_station_id)).all()
+
+
     return templates.TemplateResponse(request, "w_settings.html", {
         "request": request,
         "title": "Settings",
@@ -762,7 +767,8 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
         "login_error": login_error,
         "user_stations": user_stations,
         "stations_user_id": stations_user_id,
-        "read_stations": read_stations
+        "read_stations": read_stations,
+        "update_station": update_station
     })
 
 # Owner dashboard for the station:

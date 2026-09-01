@@ -20,14 +20,14 @@ def get_session():
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
-def migrate_add_collect_enabled():
+def migrate_add_column():
     with Session(engine) as session:
         columns = session.exec(text("PRAGMA table_info(station)")).all()
         column_names = [col[1] for col in columns]
 
-        if "collect_enabled" not in column_names:
+        if "hardware" not in column_names:
             session.exec(
-                text("ALTER TABLE station ADD COLUMN collect_enabled BOOLEAN NOT NULL DEFAULT 1")
+                text("ALTER TABLE station ADD COLUMN hardware TEXT NOT NULL DEFAULT 'Unkown'")
             )
             session.commit()
 
