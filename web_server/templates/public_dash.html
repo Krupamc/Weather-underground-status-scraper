@@ -19,6 +19,17 @@
         <h1>{{ date }}: {{ time }} {{ timezone }}</h1>
     </div>
 
+    <!-- If info toggle -->
+    {% if info %}
+    <div class="popup_overlay">
+        <div class="popup_box">
+            <p>Hardware: {{ station.hardware }}</p>
+            
+            <a href="/stations/public/{{ station_id }}" class="popup_close">OK</a>
+        </div>    
+    </div>
+    {% endif %}
+
     <!-- Online-->
     {% if status.last_status == "CONNECTED" %}
         <div class="status_bar">
@@ -27,10 +38,12 @@
                 <span class="online_dot"></span>
                 <span class="p_status_text">Online</span>
             </a>
+
             
             <div class="unit_toggle" style="padding-top: 20px">
                 <a href="?units=imperial" class="{% if units == 'imperial' %}active_unit{% endif %}">Imperial</a>
                 <a href="?units=metric" class="{% if units == 'metric' %}active_unit{% endif%}">Metric</a>
+                <a href="?info=info">Station Info</a>
             </div>
         </div>
     {% else %}
@@ -41,7 +54,6 @@
     {% endif %}
 
     <div class="p_station_content" style="padding-top: 280px; padding-left: 30px;">
-        
         <!-- Temperature -->
         <div class="p_station_card p_temp_card">
             <!-- Temp Widget -->

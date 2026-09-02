@@ -27,7 +27,7 @@ def migrate_add_column():
 
         if "hardware" not in column_names:
             session.exec(
-                text("ALTER TABLE station ADD COLUMN hardware TEXT NOT NULL DEFAULT 'Unkown'")
+                text("ALTER TABLE station ADD COLUMN hardware TEXT NOT NULL DEFAULT 'Unknown'")
             )
             session.commit()
 

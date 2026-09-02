@@ -285,7 +285,7 @@ def my_stations(request: Request, session: db.SessionDep, current_user: Annotate
 
 # Public dashboard for the station:
 @app.get("/stations/public/{station_id}", response_class=HTMLResponse)
-def public_station(request: Request, session: db.SessionDep, station_id: str, selected_date: str | None = None):
+def public_station(request: Request, session: db.SessionDep, station_id: str, selected_date: str | None = None, info: str | None = None):
 
     # Check units:
     units = request.query_params.get("units", "imperial")
@@ -497,7 +497,8 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, se
         "selected_date": day_local.isoformat(),
         "prev_day": prev_day,
         "next_day": next_day,
-        "csv_url": csv_url
+        "csv_url": csv_url,
+        "info": info
     })
 
 # Download CSV for Selected Date
@@ -748,7 +749,9 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
         access_stations = [station for access, station in rows]
 
     # Return stations current values to be updated
-    update_station = session.exec(select(m.Station).where(m.Station.station_id == update_station_id)).all()
+    update_station = None
+    if update_station_id:
+        update_station = session.exec(select(m.Station).where(m.Station.station_id == update_station_id)).first()
 
 
     return templates.TemplateResponse(request, "w_settings.html", {
@@ -773,7 +776,7 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
 
 # Owner dashboard for the station:
 @app.get("/stations/dashboard/{station_id}", response_class=HTMLResponse)
-def owner_station(request: Request, session: db.SessionDep, station_id: str, required_user: Annotated[m.User, Depends(require_station_access)], current_user: Annotated[m.User, Depends(get_current_user)]):
+def owner_station(request: Request, session: db.SessionDep, station_id: str, required_user: Annotated[m.User, Depends(require_station_access)], current_user: Annotated[m.User, Depends(get_current_user)], info: str | None = None):
     # Check units:
     units = request.query_params.get("units", "imperial")
     # Open DB tables
@@ -962,6 +965,7 @@ def owner_station(request: Request, session: db.SessionDep, station_id: str, req
         "timezone": cfg.time_zone_name,
         "success": success,
         "wu_base_url": cfg.wu_base_url,
+        "info": info
     })
 
 #---Graphing---
@@ -3317,7 +3321,7 @@ def update_station(station_id: str, station: m.StationUpdate, session: db.Sessio
 
 # Update Station (form)
 @app.post("/update/stations")
-def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form(), station_name: str = Form()):
+def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form(), station_name: str = Form(), new_station_id: str = Form(), hardware: str = Form(), is_public: bool = Form(True), is_in_maintenance: bool = Form(False), collect_enabled: bool = Form(True)):
     # Open Data
     station_db = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station_db:
@@ -3327,6 +3331,15 @@ def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
     payload = {}
     if station_name and station_name.strip():
         payload["station_name"] = station_name.strip()
+    if new_station_id and new_station_id.strip():
+        payload["station_id"] = new_station_id.strip()
+    if hardware and hardware.strip():
+        payload["hardware"] = hardware.strip()
+
+    payload["is_public"] = is_public
+    payload["is_in_maintenance"] = is_in_maintenance
+    payload["collect_enabled"] = collect_enabled
+    
     if not payload:
             return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
 

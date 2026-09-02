@@ -7,7 +7,7 @@
     </div>
 
     <!-- If toggle was done -->
-    {% if success %}
+    {% if success or info %}
     <div class="popup_overlay">
         <div class="popup_box">
             {% if success == "maintenance_on" %}
@@ -21,7 +21,10 @@
             
             {% elif success == "public_off" %}
                 <p>Public Dashboard turned off successfully!</p>
-            
+
+            {% elif info == "info" %}
+                <p>Hardware: {{ station.hardware}}</p>        
+        
             {% else %}
                 <p>ERROR: Contact Admin for more Infomation</p>
 
@@ -43,6 +46,7 @@
             <div class="unit_toggle" style="padding-top: 20px">
                 <a href="?units=imperial" class="{% if units == 'imperial' %}active_unit{% endif %}">Imperial</a>
                 <a href="?units=metric" class="{% if units == 'metric' %}active_unit{% endif%}">Metric</a>
+                <a href="?info=info">Station Info</a>
             </div>
         </div>
     {% else %}

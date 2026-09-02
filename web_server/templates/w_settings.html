@@ -343,28 +343,67 @@
                         <form method="get" action="/settings" class="settings_form">
                             <!-- Station -->
                             <label for="update_station_name_id">Station:</label>
-                            <select name="update_station_id" id="update_name_station_id" class="graph_select" onchange="if (this.value) this.form.submit();" required>
+                            <select name="update_station_id" id="update_station_name_id" class="graph_select" onchange="if (this.value) this.form.submit();" required>
                                 <option value="">Choose a Station</option>
                                 {% for station in stations %}
-                                <option value="{{ station.station_id }}" {% if access_station_id == station.station_id %}selected{% endif %}>{{ station.station_id }} - {{ station.station_name}}</option>
+                                <option value="{{ station.station_id }}" {% if update_station_id == station.station_id %}selected{% endif %}>
+                                    {{ station.station_id }} - {{ station.station_name }}
+                                </option>
                                 {% endfor %}
                             </select>
                         </form>
 
                         <form method="post" action="/update/stations" class="settings_form">
+                            {% if update_station %}
+                            <input type="hidden" name="station_id" value="{{ update_station.station_id }}">
+                            {% endif %}
+                            
                             <!-- New ID -->
                             <div class="form_group">
                                 <label for="update_station_id">Station ID:</label>
-                                <input type="text" value="{{ update_station.station_id }}" id="update_station_id" name="station_id" class="graph_input">
+                                <input type="text" value="{{ update_station.station_id if update_station else '' }}" id="update_station_id" name="new_station_id" class="graph_input" readonly>
                             </div>
                             
                             <!-- New Name -->
                             <div class="form_group">
                                 <label for="update_station_name">Station Name:</label>
-                                <input type="text" placeholder="Enter new station name" id="update_station_name" name="station_name" class="graph_input" required>
+                                <input type="text" value="{{ update_station.station_name if update_station else '' }}" id="update_station_name" name="station_name" class="graph_input" required>
                             </div>
 
-                            <button type="submit" class="graph_submit_button">Modify Station</button>
+                            <!-- Hardware -->
+                            <div class="form_group">
+                                <label for="update_station_hardware">Station Hardware:</label>
+                                <p class="settings_help" style="margin: 0">Ex: Davis Vantage Pro2</p>
+                                <input type="text" value="{{ update_station.hardware if update_station else '' }}" id="update_station_hardware" name="hardware" class="graph_input" required>
+                            </div>
+
+                            <!-- is public-->
+                            <div class="form_group">
+                                <input type="hidden" name="is_public" value="false">
+                                <label><input type="checkbox" name="is_public" value="true" {% if update_station and update_station.is_public %}checked{% endif %} {% if not update_station %}disabled{% endif %}>
+                                    Is public?
+                                </label>
+                            </div>
+
+                            <!-- collect enabled -->
+                            <div class="form_group">
+                                <input type="hidden" name="collect_enabled" value="false">
+                                <label><input type="checkbox" name="collect_enabled" value="true" {% if update_station and update_station.collect_enabled %}checked{% endif %} {% if not update_station %}disabled{% endif%}>
+                                    Is collection on?
+                                </label>
+                                <p class="settings_help" style="margin: 0">If a station's weather and status will be collected</p>
+                            </div>
+
+                            <!-- maintenance -->
+                            <div class="form_group">
+                                <input type="hidden" name="is_in_maintenance" value="false">
+                                <label><input type="checkbox" name="is_in_maintenance" value="true" {% if update_station and update_station.is_in_maintenance %}checked{% endif %} {% if not update_station %}disabled{% endif%}>
+                                    Is in maintenance mode?
+                                </label>
+                            </div>
+
+
+                            <button type="submit" class="graph_submit_button" {% if not update_station %}disabled{% endif %}>Modify Station</button>
                         </form>
                     </div>
 
