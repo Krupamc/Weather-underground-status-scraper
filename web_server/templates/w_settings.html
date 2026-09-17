@@ -485,6 +485,7 @@
                                         {% endfor %}    
                                     </div>
                                 </div>
+                                <p></p>
 
                                 <a href="/settings" class="graph_submit_button">Close Stations</a>
                             </div>
@@ -570,7 +571,7 @@
                                 <input type="email" placeholder="Enter email address" id="create_emaiL_recipient" name="email" class="graph_input" required>
                             </div>
 
-                            <!-- Station Id -->
+                            <!-- Recipient Type -->
                             <div class="form_group">
                                 <label for="create_station_id">Recipient Type:</label>
                                 <select name="recipient_type" id="recipient_type" class="graph_select" required>
@@ -590,7 +591,30 @@
                         </form>
                     </div>
 
-                    <!-- Read Stations -->
+                    <!-- Delete email -->
+                    <div class="settings_card">
+                        <h3>Delete Email from List</h3>
+                        <p class="settings_help">Create an email entry. This action is permanent, proceed with caution.</p>
+
+                        <form action="/recipients/delete" method="post" class="settings_form">
+                            <div class="form_group">
+                                <!-- Email -->
+                                <label for="email_id">Email:</label>
+                                <select name="email_id" id="email_recipient_id" class="graph_select" required>
+                                    <option value="">Choose an Email</option>
+                                    {% for email in emails %}
+                                    <option value="{{ email.id }}" {% if email_recipient_id == email.id %}selected{% endif %}>
+                                        {{ email.email }} - {{ email.recipient_type.value.capitalize() }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button type="submit" class="graph_clear_button">Delete Email Entry</button>
+                        </form>
+                    </div>
+
+                    <!-- Read emails -->
                     <div class="settings_card">
                         <h3>Read Emails</h3>
                         <p class="settings_help">Lists all emails.</p>
@@ -612,16 +636,165 @@
                                         {% endfor %}    
                                     </div>
                                 </div>
+                                <p></p>
 
                                 <a href="/settings" class="graph_submit_button">Close Emails</a>
                             </div>
                         {% endif %}
                     </div>
                 </div>
+
+            </section>
+
+            <!-- OWNER EMAILS-->
+            <section class="settings_section">
+                <div class="settings_section_head">
+                    <h2>Station Recipient Email List Management</h2>
+                    <p>Manage Email List (Per-station)</p>
                 </div>
 
-                
+                <div class="settings_grid">
+
+                    <!--Modify Email-->
+                    <div class="settings_card">
+                        <h3>Modify Station Recipient Email List</h3>
+                        <p class="settings_help">Select an email recipient, then update its email address or recipient type.</p>
+
+
+                        <!-- Get OG values -->
+                        <form method="get" action="/settings" class="settings_form">
+                            <div class="form_group">
+                                <label for="station_recipient_id">Email:</label>
+                                <select name="station_recipient_id" id="email_recipient_id" class="graph_select" onchange="if (this.value) this.form.submit();" required>
+                                    <option value="">Choose an Email</option>
+                                    {% for email in station_emails %}
+                                    <option value="{{ email.id }}" {% if station_recipient_id == email.id %}selected{% endif %}>
+                                        {{ email.email }} - {{ email.station_id }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+
+
+                        <!-- New values -->
+                        <form method="post" action="/recipients/owners/update" class="settings_form">
+                            {% if station_recipient %}
+                            <input type="hidden" name="email_id" value="{{ station_recipient.id }}">
+                            {% endif %}
+
+
+                            <!-- Email -->
+                            <div class="form_group">
+                                <label for="update_station_recipient_email">Email:</label>
+                                <input type="email" value="{{ station_recipient.email if station_recipient else '' }}" id="update_station_recipient_email" name="new_email" class="graph_input" required>
+                            </div>
+
+
+                            <!-- Station ID -->
+                            <div class="form_group">
+                                <label for="update_SR_station_id">Station:</label>
+                                <select name="station_id" id="update_SR_station_id" class="graph_select" required {% if not station_recipient %}disabled{% endif %}>
+                                    <option value="">Choose a Station</option>
+                                    {% for station in stations %}
+                                    <option value="{{ station.station_id }}" {% if station_recipient and station_recipient.station_id == station.station_id %}selected{% endif %}>
+                                        {{ station.station_id }} - {{ station.station_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+
+                            <button type="submit" class="graph_submit_button" {% if not station_recipient %}disabled{% endif %}>Modify Station Recipient Email</button>
+                        </form>
+                    </div>
+
+                    <!-- Create Email -->
+                    <div class="settings_card">
+                        <h3>Append Email to List</h3>
+                        <p class="settings_help">Create an email entry.</p>
+
+                        <form method="post" action="/recipients/owners/create/form" class="settings_form">
+                            <!-- Email -->
+                            <div class="form_group">
+                                <label for="create_email_address">Email address:</label>
+                                <input type="email" placeholder="Enter email address" id="create_emaiL_recipient" name="email" class="graph_input" required>
+                            </div>
+
+                            <!-- Station ID -->
+                            <div class="form_group">
+                                <label for="create_SR_station_id">Station:</label>
+                                <select name="station_id" id="create_SR_station_id" class="graph_select" required>
+                                    <option value="">Choose a Station</option>
+                                    {% for station in stations %}
+                                    <option value="{{ station.station_id }}" {% if station_recipient and station_recipient.station_id == station.station_id %}selected{% endif %}>
+                                        {{ station.station_id }} - {{ station.station_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            
+                            <button type="submit" class="graph_submit_button">Append Email</button>
+                        </form>
+                    </div>
+
+                    <!-- Delete email -->
+                    <div class="settings_card">
+                        <h3>Delete Email from List</h3>
+                        <p class="settings_help">Create an email entry. This action is permanent, proceed with caution.</p>
+
+                        <form action="/recipients/owners/delete" method="post" class="settings_form">
+                            <div class="form_group">
+                                <!-- Email -->
+                                <label for="email_id">Email:</label>
+                                <select name="email_id" id="email_recipient_id" class="graph_select" required>
+                                    <option value="">Choose an Email</option>
+                                    {% for email in station_emails %}
+                                    <option value="{{ email.id }}" {% if email_recipient_id == email.id %}selected{% endif %}>
+                                        {{ email.email }} - {{ email.station_id }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button type="submit" class="graph_clear_button">Delete Email Entry</button>
+                        </form>
+                    </div>
+
+                    <!-- Read emails -->
+                    <div class="settings_card">
+                        <h3>Read Emails</h3>
+                        <p class="settings_help">Lists all emails.</p>
+
+                        <a href="/settings?read_SR=true" class="graph_submit_button">Read Emails</a>
+                    
+                        <!-- Results -->
+                        {% if read_SR %}
+                            <div class="settings_results">
+                                <h4>Emails:</h4>
+
+                                <div class="settings_table_wrap">
+                                    <div class="settings_table">
+
+                                        {% for row in station_emails %}
+                                        <div class="station_access_row">
+                                            <strong>{{ row.email }} - {{ row.station_id }}</strong>
+                                        </div>
+                                        {% endfor %}  
+                                    </div>
+                                    
+                                </div>
+                                <p></p>
+                                <a href="/settings" class="graph_submit_button">Close Emails</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                </div>
             </section>
+            
 
         </div>
     </div>

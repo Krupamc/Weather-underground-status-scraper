@@ -707,7 +707,7 @@ def logout():
 
 # Admin Settings
 @app.get("/settings", response_class=HTMLResponse)
-def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None, update_station_id: str | None = None, email_recipient_id: int | None = None, read_emails: bool | None = None, ):
+def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None, update_station_id: str | None = None, email_recipient_id: int | None = None, read_emails: bool | None = None, read_SR: bool | None = None, station_recipient_id: int | None = None):
     # If blank user:
     if stations_user_id == "":
         stations_user_id = None
@@ -720,12 +720,20 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
     stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
     # List of emails
     emails = session.exec(select(m.EmailRecipient).order_by(m.EmailRecipient.email)).all()
+    # List of Station Recipient emails
+    station_emails = session.exec(select(m.StationRecipient).order_by(m.StationRecipient.email)).all()
 
     # Get Email
     email_recipient = None
 
     if email_recipient_id is not None:
         email_recipient = session.get(m.EmailRecipient, email_recipient_id)
+
+    # Get SR Email
+    station_recipient = None
+
+    if station_recipient_id is not None:
+        station_recipient = session.get(m.StationRecipient, station_recipient_id)
    
     # What permissions users have at a stations
     selected_access = None
@@ -787,6 +795,10 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
         "email_recipient": email_recipient,
         "email_recipient_id": email_recipient_id,
         "read_emails": read_emails,
+        "station_emails": station_emails,
+        "station_recipient": station_recipient,
+        "station_recipient_id": station_recipient_id,
+        "read_SR": read_SR
     })
 
 # Owner dashboard for the station:
@@ -3718,7 +3730,7 @@ def create_owner_recipient_form(session: db.SessionDep, current_user: Annotated[
     session.commit()
     session.refresh(recipient_db)
 
-    return RedirectResponse(url=f"/settings?success=station_created&username={email}", status_code=303) 
+    return RedirectResponse(url=f"/settings?success=email_created&username={email}", status_code=303) 
 
 # Read per recip
 @app.get("/recipients/owners/read/{email_id}")
@@ -3780,7 +3792,7 @@ def update_owner_recipients_from_form(session: db.SessionDep, current_user: Anno
     session.refresh(recipient_db)
     return RedirectResponse(url="/settings?success=updated", status_code=303)
 
-@app.delete("/recipients/delete/{email_id}")
+@app.delete("/recipients/owners/delete/{email_id}")
 def delete_owner_recipients(session: db.SessionDep, email_id: int, current_user: Annotated[m.User, Depends(require_admin)]):
     # Open
     recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
@@ -3793,7 +3805,7 @@ def delete_owner_recipients(session: db.SessionDep, email_id: int, current_user:
     return {"ok": True, "Detail": f"{recipient_db.email} deleted"}
 
 # Delete from form
-@app.post("/recipients/delete")
+@app.post("/recipients/owners/delete")
 def delete_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form()):
     recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
     if not recipient_db:
