@@ -20,7 +20,9 @@
                     <p>Station Access Revoked</p>
                 {% elif success == "station_created" %}
                     <p>Station <b>{{username if username else ""}}</b> created successfully.</p>
-                {% elif success == "station_ deleted"%}
+                {% elif success == "email_created" %}
+                    <p>Email <b>{{username if username else ""}}</b> appended successfully.</p>
+                {% elif success == "station_deleted"%}
                     <p>Station deleted successfully.</p>
                 {% else %}
                     <p>Action completed successfully.</p>
@@ -489,6 +491,136 @@
                         {% endif %}
                     </div>
                 </div>
+            </section>
+
+            <!-----EMAIL RECIPIENTS----->
+            <section class="settings_section">
+                <div class="settings_section_head">
+                    <h2>Email List Management</h2>
+                    <p>Manage Email List (System)</p>
+                </div>
+
+                <div class="settings_grid">
+
+                    <!--Modify Email-->
+                    <div class="settings_card">
+                        <h3>Modify Email Recipients List</h3>
+                        <p class="settings_help">Select an email recipient, then update its email address or recipient type.</p>
+
+
+                        <!-- Get OG values -->
+                        <form method="get" action="/settings" class="settings_form">
+                            <div class="form_group">
+                                <label for="email_recipient_id">Email:</label>
+                                <select name="email_recipient_id" id="email_recipient_id" class="graph_select" onchange="if (this.value) this.form.submit();" required>
+                                    <option value="">Choose an Email</option>
+                                    {% for email in emails %}
+                                    <option value="{{ email.id }}" {% if email_recipient_id == email.id %}selected{% endif %}>
+                                        {{ email.email }} - {{ email.recipient_type.value.capitalize() }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+
+
+                        <!-- New values -->
+                        <form method="post" action="/recipients/update" class="settings_form">
+                            {% if email_recipient %}
+                            <input type="hidden" name="email_id" value="{{ email_recipient.id }}">
+                            {% endif %}
+
+
+                            <!-- Email -->
+                            <div class="form_group">
+                                <label for="new_email">Email:</label>
+                                <input type="email" value="{{ email_recipient.email if email_recipient else '' }}" id="new_email" name="new_email" class="graph_input" required>
+                            </div>
+
+
+                            <!-- Recipient Type -->
+                            <div class="form_group">
+                                <label for="recipient_type">Recipient Type:</label>
+                                <select name="recipient_type" id="recipient_type" class="graph_select" required {% if not email_recipient %}disabled{% endif %}>
+                                    <option value="">Choose a Type</option>
+
+
+                                    {% for recipient_type in RecipientType %}
+                                    <option value="{{ recipient_type.value }}" {% if email_recipient and email_recipient.recipient_type == recipient_type %}selected{% endif %}>
+                                        {{ recipient_type.value.capitalize() }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+
+                            <button type="submit" class="graph_submit_button" {% if not email_recipient %}disabled{% endif %}>Modify Email</button>
+                        </form>
+                    </div>
+
+                    <!-- Create Email -->
+                    <div class="settings_card">
+                        <h3>Append Email to List</h3>
+                        <p class="settings_help">Create an email entry.</p>
+
+                        <form method="post" action="/recipients/create/form" class="settings_form">
+                            <!-- Email -->
+                            <div class="form_group">
+                                <label for="create_email_address">Email address:</label>
+                                <input type="email" placeholder="Enter email address" id="create_emaiL_recipient" name="email" class="graph_input" required>
+                            </div>
+
+                            <!-- Station Id -->
+                            <div class="form_group">
+                                <label for="create_station_id">Recipient Type:</label>
+                                <select name="recipient_type" id="recipient_type" class="graph_select" required>
+                                    <option value="">Choose a Type</option>
+
+
+                                    {% for recipient_type in RecipientType %}
+                                    <option value="{{ recipient_type.value }}">
+                                        {{ recipient_type.value.capitalize() }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            
+                            <button type="submit" class="graph_submit_button">Append Email</button>
+                        </form>
+                    </div>
+
+                    <!-- Read Stations -->
+                    <div class="settings_card">
+                        <h3>Read Emails</h3>
+                        <p class="settings_help">Lists all emails.</p>
+
+                        <a href="/settings?read_emails=true" class="graph_submit_button">Read Emails</a>
+                    
+                        <!-- Results -->
+                        {% if read_emails %}
+                            <div class="settings_results">
+                                <h4>Emails:</h4>
+
+                                <div class="settings_table_wrap">
+                                    <div class="settings_table">
+
+                                        {% for row in emails %}
+                                        <div class="station_access_row">
+                                            <strong>{{ row.email }} - {{ row.recipient_type.value.capitalize() }}</strong>
+                                        </div>
+                                        {% endfor %}    
+                                    </div>
+                                </div>
+
+                                <a href="/settings" class="graph_submit_button">Close Emails</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                </div>
+
+                
             </section>
 
         </div>

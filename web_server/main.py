@@ -7,6 +7,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from pydantic import EmailStr
+from enum import Enum
 from typing import Annotated
 from scipy import stats
 from sqlmodel import select
@@ -705,7 +707,7 @@ def logout():
 
 # Admin Settings
 @app.get("/settings", response_class=HTMLResponse)
-def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None, update_station_id: str | None = None):
+def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None, update_station_id: str | None = None, email_recipient_id: int | None = None, read_emails: bool | None = None, ):
     # If blank user:
     if stations_user_id == "":
         stations_user_id = None
@@ -716,6 +718,14 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
     users = read_users(session, offset=0, current_user=current_user)
     # List of station
     stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
+    # List of emails
+    emails = session.exec(select(m.EmailRecipient).order_by(m.EmailRecipient.email)).all()
+
+    # Get Email
+    email_recipient = None
+
+    if email_recipient_id is not None:
+        email_recipient = session.get(m.EmailRecipient, email_recipient_id)
    
     # What permissions users have at a stations
     selected_access = None
@@ -771,7 +781,12 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
         "user_stations": user_stations,
         "stations_user_id": stations_user_id,
         "read_stations": read_stations,
-        "update_station": update_station
+        "update_station": update_station,
+        "emails": emails,
+        "RecipientType": m.RecipientType,
+        "email_recipient": email_recipient,
+        "email_recipient_id": email_recipient_id,
+        "read_emails": read_emails,
     })
 
 # Owner dashboard for the station:
@@ -3008,10 +3023,10 @@ def delete_user(session: db.SessionDep, user_id: int, current_user: Annotated[m.
 
 # Delete using Settings html
 @app.post("/users/delete")
-def delete_user_from_html(session: db.SessionDep, user_id: int = Form(), current_user: Annotated[m.User, Depends(require_admin)] = None):
+def delete_user_from_form(session: db.SessionDep, user_id: int = Form(), current_user: Annotated[m.User, Depends(require_admin)] = None):
     user_db = session.exec(select(m.User).where(m.User.id == user_id)).first()
     if not user_db:
-        raise HTTPException(status_code=404, detail="User not Found")
+        return RedirectResponse(url="/settings?error=404", status_code=status.HTTP_303_SEE_OTHER)
 
     username = user_db.username
 
@@ -3019,6 +3034,7 @@ def delete_user_from_html(session: db.SessionDep, user_id: int = Form(), current
     session.commit()
 
     return RedirectResponse(url=f"/settings?success=deleted&username={username}", status_code=status.HTTP_303_SEE_OTHER)
+
 #---Access---
 
 # Read what stations a user can affect
@@ -3341,7 +3357,7 @@ def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
     payload["collect_enabled"] = collect_enabled
     
     if not payload:
-            return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
+        return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
 
     station = m.StationUpdate(**payload)
     station_data = station.model_dump(exclude_unset=True)
@@ -3543,4 +3559,249 @@ def read_history_weather(session: db.SessionDep, station_id: str, current_user: 
     if not history:
         raise HTTPException(status_code=404, detail="Station Not Found")
     return history
+
+# ---Recipients---
+
+# Create from api
+@app.post("/recipients/create", response_model=m.EmailRecipientPublic)
+def create_recipient(recipient: m.EmailRecipientCreate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    db_recipient = m.EmailRecipient.model_validate(recipient)
+
+    if not db_recipient:
+        raise HTTPException(status_code=404, detail="Wrong Inputs")
     
+    session.add(db_recipient)
+    session.commit()
+    session.refresh(db_recipient)
+    return db_recipient
+
+# Create from form
+@app.post("/recipients/create/form", response_model=m.EmailRecipientPublic)
+def create_recipient_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email: EmailStr = Form(), recipient_type: m.RecipientType = Form()):
+    # Get data
+    payload = {
+        "email": str(email).strip(),
+        "recipient_type": recipient_type
+    }
+
+    if not payload:
+        return RedirectResponse(url="/settings?error=no_payload", status_code=303)
+
+    recipient = m.EmailRecipientCreate(**payload)
+    recipient_db = m.EmailRecipient.model_validate(recipient)
+
+    # Create
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+
+    return RedirectResponse(url=f"/settings?success=email_created&username={email}", status_code=303) 
+
+# Read per recip
+@app.get("/recipients/read/{email_id}")
+def read_recipients_specific(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int):
+    recipients = session.exec(select(m.EmailRecipient).where(m.EmailRecipient.id == email_id)).first()
+    if not recipients:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+    
+    return recipients
+
+# Read from API
+@app.get("/recipients/read", response_model=list[m.EmailRecipientPublic])
+def read_recipients(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=100)] = 100):
+    recipients = session.exec(select(m.EmailRecipient).offset(offset).limit(limit)).all()
+    if not recipients:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+    
+
+    return recipients
+
+# Update from API
+@app.patch("/recipients/update/{email_id}", response_model=m.EmailRecipientPublic)
+def update_recipients(email_id: int, recipient: m.EmailRecipientUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Open
+    recipient_db = session.exec(select(m.EmailRecipient).where(m.EmailRecipient.id == email_id)).first()
+    if not recipient_db:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+
+    data = recipient.model_dump(exclude_unset=True)
+    recipient_db.sqlmodel_update(data)
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+    return recipient_db
+
+# Update from form
+@app.post("/recipients/update")
+def update_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form(), new_email: EmailStr = Form(), recipient_type: m.RecipientType = Form()):
+    # Open
+    recipient_db = session.exec(select(m.EmailRecipient).where(m.EmailRecipient.id == email_id)).first()
+    if not recipient_db:
+        return RedirectResponse(url="/settings?error=404", status_code=303)
+
+    # Update
+    payload = {}
+    if new_email and str(new_email).strip():
+        payload["email"] = str(new_email).strip()
+    if recipient_type:
+        payload["recipient_type"] = recipient_type
+
+    if not payload:
+        return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
+
+    recipient = m.EmailRecipientUpdate(**payload)
+    data = recipient.model_dump(exclude_unset=True)
+
+    recipient_db.sqlmodel_update(data)
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+    return RedirectResponse(url="/settings?success=updated", status_code=303)
+
+# Delete from API
+@app.delete("/recipients/delete/{email_id}")
+def delete_recipients(session: db.SessionDep, email_id: int, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Open
+    recipient_db = session.exec(select(m.EmailRecipient).where(m.EmailRecipient.id == email_id)).first()
+    if not recipient_db:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+
+    # Delete
+    session.delete(recipient_db)
+    session.commit()
+    return {"ok": True, "Detail": f"{recipient_db.email} deleted"}
+
+# Delete from form
+@app.post("/recipients/delete")
+def delete_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form()):
+    recipient_db = session.exec(select(m.EmailRecipient).where(m.EmailRecipient.id == email_id)).first()
+    if not recipient_db:
+        return RedirectResponse(url=f"/settings?error=404", status_code=status.HTTP_303_SEE_OTHER)
+
+    session.delete(recipient_db)
+    session.commit()
+
+    username = recipient_db.email
+
+    return RedirectResponse(url=f"/settings?success=deleted&username={username}", status_code=status.HTTP_303_SEE_OTHER)
+
+# ---Station Owners---
+# CRUD for station owner emails
+
+# Create from api
+@app.post("/recipients/owners/create", response_model=m.StationRecipientPublic)
+def create_owner_recipient(recipient: m.StationRecipientCreate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    db_recipient = m.StationRecipient.model_validate(recipient)
+
+    session.add(db_recipient)
+    session.commit()
+    session.refresh(db_recipient)
+    return db_recipient
+
+# Create from form
+@app.post("/recipients/owners/create/form", response_model=m.StationRecipientPublic)
+def create_owner_recipient_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email: EmailStr = Form(), station_id: str = Form()):
+    # Get data
+    payload = {
+        "email": str(email).strip(),
+        "station_id": station_id
+    }
+
+    if not payload:
+        return RedirectResponse(url="/settings?error=no_payload", status_code=303)
+
+    recipient = m.StationRecipientCreate(**payload)
+    recipient_db = m.StationRecipient.model_validate(recipient)
+
+    # Create
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+
+    return RedirectResponse(url=f"/settings?success=station_created&username={email}", status_code=303) 
+
+# Read per recip
+@app.get("/recipients/owners/read/{email_id}")
+def read_owner_recipients_specific(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int):
+    recipients = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
+    if not recipients:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+
+    return recipients
+
+# Read from API
+@app.get("/recipients/owners/read", response_model=list[m.StationRecipientPublic])
+def read_owner_recipients(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=100)] = 100):
+    recipients = session.exec(select(m.StationRecipient).offset(offset).limit(limit)).all()
+    if not recipients:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+
+    return recipients
+
+# Update from API
+@app.patch("/recipients/owners/update/{email_id}", response_model=m.StationRecipientPublic)
+def update_owner_recipients(email_id: int, recipient: m.StationRecipientUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Open
+    recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
+    if not recipient_db:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+
+    data = recipient.model_dump(exclude_unset=True)
+    recipient_db.sqlmodel_update(data)
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+    return recipient_db
+
+# Update from form
+@app.post("/recipients/owners/update")
+def update_owner_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form(), new_email: EmailStr = Form(), station_id: str = Form()):
+    # Open
+    recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
+    if not recipient_db:
+        return RedirectResponse(url="/settings?error=404", status_code=303)
+
+    # Update
+    payload = {}
+    if new_email and str(new_email).strip():
+        payload["email"] = str(new_email).strip()
+    if station_id:
+        payload["station_id"] = station_id
+
+    if not payload:
+        return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
+
+    recipient = m.StationRecipientUpdate(**payload)
+    data = recipient.model_dump(exclude_unset=True)
+
+    recipient_db.sqlmodel_update(data)
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+    return RedirectResponse(url="/settings?success=updated", status_code=303)
+
+@app.delete("/recipients/delete/{email_id}")
+def delete_owner_recipients(session: db.SessionDep, email_id: int, current_user: Annotated[m.User, Depends(require_admin)]):
+    # Open
+    recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
+    if not recipient_db:
+        raise HTTPException(status_code=404, detail="Owner Recipient Not Found")
+
+    # Delete from form
+    session.delete(recipient_db)
+    session.commit()
+    return {"ok": True, "Detail": f"{recipient_db.email} deleted"}
+
+# Delete from form
+@app.post("/recipients/delete")
+def delete_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form()):
+    recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
+    if not recipient_db:
+        return RedirectResponse(url=f"/settings?error=404", status_code=303)
+
+    session.delete(recipient_db)
+    session.commit()
+
+    username = recipient_db.email
+
+    return RedirectResponse(url=f"/settings?success=deleted&username={username}", status_code=status.HTTP_303_SEE_OTHER)

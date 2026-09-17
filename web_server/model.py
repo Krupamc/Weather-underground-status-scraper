@@ -1,9 +1,10 @@
 from sqlmodel import Field, SQLModel
 from sqlalchemy import UniqueConstraint
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
 import web_config as cfg
 import pytz
+from enum import Enum
 
 # Function to parse iso 8601 to datetime timezone
 def parse_iso_to_zone(iso_str: str, tz_name: str = cfg.timezone) -> datetime:
@@ -34,7 +35,12 @@ def to_eastern(dt: datetime) -> datetime:
         dt = dt.astimezone(utc)
 
     return eastern.normalize(dt.astimezone(eastern))
-    
+
+# Enums
+class RecipientType(str, Enum):
+    admin = "admin"
+    global_recipient = "global"
+    report = "report"
 
 # ---Station---
 
@@ -235,18 +241,54 @@ class UserAccessUpdate(SQLModel):
     can_view: bool = Field(default=True)
     can_toggle_maintenance: bool = Field(default=True)
 
+# ---Status Emails---
+class EmailRecipientBase(SQLModel):
+    email: EmailStr = Field(index=True)
+    recipient_type: RecipientType = Field(index=True)
 
-# ---Email List---
+class EmailRecipient(EmailRecipientBase, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+
+class EmailRecipientCreate(EmailRecipientBase):
+    pass
+
+class EmailRecipientPublic(EmailRecipientBase):
+    id: int
+
+class EmailRecipientUpdate(SQLModel):
+    email: EmailStr | None = None
+    recipient_type: RecipientType | None = None
+
+# Station owners
+class StationRecipientBase(SQLModel):
+    email: EmailStr = Field(index=True)
+    station_id: str = Field(foreign_key="station.station_id", index=True)
+
+class StationRecipient(StationRecipientBase, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+
+class StationRecipientCreate(StationRecipientBase):
+    pass
+
+class StationRecipientPublic(StationRecipientBase):
+    id: int
+
+class StationRecipientUpdate(SQLModel):
+    email: EmailStr | None = None
+    station_id: str | None = None
+
+# ---Weather Email List---
 class WeatherEmailListBase(SQLModel):
     email: str = Field(index=True)
     name: str = Field(index=True)
 
+#class WeatherEmailList(WeatherEmailListBase, Table = True): #Uncomment to make into table
 class WeatherEmailList(WeatherEmailListBase):
     id: int | None = Field(default=None, primary_key=True)
 
-class WeatherEmailListPubic(WeatherEmailListBase):
+class WeatherEmailListPublic(WeatherEmailListBase):
     id: int
 
-class WeatherEmailListUpdate(WeatherEmailList):
-    email: str | None = None
+class WeatherEmailListUpdate(SQLModel):
+    email: EmailStr | None = None
     name: str | None = None
