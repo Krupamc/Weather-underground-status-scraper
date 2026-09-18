@@ -2854,11 +2854,35 @@ def scraper_station_active(session: db.SessionDep, x_api_key: Annotated[str, Hea
 
     # Open Station and check if active
     stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
-    if not stations:
-        raise HTTPException(status_code=404, detail="Station Not Found")
+        # if not send back empty list
     
     return stations
-    
+
+# API Email Recipient Read
+@app.get("/scraper/recipients", response_model=list[m.EmailRecipientPublic])
+def scraper_email_recipients(session: db.SessionDep, x_api_key: Annotated[str, Header()]):
+    # Check if api key is correct
+    if x_api_key != cfg.scraper_api_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Open emails
+    emails = session.exec(select(m.EmailRecipient).order_by(m.EmailRecipient.email)).all()
+        # if not send back empty list
+
+    return emails
+
+# API Station Recipient Read
+@app.get("/scraper/owner/recipients", response_model=list[m.StationRecipientPublic])
+def scraper_station_recipients(session: db.SessionDep, x_api_key: Annotated[str, Header()]):
+    # Check if api key is correct
+    if x_api_key != cfg.scraper_api_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Open emails
+    emails = session.exec(select(m.StationRecipient).order_by(m.StationRecipient.email)).all()
+        # if not send back empty list
+
+    return emails
 
 # Toggle maintenance with a form
 @app.post("/maintenance/{station_id}", response_class=HTMLResponse)

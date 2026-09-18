@@ -82,7 +82,7 @@ def check_station(station_id, station_info, http: requests.Session):
             email(
                 subject=cfg.scrape_e_subject,
                 body=cfg.e_body.format(err=last_error),
-                recipients=cfg.admin
+                recipients=admin_recipients
             )
         
         return
@@ -236,21 +236,20 @@ def get_time(station_id, station_name, maintenance) -> datetime:
                 email(
                     subject=cfg.time_e_subject,
                     body=cfg.time_e_body.format(err = e),
-                    recipients=cfg.admin
+                    recipients=admin_recipients
                 )
+            else:
+                print("[EMAIL SKIPPED]: No recipients configured in API")      
     else:
         return
     
 # Use all alert funcs.
 def recover_alert(stat_id, stat_name, url, start, duration, now):
+    recipients = get_alert_recipients(stat_id)
 
-    station_recipient = cfg.recipients.get(stat_id, [])
-
-    if station_recipient:
-        recipients = station_recipient + cfg.global_recipients
-
-    else:
-        recipients = cfg.global_recipients
+    if not recipients:
+        print(f"[EMAIL SKIPPED]: No recovery recipients configured for {stat_id}")
+        return
     
     email(
         subject = cfg.r_subject.format(station_name=stat_name, station_id=stat_id, now=now),
@@ -262,13 +261,11 @@ def recover_alert(stat_id, stat_name, url, start, duration, now):
 
 # Use alert functions
 def offline_remind(stat_id, stat_name, consec_offline, url, now):
-    station_recipient = cfg.recipients.get(stat_id, [])
+    recipients = get_alert_recipients(stat_id)
 
-    if station_recipient:
-        recipients = station_recipient + cfg.global_recipients
-
-    else:
-        recipients = cfg.global_recipients
+    if not recipients:
+        print(f"[EMAIL SKIPPED]: No reminder recipients configured for {stat_id}")
+        return
     
     email(
         subject = cfg.o_subject.format(station_name = stat_name, station_id = stat_id),
@@ -280,14 +277,11 @@ def offline_remind(stat_id, stat_name, consec_offline, url, now):
 
 # Use all alert functions
 def offline_alert(stat_id, stat_name, consec_offline, url, now):
+    recipients = get_alert_recipients(stat_id)
 
-    station_recipient = cfg.recipients.get(stat_id, [])
-
-    if station_recipient:
-        recipients = station_recipient + cfg.global_recipients
-    
-    else:
-        recipients = cfg.global_recipients
+    if not recipients:
+        print(f"[EMAIL SKIPPED]: No offline-alert recipients configured for {stat_id}")
+        return
 
     email(
         subject = cfg.d_subject.format(station_name = stat_name, station_id = stat_id),
@@ -299,10 +293,10 @@ def offline_alert(stat_id, stat_name, consec_offline, url, now):
 
 #---Report/stats---
 
-def send_report(now: datetime, period_start, period_end, stations_with_outages, longest_station_name, longest_hour, station_summary):
+def send_report(now: datetime, period_start, period_end, stations_with_outages, longest_station_name, longest_hour, station_summary, stations: list[dict]):
     report = read_report_file()
-    recipients=cfg.report_users
-    stations_num = len(cfg.stations)
+    recipients=report_recipients
+    stations_num = len(stations)
 
     email(
         subject = cfg.m_subject.format(month = now.strftime("%B")),
@@ -342,7 +336,7 @@ def write_report(now: datetime, stations: list[dict]):
 
 
 
-    send_report(now, period_start.date(), period_end.date(), stations_with_outages, longest_station_name, longest_hour, station_summary)
+    send_report(now, period_start.date(), period_end.date(), stations_with_outages, longest_station_name, longest_hour, station_summary, stations)
 
 def get_previous_month_period(now: datetime):
     first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -375,7 +369,7 @@ def compute_monthly_stats(period_start: datetime, period_end: datetime, stations
     
     with path.open("r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        current_outage = {sid: None for sid in cfg.stations.keys()}
+        current_outage = {station_id: None for station_id in stats.keys()}
 
         for row in reader:
             ts_str = row["timestamp"]
@@ -463,7 +457,100 @@ def email(subject: str, body: str, recipients: list[str]) -> None:
         server.starttls(context=context)
         server.login(cfg.username, cfg.password)
         server.send_message(msg)
+        
+# Test all email recipients from API
+def test_all_emails():
+    print("\n[EMAIL TEST]: Starting API recipient email test\n")
 
+    sent_to = set()
+
+    # Admin Recipients
+    for recipient in admin_recipients:
+        if recipient in sent_to:
+            continue
+
+        email(
+            subject="[TEST] Mesonet Admin Email Test",
+            body=(
+                "This is a test email from the Mesonet status scraper.\n\n"
+                "Recipient type: Admin\n"
+                "This confirms that the admin recipient list was pulled "
+                "successfully from the API."
+            ),
+            recipients=[recipient]
+        )
+
+        sent_to.add(recipient)
+        print(f"[EMAIL TEST SENT]: Admin -> {recipient}")
+
+
+    # Global Recipients
+    for recipient in global_recipients:
+        if recipient in sent_to:
+            continue
+
+        email(
+            subject="[TEST] Mesonet Global Alert Email Test",
+            body=(
+                "This is a test email from the Mesonet status scraper.\n\n"
+                "Recipient type: Global Alert Recipient\n"
+                "This confirms that the global recipient list was pulled "
+                "successfully from the API."
+            ),
+            recipients=[recipient]
+        )
+
+        sent_to.add(recipient)
+        print(f"[EMAIL TEST SENT]: Global -> {recipient}")
+
+
+    # Monthly Report Recipients
+    for recipient in report_recipients:
+        if recipient in sent_to:
+            continue
+
+        email(
+            subject="[TEST] Mesonet Monthly Report Email Test",
+            body=(
+                "This is a test email from the Mesonet status scraper.\n\n"
+                "Recipient type: Monthly Report Recipient\n"
+                "This confirms that the report recipient list was pulled "
+                "successfully from the API."
+            ),
+            recipients=[recipient]
+        )
+
+        sent_to.add(recipient)
+        print(f"[EMAIL TEST SENT]: Report -> {recipient}")
+
+
+    # Station Owner Recipients
+    for station_id, recipients in station_recipients.items():
+        for recipient in recipients:
+            if recipient in sent_to:
+                continue
+
+            email(
+                subject=f"[TEST] Mesonet Station Recipient Email Test - {station_id}",
+                body=(
+                    "This is a test email from the Mesonet status scraper.\n\n"
+                    "Recipient type: Station Recipient\n"
+                    f"Assigned station: {station_id}\n"
+                    "This confirms that the station-recipient list was pulled "
+                    "successfully from the API."
+                ),
+                recipients=[recipient]
+            )
+
+            sent_to.add(recipient)
+            print(f"[EMAIL TEST SENT]: Station {station_id} -> {recipient}")
+
+
+    if not sent_to:
+        print("[EMAIL TEST]: No recipients were returned by the API")
+
+    else:
+        print(f"\n[EMAIL TEST]: Finished. Sent {len(sent_to)} separate test email(s).\n")
 # Log the data
 def log_data(now: str, station_id, station_name, status, consec_offline, event_type: str, message: str):
     path = Path("status_scraper/status_log.csv")
@@ -564,7 +651,7 @@ def post_status_to_api(station_id: str, station_name: str, maintenance: bool, ht
             email(
                 subject=cfg.post_e_subject,
                 body=cfg.e_body.format(err=last_error),
-                recipients=cfg.admin
+                recipients=admin_recipients
             )
         
         return
@@ -584,31 +671,11 @@ def start_log():
 
 # Create base json status file
 def write_start():
-
     status_json_file = Path("status_scraper/status.json")
-    
+
     if not status_json_file.exists():
-
-        data = {}
-
-        for station, station_name in cfg.stations.items():
-
-            data[station] = {
-                "station_id": station,
-                "station_name": station_name,
-                "last_status": "Not Checked",
-                "consecutive_offline": 0,
-                "alert_sent": False,
-                "last_connected": None,
-                "first_offline": None,
-                "since_first_alert": None,
-                "last_reminder_sent": None,
-                "http_e": None,
-                "time_e": None,
-                "error": None,
-            }
-        print(f"\nJson Status File Created\n")
-        write_json_file(data)
+        write_json_file({})
+        print("\nJson Status File Created\n")
 
 # Create Report json file:
 def report_write_start(now: datetime):
@@ -782,10 +849,79 @@ def get_stations_list(http: requests.Session) -> list[dict]:
         email(
             subject=cfg.api_e_subject,
             body=cfg.e_body.format(err=last_error),
-            recipients=cfg.admin
+            recipients=admin_recipients
         )
     return []
 
+# Get Email Recipients
+def get_email_recipients(http: requests.Session) -> list[dict]:
+    for attempt in range(cfg.max_retries):
+        try:
+            url = f"{cfg.api_base}/scraper/recipients"
+
+            r = http.get(url, timeout=10)
+            r.raise_for_status()
+            return r.json()
+
+        except HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else None
+            last_error = f"Email API HTTP Error: {e}"
+
+            if status_code and 400 <= status_code < 500:
+                print(f"[EMAIL API HTTP ERROR] {e} not retrying")
+                break
+
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[EMAIL API HTTP ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+
+        except RequestException as e:
+            last_error = f"Email API Request Error: {e}"
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[EMAIL API REQUEST ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+
+    print(f"[EMAIL API ERROR]: {last_error}")
+    return []
+
+# Get Station Recipient Emails
+def get_station_recipients(http: requests.Session) -> list[dict]:
+    for attempt in range(cfg.max_retries):
+        try:
+            url = f"{cfg.api_base}/scraper/owner/recipients"
+
+            r = http.get(url, timeout=10)
+            r.raise_for_status()
+            return r.json()
+
+        except HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else None
+            last_error = f"Station Recipient API HTTP Error: {e}"
+
+            if status_code and 400 <= status_code < 500:
+                print(f"[STATION RECIPIENT API HTTP ERROR] {e} not retrying")
+                break
+
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[STATION RECIPIENT API HTTP ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+
+        except RequestException as e:
+            last_error = f"Station Recipient API Request Error: {e}"
+            wait_time = cfg.backoff_factor ** attempt
+            print(f"[STATION RECIPIENT API REQUEST ERROR] {e} retrying in {wait_time} seconds")
+            time.sleep(wait_time)
+
+    print(f"[STATION RECIPIENT API ERROR]: {last_error}")
+    return []
+
+# Get station owners and global recipients
+def get_alert_recipients(station_id: str) -> list[str]:
+    station_recipient = station_recipients.get(station_id, [])
+
+    recipients = station_recipient + global_recipients
+
+    return list(dict.fromkeys(recipients))
 #---Program---
 
 # Single Session Request
@@ -797,10 +933,58 @@ ensure_data_dir()
 alert_cooldown_write_start()
 write_start()
 start_log()
+admin_recipients = []
+global_recipients = []
+report_recipients = []
+station_recipients = {}
+
+# API Pull
 stations = get_stations_list(session_http)
+
+if not stations:
+    print("[STOPPED]: No stations were returned by the API")
+    raise SystemExit(1)
+
+emails = get_email_recipients(session_http)
+station_emails = get_station_recipients(session_http)
+
+# Sync
 sync_status_file(stations)
 #station_map = {s["station_id"]: s for s in stations}
 
+# Email Lists
+admin_recipients = [
+    recipient["email"]
+    for recipient in emails
+    if recipient["recipient_type"] == "admin"
+]
+
+global_recipients = [
+    recipient["email"]
+    for recipient in emails
+    if recipient["recipient_type"] == "global"
+]
+
+report_recipients = [
+    recipient["email"]
+    for recipient in emails
+    if recipient["recipient_type"] == "report"
+]
+station_recipients = {}
+
+for recipient in station_emails:
+    station_id = recipient["station_id"]
+
+    if station_id not in station_recipients:
+        station_recipients[station_id] = []
+
+    station_recipients[station_id].append(recipient["email"])
+
+#Test every API-configured email recipient
+test_all_emails()
+
+
+# Time
 now = get_time("Report", "Report", False)
 if now is not None:
     report_write_start(now)
