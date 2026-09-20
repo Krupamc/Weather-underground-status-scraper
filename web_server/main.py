@@ -3373,7 +3373,7 @@ def update_station(station_id: str, station: m.StationUpdate, session: db.Sessio
 
 # Update Station (form)
 @app.post("/update/stations")
-def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form(), station_name: str = Form(), new_station_id: str = Form(), hardware: str = Form(), is_public: bool = Form(True), is_in_maintenance: bool = Form(False), collect_enabled: bool = Form(True)):
+def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form(), station_name: str = Form(), new_station_id: str = Form(), hardware: str = Form(), latitude: float = Form(), longitude: float = Form(), is_public: bool = Form(True), is_in_maintenance: bool = Form(False), collect_enabled: bool = Form(True)):
     # Open Data
     station_db = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station_db:
@@ -3388,6 +3388,8 @@ def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
     if hardware and hardware.strip():
         payload["hardware"] = hardware.strip()
 
+    payload["latitude"] = latitude
+    payload["longitude"] = longitude
     payload["is_public"] = is_public
     payload["is_in_maintenance"] = is_in_maintenance
     payload["collect_enabled"] = collect_enabled

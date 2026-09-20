@@ -25,9 +25,8 @@ def migrate_add_column():
         columns = session.exec(text("PRAGMA table_info(station)")).all()
         column_names = [col[1] for col in columns]
 
-        if "hardware" not in column_names:
+        if "longitude" not in column_names:
             session.exec(
-                text("ALTER TABLE station ADD COLUMN hardware TEXT NOT NULL DEFAULT 'Unknown'")
+                text("ALTER TABLE station ADD COLUMN longitude FLOAT DEFAULT NULL")
             )
             session.commit()
-

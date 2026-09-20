@@ -48,10 +48,16 @@ class RecipientType(str, Enum):
 class StationBase(SQLModel):
     station_id: str = Field(index=True, unique=True)
     station_name: str = Field(index=True)
+
     is_in_maintenance: bool = Field(default=False)
     is_public: bool = Field(default=True)
+
     collect_enabled: bool = Field(default=True)
+
     hardware: str | None = Field(default="Unknown")
+
+    latitude: float | None = None
+    longitude: float | None = None
 
 # Model For Database (Table Model):
 class Station(StationBase, table=True):
