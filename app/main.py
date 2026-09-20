@@ -34,7 +34,7 @@ app = FastAPI(title="SBB Mesonet Notification System")
 #app = FastAPI(title="SBB Mesonet Notification System", docs_url=None, redoc_url=None, openapi_url=None)
 
 # Graph text
-roboto_path = "web_server/static/fonts/Roboto-Regular.ttf"
+roboto_path = "app/static/fonts/Roboto-Regular.ttf"
 fm.fontManager.addfont(roboto_path)
 plt.rcParams["font.family"] = fm.FontProperties(fname=roboto_path).get_name()
 
@@ -135,8 +135,8 @@ def get_current_user_op(session: db.SessionDep, access_token: str | None = Cooki
     return session.exec(select(m.User).where(m.User.username == username)).first()
 
 # Static and Templates
-templates = Jinja2Templates(directory="web_server/templates", context_processors=[template_context])
-app.mount("/static", StaticFiles(directory="web_server/static"), name="static")
+templates = Jinja2Templates(directory="app/templates", context_processors=[template_context])
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Force admin
 def require_admin(current_user: Annotated[m.User, Depends(get_current_user)]):

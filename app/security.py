@@ -5,7 +5,7 @@ import web_config as cfg
 
 secret_key = cfg.secret_key
 algorithm = cfg.algorithm
-access_token_expire_minutes = cfg.access_token_expire_minuites
+access_token_expire_minutes = cfg.access_token_expire_minutes
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()

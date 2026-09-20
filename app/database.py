@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends
 
 # Engine of the DB:
-sqlite_file_name = "web_server/database.db"
+sqlite_file_name = "app/database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 connect_args = {"check_same_thread": False}

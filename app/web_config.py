@@ -41,5 +41,5 @@ angle_min = -120
 # Security
 secret_key = "ABC1234"
 scraper_api_key = "test"
-access_token_expire_minuites = 30
+access_token_expire_minutes = 30
 algorithm = "HS256"

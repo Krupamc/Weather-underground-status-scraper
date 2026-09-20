@@ -27,7 +27,7 @@ def check_station(station_id, station_info, http: requests.Session):
 
     for attempt in range(cfg.max_retries): # Try the scraping for configured 
         try:
-            url = f"https://preview.wunderground.com/dashboard/pws/{station_id}" # Base url
+            url = f"{cfg.wu_base_url}{station_id}" # Base url
             r = http.get(url, timeout=10)
             r.raise_for_status()
 

@@ -84,7 +84,7 @@ def scrape(station_id):
     for attempt in range(cfg.max_retries): # Try as many times as configured
         try: 
             # base url
-            url = f'https://preview.wunderground.com/dashboard/pws/{station_id}/?data-unit="m"'
+            url = f'{cfg.wu_base_url}{station_id}'
 
             # Get time
             scrape_time = api_timestamp()
@@ -220,7 +220,7 @@ def scrape(station_id):
 def get_stations_list(http: requests.Session) -> list[dict]:
     for attempt in range(cfg.max_retries):
         try:
-            url = f"{cfg.API_BASE}/scraper/stations"
+            url = f"{cfg.api_base}/scraper/stations"
 
             # Get Json from API
             r = http.get(url, timeout=10)
@@ -270,6 +270,6 @@ for station in stations:
     save_data(results, now=results["observed_at"])
 
     print(f"Sending data...{results['station_id']}\n")
-    session_http.post(f"{cfg.API_BASE}/weather/stations", json=results)
+    session_http.post(f"{cfg.api_base}{cfg.api_weather_post}", json=results)
 
 print("Scraping Complete! All data Saved")
