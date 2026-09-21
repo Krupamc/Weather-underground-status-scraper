@@ -12,8 +12,8 @@ WORKDIR /app
 RUN apt-get update
 
 # Install Timezone info
-RUN apt-get install -y --no-install-recommends
-        tzdata
+RUN apt-get install -y tzdata --no-install-recommends
+        
 # Delete the apt lists to save space 
 RUN rm -rf /var/lib/apt/lists*
 

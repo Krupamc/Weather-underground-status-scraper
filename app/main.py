@@ -44,30 +44,32 @@ plt.rcParams["font.family"] = fm.FontProperties(fname=roboto_path).get_name()
 
 # Make sure only stations in the config are in server:
 def seed_stations(): # perhaps add auto delete if not in dict?
+    station_config = dict(stations)
+
     with db.Session(db.engine) as session:
-        db_station = session.exec(select(m.Station)).all()
-        
-        db_ids = {station.station_id for station in db_station}
-        config_ids = set(cfg.stations.keys())
-        
-        # If a station is in the config but not the db, add it
-        for station_id, station_name in sorted(cfg.stations.items(), key=lambda item: item[1].lower()):
+        db_stations = session.exec(select(m.Station)).all()
+        db_ids = {station.station_id for station in db_stations}
+
+        added_count = 0
+
+        # Sort alphabetically by station name
+        for station_id, station_name in sorted(
+            station_config.items(),
+            key=lambda item: item[1].lower()
+        ):
             if station_id not in db_ids:
                 session.add(
                     m.Station(
                         station_id=station_id,
                         station_name=station_name,
-                        is_in_maintenance=False
+                        is_in_maintenance=False,
                     )
                 )
-        
-        # If there is a extra station in the db, delete it
-        #for station in db_station:
-        #    if station.station_id not in config_ids:
-        #        session.delete(station)
-        #        # make it delet its other models...
+                added_count += 1
 
-        session.commit()
+        if added_count:
+            session.commit()
+
 
 # Passes user into each template
 def template_context(request: Request):
