@@ -1,4 +1,4 @@
-import config as cfg
+import status_scraper.status_config as cfg
 import requests
 from requests.exceptions import HTTPError, RequestException
 from bs4 import BeautifulSoup as bs

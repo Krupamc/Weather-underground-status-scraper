@@ -8,7 +8,7 @@ import convert_metric as cv
 from pathlib import Path
 import csv
 from datetime import datetime
-import weather_config as cfg
+import config as cfg
 import pytz
 import time
 

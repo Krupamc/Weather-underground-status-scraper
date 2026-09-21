@@ -14,7 +14,7 @@ from scipy import stats
 from sqlmodel import select
 import database as db
 import model as m
-import web_config as cfg
+import config as cfg
 import security as s
 import pytz, csv, io, jwt, statistics
 from jwt import InvalidTokenError
@@ -203,6 +203,12 @@ def on_startup():
     db.create_db_table()
     seed_stations()
 
+@app.get("/health")
+def health():
+    return {
+        "ok": True,
+        "service": "jersey-shore-mesonet"
+    }
 
 # Homepage
 @app.get("/", response_class=HTMLResponse)

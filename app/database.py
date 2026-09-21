@@ -1,13 +1,17 @@
 from sqlmodel import Session, SQLModel, create_engine, text
 from typing import Annotated
 from fastapi import Depends
+import config as cfg
 
 # Engine of the DB:
-sqlite_file_name = "app/database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
 
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+# SQLite
+#sqlite_file_name = "app/database.db"
+#sqlite_url = f"sqlite:///{sqlite_file_name}"
+#connect_args = {"check_same_thread": False}
+#engine = create_engine(sqlite_url, connect_args=connect_args)
+
+engine = create_engine(cfg.database_url, pool_pre_ping=True)
 
 # Create table:
 def create_db_table():
@@ -20,6 +24,7 @@ def get_session():
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
+# SQlite migrate
 def migrate_add_column():
     with Session(engine) as session:
         columns = session.exec(text("PRAGMA table_info(station)")).all()
