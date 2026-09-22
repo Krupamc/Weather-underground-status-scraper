@@ -923,6 +923,7 @@ def get_alert_recipients(station_id: str) -> list[str]:
 
     return list(dict.fromkeys(recipients))
 #---Program---
+print("[SCRAPE]: Status Scrape Started...")
 
 # Single Session Request
 session_http = requests.Session()

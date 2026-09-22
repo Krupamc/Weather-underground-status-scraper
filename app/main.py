@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Annotated
 from scipy import stats
 from sqlmodel import select
+from contextlib import asynccontextmanager
 import database as db
 import model as m
 import config as cfg
@@ -28,8 +29,15 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager as fm
 import matplotlib.dates as mdates
 
+# Run first
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db.create_db_table()
+    seed_stations()
+    yield
 
-app = FastAPI(title="SBB Mesonet Notification System")
+# app
+app = FastAPI(title="SBB Mesonet Notification System", lifespan=lifespan)
 
 # Open Parent
 BASE_DIR = Path(__file__).resolve().parent
@@ -61,22 +69,25 @@ def seed_stations(): # perhaps add auto delete if not in dict?
         added_count = 0
 
         # Sort alphabetically by station name
-        for station_id, station_name in sorted(
-            station_config.items(),
-            key=lambda item: item[1].lower()
-        ):
+        for station_id, station_name in sorted(station_config.items(), key=lambda item: item[1].lower()):
             if station_id not in db_ids:
                 session.add(
                     m.Station(
                         station_id=station_id,
                         station_name=station_name,
                         is_in_maintenance=False,
+                        is_public=True,
+                        collect_enabled=True,
+                        hardware="Unknown"
                     )
                 )
                 added_count += 1
 
         if added_count:
             session.commit()
+            print(f"[DB SEED]: Added {added_count} stations to DB")
+        else:
+            print("[DB SEED]: All configured stations already exist")
 
 
 # Passes user into each template
@@ -3370,8 +3381,17 @@ def delete_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
         return RedirectResponse(url="/settings?error=404", status_code=303)
 
     # Delete
-    session.delete(station)
+    payload = {}
+    payload["collect_enabled"] = False
+    
+    if not payload:
+        return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
+    
+    station = m.StationUpdate(**payload)
+    station_data = station.model_dump(exclude_unset=True)
+    session.add(station)
     session.commit()
+    session.refresh(station)
     return RedirectResponse(url="/settings?success=station_deleted", status_code=303)
 
 

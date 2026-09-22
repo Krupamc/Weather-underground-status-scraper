@@ -247,6 +247,9 @@ def get_stations_list(http: requests.Session) -> list[dict]:
             time.sleep(wait_time)
     return []
 
+# Start
+print("[SCRAPE]: Status Scrape Started...")
+
 # Requests
 
 api_header = {
