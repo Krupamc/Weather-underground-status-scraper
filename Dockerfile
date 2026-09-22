@@ -26,10 +26,21 @@ RUN pip install --no-cache-dir --upgrade pip
 # Install depends
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy entire project over
-COPY . /app
+# Copy web project over
+COPY app/ /app/
+
+# Copy scraper code:
+COPY status_scraper/ /app/status_scraper/
+
+# Copy weather scraper code if it is in its own folder:
+COPY weather_scraper/ /app/weather_scraper/
+
+# Copy scheduled-runner script:
+COPY scripts/ /app/scripts/
 
 #RUN mkdir -p
 
 # Open the 800 port for FastAPI
 EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

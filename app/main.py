@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, date, time
 import convert_metric as cv
 import matplotlib
 import numpy as np
+from pathlib import Path
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager as fm
@@ -30,11 +31,18 @@ import matplotlib.dates as mdates
 
 app = FastAPI(title="SBB Mesonet Notification System")
 
+# Open Parent
+BASE_DIR = Path(__file__).resolve().parent
+
+STATIC_DIR = BASE_DIR / "static"
+TEMPLATES_DIR = BASE_DIR / "templates"
+FONTS_DIR = STATIC_DIR / "fonts"
+
 # Turn off docs
 #app = FastAPI(title="SBB Mesonet Notification System", docs_url=None, redoc_url=None, openapi_url=None)
 
 # Graph text
-roboto_path = "app/static/fonts/Roboto-Regular.ttf"
+roboto_path = "static/fonts/Roboto-Regular.ttf"
 fm.fontManager.addfont(roboto_path)
 plt.rcParams["font.family"] = fm.FontProperties(fname=roboto_path).get_name()
 
@@ -44,7 +52,7 @@ plt.rcParams["font.family"] = fm.FontProperties(fname=roboto_path).get_name()
 
 # Make sure only stations in the config are in server:
 def seed_stations(): # perhaps add auto delete if not in dict?
-    station_config = dict(stations)
+    station_config = dict(cfg.stations)
 
     with db.Session(db.engine) as session:
         db_stations = session.exec(select(m.Station)).all()
@@ -137,7 +145,7 @@ def get_current_user_op(session: db.SessionDep, access_token: str | None = Cooki
     return session.exec(select(m.User).where(m.User.username == username)).first()
 
 # Static and Templates
-templates = Jinja2Templates(directory="app/templates", context_processors=[template_context])
+templates = Jinja2Templates(directory=TEMPLATES_DIR, context_processors=[template_context])
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Force admin

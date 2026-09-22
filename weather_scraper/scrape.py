@@ -250,11 +250,11 @@ def get_stations_list(http: requests.Session) -> list[dict]:
 # Requests
 
 api_header = {
-    "x-api-key" : cfg.API_KEY
+    "x-api-key" : cfg.api_key
 }
 
 session_http = requests.Session()
-session_http.headers.update({"x-api-key": cfg.API_KEY})
+session_http.headers.update({"x-api-key": api_header})
 
 stations = get_stations_list(session_http)
 
