@@ -248,16 +248,11 @@ def get_stations_list(http: requests.Session) -> list[dict]:
     return []
 
 # Start
-print("[SCRAPE]: Status Scrape Started...")
+print("[SCRAPE]: Weather Scrape Started...")
 
 # Requests
-
-api_header = {
-    "x-api-key" : cfg.api_key
-}
-
 session_http = requests.Session()
-session_http.headers.update({"x-api-key": api_header})
+session_http.headers.update({"x-api-key": cfg.api_key}) 
 
 stations = get_stations_list(session_http)
 

@@ -9,16 +9,16 @@ next_status=0
 
 while true; do
     echo "[$(date -Iseconds)]: {RUN} Weather Scraper..."
-    python weather_scraper/scrape.py || echo "[ERROR]: Status Scraper failed with exit code $?"
+    python /app/weather_scraper/scrape.py || echo "[ERROR]: Status Scraper failed with exit code $?"
     
 
     now=$(date +%s) 
 
-    if ["$now" -ge "$next_status" ]; then
+    if [ "$now" -ge "$next_status" ]; then
         echo "[$(date -Iseconds)]: {RUN} Status Scraper..."
-        python status_scraper/status.py || echo "[ERROR]: Status Scraper failed with exit code $?"
+        python /app/status_scraper/status.py || echo "[ERROR]: Status Scraper failed with exit code $?"
 
-        next_status=$((now + WEATHER_INTERVAL))
+        next_status=$((now + STATUS_INTERVAL))
     fi
 
         echo "[$(date -Iseconds)] Sleeping for ${WEATHER_INTERVAL} seconds..."

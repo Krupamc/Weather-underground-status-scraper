@@ -1,4 +1,4 @@
-import status_scraper.status_config as cfg
+import config as cfg
 import requests
 from requests.exceptions import HTTPError, RequestException
 from bs4 import BeautifulSoup as bs
@@ -613,7 +613,9 @@ def post_status_to_api(station_id: str, station_name: str, maintenance: bool, ht
                 "alert_sent": alert_sent
             }
 
-            r = http.post(cfg.api_post_url, json=payload, timeout=10)
+            
+
+            r = http.post(f"{cfg.api_base}{cfg.api_post_url}", json=payload, timeout=10)
 
             r.raise_for_status()
 
