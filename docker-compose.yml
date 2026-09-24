@@ -6,11 +6,11 @@ services:
   web:
     build:
       context: .
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    command: uvicorn main:app --host 0.0.0.0 --port ${FASTAPI_PORT}
     env_file:
       - .env
     ports:
-      - "8000:8000" # Expose
+      - "${FASTAPI_PORT}:${FASTAPI_PORT}" # Expose
     volumes:
       - app_data:/app/data
     depends_on: # Starts when database is ready
@@ -28,7 +28,7 @@ services:
   scraper:
     build:
       context: .
-    command: sh /app/scripts/run-scrapers.sh # Run infinite loop script
+    command: /usr/local/bin/supercronic /app/scripts/scraper.crontab # Run crontab
     env_file:
       - .env
     volumes:
@@ -42,8 +42,8 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: mesonet
-      POSTGRES_USER: mesonet
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -55,10 +55,39 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # Postgre SQL Backups (https://github.com/prodrigestivill/docker-postgres-backup-local)
+  db_backup:
+    image: prodrigestivill/postgres-backup-local:16
+    restart: unless-stopped
+    env_file:
+      - .env
+    enviroment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # Run daily at 2:15 AM container time
+      SCHEDULE: "@daily"
+
+      # Keep exactly your requested retention:
+      BACKUP_KEEP_DAYS: 14
+      BACKUP_KEEP_WEEKS: 0
+      BACKUP_KEEP_MONTHS: 1
+
+      # Optional:
+      BACKUP_KEEP_YEAR: 0
+      HEALTHCHECK_PORT: 8080
+    volumes:
+      - postgres_backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   app_data:
   scraper_data:
-    
+  postgres_backups
 
   

@@ -4,7 +4,9 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBEFFERED=1
-ENV TZ=America/New_York
+ENV TZ={TIMEZONE}
+ENV SUPERCRONIC_VERSION=v0.2.33
+
 
 WORKDIR /app
 
@@ -12,10 +14,14 @@ WORKDIR /app
 RUN apt-get update
 
 # Install Timezone info
-RUN apt-get install -y tzdata --no-install-recommends
-        
-# Delete the apt lists to save space 
+RUN apt-get install -y tzdata curl --no-install-recommends
+# Delete the apt lists to save space
 RUN rm -rf /var/lib/apt/lists*
+
+# Download Supercrnic
+RUN curl -fsSL "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64" \
+    -o /usr/local/bin/supercronic \
+    && chmod +x /usr/local/bin/supercronic
 
 # Copy the file to working dir
 COPY requirements.txt /app/requirements.txt
@@ -40,7 +46,9 @@ COPY scripts/ /app/scripts/
 
 #RUN mkdir -p
 
-# Open the 800 port for FastAPI
-EXPOSE 8000
+# Open the 8000 port for FastAPI
+EXPOSE ${FASTAPI_PORT}
 
+# Add to PATH
+CMD ["/usr/local/bin/supercronic", "/app/crontab"]
 #CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

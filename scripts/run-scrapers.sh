@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+# Use to manually start the scrapers on a infinite timer
+
 # Get the env variables:
 STATUS_INTERVAL="${STATUS_SCRAPER_INTERVAL_SECONDS:-900}" # 900
 WEATHER_INTERVAL="${WEATHER_SCRAPER_INTERVAL_SECONDS:-60}" # 60

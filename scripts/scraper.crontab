@@ -1,0 +1,7 @@
+# Schedule Scrapers using Cron and Flock (to stop concurent runs)
+
+# Weather Scrape every 5 minutes
+*/5 * * * * flock -n /tmp/weather-scraper.lock python /weather_scraper/scrape.py
+
+# Status Scrape every 15 mins (offset by 2 mins)
+2,17,32,47 * * * * flock -n /tmp/status-scraper.lock python /weather_scraper/status.py

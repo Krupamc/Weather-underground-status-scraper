@@ -669,18 +669,25 @@ def start_log():
             ])
         print(f"\nCSV Log Created\n")
 
-# Create base json status file
-def write_start(stations):
+def write_start(stations: list[dict]):
     status_json_file = Path("status_scraper/status.json")
 
     if not status_json_file.exists():
-        
         data = {}
-        # Write entry for every station:
-        for station, in stations:
-            data[station] = build_station_status(station["station_id"], station["station_name"], station["collect_enabled"]) # Fields
 
-        print(data)
+        for station in stations:
+            station_id = station["station_id"]
+            station_name = station["station_name"]
+            collect_enabled = station.get("collect_enabled", False)
+
+
+            data[station_id] = build_station_status(
+                station_id,
+                station_name,
+                collect_enabled
+            )
+
+
         write_json_file(data)
         print("\nJson Status File Created\n")
 
