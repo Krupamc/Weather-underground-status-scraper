@@ -50,7 +50,7 @@ FONTS_DIR = STATIC_DIR / "fonts"
 #app = FastAPI(title="SBB Mesonet Notification System", docs_url=None, redoc_url=None, openapi_url=None)
 
 # Graph text
-roboto_path = "static/fonts/Roboto-Regular.ttf"
+roboto_path = f"{STATIC_DIR}/fonts/Roboto-Regular.ttf"
 fm.fontManager.addfont(roboto_path)
 plt.rcParams["font.family"] = fm.FontProperties(fname=roboto_path).get_name()
 
@@ -59,8 +59,22 @@ plt.rcParams["font.family"] = fm.FontProperties(fname=roboto_path).get_name()
 #oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Make sure only stations in the config are in server:
+# Make sure only stations in the config are in server:
 def seed_stations(): # perhaps add auto delete if not in dict?
     station_config = dict(cfg.stations)
+
+    print("\n[DB SEED]: Starting station seed")
+
+    station_config = cfg.stations
+
+    if not station_config:
+        print("[DB SEED]: No station configuration was loaded")
+        return
+
+    if not isinstance(station_config, dict):
+        print("[DB SEED ERROR]: cfg.stations must be a dictionary")
+        print("[DB SEED ERROR]: Expected {'STATION_ID': 'Station Name'}")
+        return
 
     with db.Session(db.engine) as session:
         db_stations = session.exec(select(m.Station)).all()
@@ -88,6 +102,7 @@ def seed_stations(): # perhaps add auto delete if not in dict?
             print(f"[DB SEED]: Added {added_count} stations to DB")
         else:
             print("[DB SEED]: All configured stations already exist")
+
 
 
 # Passes user into each template
@@ -157,7 +172,7 @@ def get_current_user_op(session: db.SessionDep, access_token: str | None = Cooki
 
 # Static and Templates
 templates = Jinja2Templates(directory=TEMPLATES_DIR, context_processors=[template_context])
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Force admin
 def require_admin(current_user: Annotated[m.User, Depends(get_current_user)]):

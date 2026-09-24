@@ -43,4 +43,4 @@ COPY scripts/ /app/scripts/
 # Open the 800 port for FastAPI
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+#CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
