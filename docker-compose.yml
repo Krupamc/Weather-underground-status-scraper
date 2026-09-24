@@ -1,3 +1,6 @@
+# Docker Compose file of the Program. Change contianer settings here.
+# (Any port changes must be done here and the "Dockerfile " and ".env")
+
 services:
   # Container for web app:
   web:

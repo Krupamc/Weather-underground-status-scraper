@@ -613,8 +613,6 @@ def post_status_to_api(station_id: str, station_name: str, maintenance: bool, ht
                 "alert_sent": alert_sent
             }
 
-            
-
             r = http.post(f"{cfg.api_base}{cfg.api_post_url}", json=payload, timeout=10)
 
             r.raise_for_status()
@@ -672,11 +670,18 @@ def start_log():
         print(f"\nCSV Log Created\n")
 
 # Create base json status file
-def write_start():
+def write_start(stations):
     status_json_file = Path("status_scraper/status.json")
 
     if not status_json_file.exists():
-        write_json_file({})
+        
+        data = {}
+        # Write entry for every station:
+        for station, in stations:
+            data[station] = build_station_status(station["station_id"], station["station_name"], station["collect_enabled"]) # Fields
+
+        print(data)
+        write_json_file(data)
         print("\nJson Status File Created\n")
 
 # Create Report json file:
@@ -693,11 +698,12 @@ def report_write_start(now: datetime):
         print(f"\nReport File Created\n")
 
 # Base Status
-def build_station_status(station_id, station_name):
+def build_station_status(station_id, station_name, collect_enabled):
     return {
         "station_id": station_id,
         "station_name": station_name,
         "last_status": "Not Checked",
+        "collect_enabled": collect_enabled,
         "consecutive_offline": 0,
         "alert_sent": False,
         "last_connected": None,
@@ -728,9 +734,10 @@ def sync_status_file(stations: list[dict]):
     for station in stations:
         station_id = station["station_id"]
         station_name = station["station_name"]
+        collect_enabled = station["collect_enabled"]
 
         if station_id not in data:
-            data[station_id] = build_station_status(station_id, station_name)
+            data[station_id] = build_station_status(station_id, station_name, collect_enabled)
             changed = True
 
     if changed:
@@ -931,22 +938,23 @@ print("[SCRAPE]: Status Scrape Started...")
 session_http = requests.Session()
 session_http.headers.update({"x-api-key": cfg.api_key})
 
-# Intializers
-ensure_data_dir()
-alert_cooldown_write_start()
-write_start()
-start_log()
-admin_recipients = []
-global_recipients = []
-report_recipients = []
-station_recipients = {}
-
 # API Pull
 stations = get_stations_list(session_http)
 
 if not stations:
     print("[STOPPED]: No stations were returned by the API")
     raise SystemExit(1)
+
+# Intializers
+ensure_data_dir()
+alert_cooldown_write_start()
+write_start(stations)
+start_log()
+admin_recipients = []
+global_recipients = []
+report_recipients = []
+station_recipients = {}
+
 
 emails = get_email_recipients(session_http)
 station_emails = get_station_recipients(session_http)
@@ -984,7 +992,7 @@ for recipient in station_emails:
     station_recipients[station_id].append(recipient["email"])
 
 #Test every API-configured email recipient
-test_all_emails()
+#test_all_emails()
 
 
 # Time
