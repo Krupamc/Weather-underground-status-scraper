@@ -17,7 +17,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://web:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://web:${FASTAPI_PORT}/health')"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -47,6 +47,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - /opt/mesonet-backups:/backups:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mesonet -d mesonet"]
       interval: 10s
@@ -67,19 +68,22 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
-      # Run daily at 2:15 AM container time
+      # Run on container start:
+      BACKUP_ON_START: "TRUE"
+
+      # Run daily at 2:15 AM
       SCHEDULE: "@daily"
 
-      # Keep exactly your requested retention:
-      BACKUP_KEEP_DAYS: 14
-      BACKUP_KEEP_WEEKS: 0
-      BACKUP_KEEP_MONTHS: 1
+      # Keep exactly requested retention:
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS}
+      BACKUP_KEEP_WEEKS: ${BACKUP_KEEP_WEEKS}
+      BACKUP_KEEP_MONTHS: ${BACKUP_KEEP_MONTHS}
+      BACKUP_KEEP_YEAR: ${BACKUP_KEEP_YEAR}
 
-      # Optional:
-      BACKUP_KEEP_YEAR: 0
       HEALTHCHECK_PORT: 8080
+      
     volumes:
-      - postgres_backups:/backups
+      - /opt/mesonet-backups:/backups
     depends_on:
       db:
         condition: service_healthy
@@ -88,4 +92,3 @@ volumes:
   postgres_data:
   app_data:
   scraper_data:
-  postgres_backups:
