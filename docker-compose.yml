@@ -88,6 +88,4 @@ volumes:
   postgres_data:
   app_data:
   scraper_data:
-  postgres_backups
-
-  
+  postgres_backups:
