@@ -548,7 +548,6 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, se
 # Download CSV for Selected Date
 @app.get("/stations/weather/csv/{station_id}")
 def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial", selected_date: str | None = None):
-    # Get Data
     local_tz = pytz.timezone(cfg.timezone)
 
     if not selected_date or selected_date == "None":
@@ -1135,7 +1134,7 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
         raise HTTPException(status_code=400, detail="Invalid Range Mode")
     
 
-    # Get data
+    # Open table
     weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
 
     if not weather:
@@ -1362,7 +1361,7 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
     else:
         raise HTTPException(status_code=400, detail="Invalid Range Mode")
 
-    # Get data
+    # Open Table
     weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
     
 
@@ -1776,7 +1775,7 @@ def analysis_page(request: Request, session: db.SessionDep, station_id: str = ""
 # Download Analysis
 @app.get("/analyze/weather/{station_id}/csv")
 def analysis_csv(station_id: str, variable: str, session: db.SessionDep, units: str = "imperial", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
-    # Get Data
+    # Analyze the data
     stats = build_analysis_stats(session=session, station_id=station_id, variable=variable, units=units, range_mode=range_mode, range_value=range_value, range_unit=range_unit, start_date=start_date, end_date=end_date)
 
     output = io.StringIO()
@@ -2060,7 +2059,7 @@ def linear_regression(session: db.SessionDep, station_id: str, x_variable: str, 
         raise HTTPException(status_code=400, detail="Invalid Range Mode")
     
 
-    # Get data
+    # Open Table
     weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
 
     if not weather:
@@ -3335,7 +3334,7 @@ def create_station(station: m.StationCreate, session: db.SessionDep, current_use
 # Create Station Rows in DB from form:
 @app.post("/stations/create/form")
 def create_station_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form(), station_name: str = Form(), is_in_maintenance: bool = Form(False), is_public: bool = Form(True)):
-    # Get data
+    # Get form variable
     payload = {
         "station_id": station_id.strip(),
         "station_name": station_name.strip(),
@@ -3425,7 +3424,6 @@ def update_station(station_id: str, station: m.StationUpdate, session: db.Sessio
 # Update Station (form)
 @app.post("/update/stations")
 def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form(), station_name: str = Form(), new_station_id: str = Form(), hardware: str = Form(), latitude: float = Form(), longitude: float = Form(), is_public: bool = Form(True), is_in_maintenance: bool = Form(False), collect_enabled: bool = Form(True)):
-    # Open Data
     station_db = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station_db:
         return RedirectResponse(url="/settings?error=404", status_code=303)
@@ -3667,7 +3665,7 @@ def create_recipient(recipient: m.EmailRecipientCreate, session: db.SessionDep, 
 # Create from form
 @app.post("/recipients/create/form", response_model=m.EmailRecipientPublic)
 def create_recipient_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email: EmailStr = Form(), recipient_type: m.RecipientType = Form()):
-    # Get data
+    # get from form
     payload = {
         "email": str(email).strip(),
         "recipient_type": recipient_type
@@ -3790,7 +3788,7 @@ def create_owner_recipient(recipient: m.StationRecipientCreate, session: db.Sess
 # Create from form
 @app.post("/recipients/owners/create/form", response_model=m.StationRecipientPublic)
 def create_owner_recipient_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email: EmailStr = Form(), station_id: str = Form()):
-    # Get data
+    # get from form
     payload = {
         "email": str(email).strip(),
         "station_id": station_id

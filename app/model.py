@@ -6,15 +6,14 @@ import web_config as cfg
 import pytz
 from enum import Enum
 
-# Function to parse iso 8601 to datetime timezone
+# Pparse iso 8601 to datetime timezone
 def parse_iso_to_zone(iso_str: str, tz_name: str = cfg.timezone) -> datetime:
     dt = datetime.fromisoformat(iso_str)
 
     # if no tzinfo, UTC
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=pytz.utc)
-    
-    # Else convert to selected timezone
+
     timezone = pytz.timezone(tz_name)
     return dt.astimezone(timezone)
 
@@ -59,7 +58,6 @@ class StationBase(SQLModel):
     latitude: float | None = None
     longitude: float | None = None
 
-# Model For Database (Table Model):
 class Station(StationBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
@@ -69,7 +67,6 @@ class StationPublic(StationBase):
 class StationCreate(StationBase):
     pass
 
-# Update Model
 class StationUpdate(SQLModel):
     station_name: str | None = None
     is_in_maintenance: bool | None = None
