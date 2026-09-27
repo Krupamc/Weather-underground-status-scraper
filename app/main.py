@@ -736,7 +736,7 @@ def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth
     # Give cookie 
     access_token = s.create_access_token(data={"sub": user.username}) 
     response = RedirectResponse(url="/my-stations", status_code=303)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, path="/", samesite="lax")
+    response.set_cookie(key="access_token", value=access_token, httponly=True, path="/", secure=cfg.cookie_secure, samesite=cfg.cookie_samesite, max_age=cfg.access_token_expire_minutes * 60)
     return response
 
 # Log out
