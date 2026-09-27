@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+# Restores DB using latest backup
 
 # Project root
 PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"

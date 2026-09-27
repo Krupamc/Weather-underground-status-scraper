@@ -744,7 +744,7 @@ def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth
 def logout():
     # Delete cookie
     response = RedirectResponse("/", status_code=303)
-    response.delete_cookie(key="access_token", path="/", samesite="lax")
+    response.delete_cookie(key="access_token", path="/")
     return response
 
 # Admin Settings

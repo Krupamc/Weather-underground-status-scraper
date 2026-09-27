@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+# Tests restoring the databasw will the latest backup with a test table that is created and deleted.
 
 # Project root
 PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
@@ -128,3 +129,5 @@ docker compose exec -T "$DB_SERVICE" \
 
 
 echo "[RESTORE TEST COMPLETE]: Backup restored successfully into $TEST_DB_NAME"
+
+# Ask about how to test this now

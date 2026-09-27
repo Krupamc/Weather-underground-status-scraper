@@ -1,0 +1,7 @@
+# Schedule Health Tests using Cron and Flock (to stop concurent runs)
+
+# Monthly Backup Tests
+30 3 2 * * flock -n /tmp/restore-db-test.lock sh /scripts/restore-db-test.sh >> backups/logs/monthly-cron.log 2>&1
+
+# Daily Backup Tests
+30 4 * * * flock -n /tmp/check-backup-health.lock sh /scripts/check-backup-health.sh >> backups/logs/backup-health.log 2>&1
