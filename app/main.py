@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 # app
 app = FastAPI(title="SBB Mesonet Notification System", lifespan=lifespan)
 
-# Open Parent
+# Open Parent dir
 BASE_DIR = Path(__file__).resolve().parent
 
 STATIC_DIR = BASE_DIR / "static"
@@ -146,7 +146,6 @@ def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(d
     except InvalidTokenError:
         raise credentials_exception
 
-    # Get user from username
     user = session.exec(select(m.User).where(m.User.username == username)).first()
 
     if user is None:
@@ -182,8 +181,6 @@ def require_admin(current_user: Annotated[m.User, Depends(get_current_user)]):
 
 # Force user having access to a station
 def require_station_access(station_id: str, current_user: Annotated[m.User, Depends(get_current_user)], session: db.SessionDep):
-
-    # Open Station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     
     if not station:
@@ -334,7 +331,6 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, se
     # Check units:
     units = request.query_params.get("units", "imperial")
 
-    # Open DB tables
     status = session.exec(select(m.Status).where(m.Status.station_id == station_id)).first()
     weather = session.exec(select(m.Weather).where(m.Weather.station_id == station_id)).first()
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
@@ -369,7 +365,6 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, se
     day_start_utc = day_start_local.astimezone(pytz.UTC)
     day_end_utc = day_end_local.astimezone(pytz.UTC)
 
-    # Get the history
     history = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= day_start_utc, m.WeatherHistory.observed_at <= day_end_utc).order_by(m.WeatherHistory.observed_at)).all()
 
     # Make the rows
@@ -701,7 +696,6 @@ def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial
 # Gives direct token for docs login
 @app.post("/token")
 def login_for_access_token(session: db.SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
-    # Open user using creds
     user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
 
     # If user is right give token if not 401
@@ -725,7 +719,6 @@ def load_login(request: Request, error: str | None = None):
 # From Response with creds.
 @app.post("/login")
 def login_page_submit(request: Request, session: db.SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
-    # Open user with form creds
     user = session.exec(select(m.User).where(m.User.username == form_data.username)).first()
 
     # If not right, 401
@@ -1041,7 +1034,6 @@ def owner_station(request: Request, session: db.SessionDep, station_id: str, req
 # Graph page
 @app.get("/graph", response_class=HTMLResponse)
 def graph_page(request: Request, session: db.SessionDep, station_id: str="", variables: Annotated[list[str] | None, Query()] = None, units: str="imperial", title: str="", range_mode: str = "relative", range_value: int | None = None, range_unit: str | None = None, start_date: str | None = None, end_date: str | None = None):
-    # Open stations
     stations = session.exec(select(m.Station).where(m.Station.is_public == True).order_by(m.Station.station_name)).all()
 
     # Variables
@@ -1133,8 +1125,6 @@ def graph_variables(station_id: str, variables: Annotated[list[str], Query()], s
     else:
         raise HTTPException(status_code=400, detail="Invalid Range Mode")
     
-
-    # Open table
     weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
 
     if not weather:
@@ -1361,7 +1351,6 @@ def export_graph_csv(station_id: str, variables: Annotated[list[str], Query()], 
     else:
         raise HTTPException(status_code=400, detail="Invalid Range Mode")
 
-    # Open Table
     weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
     
 
@@ -2058,8 +2047,6 @@ def linear_regression(session: db.SessionDep, station_id: str, x_variable: str, 
     else:
         raise HTTPException(status_code=400, detail="Invalid Range Mode")
     
-
-    # Open Table
     weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
 
     if not weather:
@@ -2349,7 +2336,7 @@ def run_t_test(session: db.SessionDep, units: str="imperial", range_mode: str = 
     values_a = []
     values_b = []
 
-    # Get Values and convert them
+    # convert data
     for row in weather_a:
         value = getattr(row, variable, None)
         if value is None:
@@ -2511,7 +2498,7 @@ def run_anova(session: db.SessionDep, units: str="imperial", range_mode: str = "
     values_b = []
     values_c = []
 
-    # Get Values and convert them
+    # convert Values
     for row in weather_a:
         value = getattr(row, variable, None)
         if value is None:
@@ -2707,7 +2694,6 @@ def test_csv(session: db.SessionDep, units: str = "imperial", range_mode: str = 
         if x_variable not in allowed or y_variable not in allowed:
             raise HTTPException(status_code=400, detail="Invalid Variable")
 
-        # Get Weather
         weather = session.exec(select(m.WeatherHistory).where(m.WeatherHistory.station_id == station_id, m.WeatherHistory.observed_at >= cutoff_start, m.WeatherHistory.observed_at <= cutoff_end).order_by(m.WeatherHistory.observed_at)).all()
 
         x = []
@@ -2893,9 +2879,7 @@ def scraper_station_active(session: db.SessionDep, x_api_key: Annotated[str, Hea
     if x_api_key != cfg.scraper_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Open Station and check if active
     stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
-        # if not send back empty list
     
     return stations
 
@@ -2906,9 +2890,7 @@ def scraper_email_recipients(session: db.SessionDep, x_api_key: Annotated[str, H
     if x_api_key != cfg.scraper_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Open emails
     emails = session.exec(select(m.EmailRecipient).order_by(m.EmailRecipient.email)).all()
-        # if not send back empty list
 
     return emails
 
@@ -2919,9 +2901,7 @@ def scraper_station_recipients(session: db.SessionDep, x_api_key: Annotated[str,
     if x_api_key != cfg.scraper_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Open emails
     emails = session.exec(select(m.StationRecipient).order_by(m.StationRecipient.email)).all()
-        # if not send back empty list
 
     return emails
 
@@ -2953,7 +2933,6 @@ def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str
     if update.is_in_maintenance:
         update.is_public = False
 
-    # Update in db
     session.add(update)
     session.commit()
     session.refresh(update)
@@ -2990,7 +2969,6 @@ def toggle_public(request: Request, session: db.SessionDep, station_id: str, cur
     
     update.is_public = not update.is_public
     
-    # Update DB
     session.add(update)
     session.commit()
     session.refresh(update)
@@ -3117,7 +3095,6 @@ def delete_user_from_form(session: db.SessionDep, user_id: int = Form(), current
 # Read what stations a user can affect
 @app.get("/users/{user_id}/stations")
 def read_user_stations(user_id: int, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
-    # Open row
     access_rows = session.exec(select(m.UserAccess).where(m.UserAccess.user_id == user_id)).all()
 
     if not access_rows:
@@ -3136,7 +3113,6 @@ def read_user_stations(user_id: int, session: db.SessionDep, current_user: Annot
 # Give User Access to a station
 @app.post("/users/{user_id}/stations/{station_id}")
 def grant_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
-    # Open station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         raise HTTPException(status_code=404, detail="Station Not Found")
@@ -3159,7 +3135,6 @@ def grant_station_access(user_id: int, station_id: str, session: db.SessionDep, 
 
 @app.post("/users/stations/grant")
 def grant_station_access_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], user_id: int = Form(), station_id: str = Form()):
-    # Open station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         return RedirectResponse(url=f"/settings?error=404", status_code=303)
@@ -3183,7 +3158,6 @@ def grant_station_access_from_form(session: db.SessionDep, current_user: Annotat
 # Delete Access
 @app.delete("/users/{user_id}/stations/{station_id}")
 def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
-    # Open station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         raise HTTPException(status_code=404, detail="Station Not Found")
@@ -3204,7 +3178,6 @@ def revoke_station_access(user_id: int, station_id: str, session: db.SessionDep,
 # Delete Access from form
 @app.post("/users/stations/revoke")
 def revoke_station_access_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], user_id: int = Form(), station_id: str = Form()):
-    # Open station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         return RedirectResponse(url=f"/settings?error=404", status_code=303)
@@ -3272,7 +3245,6 @@ def update_user_from_form(session: db.SessionDep, current_user: Annotated[m.User
     if not user_db:
         return RedirectResponse(url=f"/settings?error=404", status_code=303)
 
-    # Update
     payload = {}
     if username and username.strip():
         payload["username"] = username.strip()
@@ -3300,7 +3272,6 @@ def update_user_from_form(session: db.SessionDep, current_user: Annotated[m.User
 # Update User
 @app.patch("/users/{user_id}")
 def update_user(user_id: int, user: m.UserUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
-    # Open User
     user_db = session.exec(select(m.User).where(m.User.id == user_id)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="No User Exists")
@@ -3389,7 +3360,6 @@ def delete_station(station_id: str, session: db.SessionDep, current_user: Annota
 # Delete Station from form
 @app.post("/delete/stations")
 def delete_station_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], station_id: str = Form()):
-    # Get Station
     station = session.exec(select(m.Station).where(m.Station.station_id == station_id)).first()
     if not station:
         return RedirectResponse(url="/settings?error=404", status_code=303)
@@ -3465,7 +3435,6 @@ def post_status(session: db.SessionDep, status_in: m.StatusIn, x_api_key: Annota
     if x_api_key != cfg.scraper_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Open current
     current = session.exec(select(m.Status).where(m.Status.station_id == status_in.station_id)).first()
     
     # On first post
@@ -3653,9 +3622,6 @@ def read_history_weather(session: db.SessionDep, station_id: str, current_user: 
 @app.post("/recipients/create", response_model=m.EmailRecipientPublic)
 def create_recipient(recipient: m.EmailRecipientCreate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
     db_recipient = m.EmailRecipient.model_validate(recipient)
-
-    if not db_recipient:
-        raise HTTPException(status_code=404, detail="Wrong Inputs")
     
     session.add(db_recipient)
     session.commit()
@@ -3706,7 +3672,6 @@ def read_recipients(session: db.SessionDep, current_user: Annotated[m.User, Depe
 # Update from API
 @app.patch("/recipients/update/{email_id}", response_model=m.EmailRecipientPublic)
 def update_recipients(email_id: int, recipient: m.EmailRecipientUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
-    # Open
     recipient_db = session.exec(select(m.EmailRecipient).where(m.EmailRecipient.id == email_id)).first()
     if not recipient_db:
         raise HTTPException(status_code=404, detail="Recipient Not Found")
@@ -3721,7 +3686,6 @@ def update_recipients(email_id: int, recipient: m.EmailRecipientUpdate, session:
 # Update from form
 @app.post("/recipients/update")
 def update_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form(), new_email: EmailStr = Form(), recipient_type: m.RecipientType = Form()):
-    # Open
     recipient_db = session.exec(select(m.EmailRecipient).where(m.EmailRecipient.id == email_id)).first()
     if not recipient_db:
         return RedirectResponse(url="/settings?error=404", status_code=303)
@@ -3748,7 +3712,6 @@ def update_recipients_from_form(session: db.SessionDep, current_user: Annotated[
 # Delete from API
 @app.delete("/recipients/delete/{email_id}")
 def delete_recipients(session: db.SessionDep, email_id: int, current_user: Annotated[m.User, Depends(require_admin)]):
-    # Open
     recipient_db = session.exec(select(m.EmailRecipient).where(m.EmailRecipient.id == email_id)).first()
     if not recipient_db:
         raise HTTPException(status_code=404, detail="Recipient Not Found")
@@ -3816,7 +3779,7 @@ def read_owner_recipients_specific(session: db.SessionDep, current_user: Annotat
 
     return recipients
 
-# Read from API
+# Read /doc
 @app.get("/recipients/owners/read", response_model=list[m.StationRecipientPublic])
 def read_owner_recipients(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=100)] = 100):
     recipients = session.exec(select(m.StationRecipient).offset(offset).limit(limit)).all()
@@ -3825,10 +3788,9 @@ def read_owner_recipients(session: db.SessionDep, current_user: Annotated[m.User
 
     return recipients
 
-# Update from API
+# Update /doc
 @app.patch("/recipients/owners/update/{email_id}", response_model=m.StationRecipientPublic)
 def update_owner_recipients(email_id: int, recipient: m.StationRecipientUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
-    # Open
     recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
     if not recipient_db:
         raise HTTPException(status_code=404, detail="Recipient Not Found")
@@ -3843,7 +3805,6 @@ def update_owner_recipients(email_id: int, recipient: m.StationRecipientUpdate, 
 # Update from form
 @app.post("/recipients/owners/update")
 def update_owner_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form(), new_email: EmailStr = Form(), station_id: str = Form()):
-    # Open
     recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
     if not recipient_db:
         return RedirectResponse(url="/settings?error=404", status_code=303)
@@ -3869,7 +3830,6 @@ def update_owner_recipients_from_form(session: db.SessionDep, current_user: Anno
 
 @app.delete("/recipients/owners/delete/{email_id}")
 def delete_owner_recipients(session: db.SessionDep, email_id: int, current_user: Annotated[m.User, Depends(require_admin)]):
-    # Open
     recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
     if not recipient_db:
         raise HTTPException(status_code=404, detail="Owner Recipient Not Found")
