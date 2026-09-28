@@ -1,14 +1,16 @@
 # Scraper
-docker compose exec scraper python /app/weather_scraper/scrape.py
-docker compose exec scraper python /app/status_scraper/status.py
-docker compose exec scraper cat /app/scripts/scraper.crontab
+sudo docker compose exec scraper python /app/weather_scraper/scrape.py
+sudo docker compose exec scraper python /app/status_scraper/status.py
+sudo docker compose exec scraper cat /app/scripts/scraper.crontab
 
 # Backup
-docker compose exec db_backup env | sort
+sudo docker compose exec db_backup env | sort
+sudo docker compose exec db_backup bash /app/scripts/backup-postgres.sh
+sudo docker compose exec db_backup bash /app/scripts/restore-backup-postgres.sh
 ls -lah /opt/mesonet-backups
 
 # Health Tests
-docker compose exec health_tests python /app/scripts/send-alerts.py "Test Subject" "Test Body"
-docker compose exec health-tests bash /app/scripts/check-backup-health.sh
-docker compose exec health-tests bash /app/scripts/restore-db-test.sh
-docker compose exec health-tests bash /app/scripts/test-restore.sh
+sudo docker compose exec health-tests python /app/scripts/send-alerts.py "Test Subject" "Test Body"
+sudo docker compose exec health-tests bash /app/scripts/check-backup-health.sh
+sudo docker compose exec health-tests bash /app/scripts/restore-db-test.sh
+sudo docker compose exec health-tests bash /app/scripts/test-restore.sh
