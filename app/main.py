@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     yield
 
 # app
-app = FastAPI(title="SBB Mesonet Notification System", lifespan=lifespan)
+app = FastAPI(title=f"{cfg.system_name} Notification System", lifespan=lifespan)
 
 # Open Parent dir
 BASE_DIR = Path(__file__).resolve().parent
@@ -107,8 +107,7 @@ def seed_stations(): # perhaps add auto delete if not in dict?
 
 # Passes user into each template
 def template_context(request: Request):
-    
-    # Read cookie from heaer
+    # Header Cookie
     access_token = request.cookies.get("access_token")
     current_user = None
 
@@ -124,8 +123,9 @@ def template_context(request: Request):
                     current_user = session.exec(select(m.User).where(m.User.username == username)).first()
         except InvalidTokenError:
             current_user = None
+
     
-    return {"current_user": current_user}
+    return {"current_user": current_user, "system_name": cfg.system_name}
 
 # Check what user
 def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(default=None)):

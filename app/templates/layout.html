@@ -22,39 +22,30 @@
         </style>
 
         <!-- Meta data... -->
-        <meta name="description" content="SBB Mesonet System">
+        <meta name="description" content="Weather Station Monitoring System for {{system_name}}">
         <meta name="author" content="Krupam Patel">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         
         <!-- Title of page for social media. CVan match title tag or be more descriptive -->
-        <meta property="og:title" content="SBB Mesonet System">
+        <meta property="og:title" content="{{system_name}} Mesonet System">
 
         <!-- Set for website for static sites or article for content-heavy -->
         <meta property="og:type" content="website">
 
-        <!-- URL of the page -->
-        <meta property="og:url" content="">
-
         <!-- Url of an image that represents the page -->
         <meta property="og:image" content="">
-
-        <!-- Alternate text for the image -->
         <meta property="og:image:alt" content="">
 
         <!-- Favicon (Small image for browser preview ICO)-->
-        <link rel="icon" href="/static/icons/favicon.ico" sizes="any">
-        <link rel="icon" href="/static/isons/icon.svf" type="image/svg+xml">
+        <link rel="icon" href="{{ url_for('static', path='/icons/favicon.ico') }}" sizes="any">
+        <link rel="icon" href="{{ url_for('static', path='/icons/icon.svg') }}" type="image/svg+xml">
 
         <!-- Apple touch icon -->
-        <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='/icons/icon.png') }}">
 
         <!-- Web App Manifest-->
-        <link rel="manifest" href="/static/site.webmanifest">
+        <link rel="manifest" href="{{ url_for('static', path='/site.webmanifest') }}">
 
-        <!-- Content Security Policy. Add any external libraries to it -->
-        <!--<meta http-equiv="Content-Security-Policy" content=" default-src 'self'; script-src 'self' code.jquery.com; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' images.examplecdn.com; "> -->
-        
-        
     </head>
     <body>
         <!-- Broswer title -->
@@ -62,7 +53,7 @@
             {% if title %}
                 {{ title }}
             {% else %}
-                Jersey Shore Mesonet System
+                {{system_name}} Mesonet System
             {% endif %}
         </title>
 
@@ -70,9 +61,9 @@
         <div id="top-red-bar" class="top_red_bar" >
             <span id="top-red-bar-text" class="top_red_bar_text">
                 {% if title %}
-                    Jersey Shore Mesonet System - {{ title }}
+                    {{system_name}} Mesonet System - {{ title }}
                 {% else %}
-                    Jersey Shore Mesonet System
+                    {{system_name}} Mesonet System
                 {% endif %}
             </span>
         </div>
@@ -85,7 +76,7 @@
                 <div class="nav_links">
                     <!-- Logo link -->
                     <a href="/" class="logo_link">
-                        <img src="/static/icons/logo.png" alt="Save Barnegat Bay" width="225" class="logo_link">
+                        <img src="{{ url_for('static', path='/icons/logo.png') }}" alt="logo" width="225" class="logo_link">
                     </a>
                     <a href="/stations" class="nav_item {% if active_page == 'stations' %}active{% endif %}">WEATHER STATIONS ▼</a>
                     <a href="/graph" class="nav_item {% if active_page == 'graph' %}active{% endif %}">GRAPHING AND ANALYSIS ▼</a>
