@@ -57,7 +57,7 @@ services:
     restart: unless-stopped
 
   # Postgre SQL Backups (https://github.com/prodrigestivill/docker-postgres-backup-local)
-  db_backup:
+  db-backup:
     image: prodrigestivill/postgres-backup-local:16
     restart: unless-stopped
     env_file:

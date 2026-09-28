@@ -18,7 +18,7 @@ def check_station(station_id, station_info, http: requests.Session):
     station_name = station_info["station_name"]
     maintenance = station_info.get("is_in_maintenance", False)
 
-    ensure_station_exists(station_id, station_name)
+    ensure_station_exists(station_id, station_name, station_info["collect_enabled"])
 
     # Time
     now = get_time(station_id, station_name, station_info["is_in_maintenance"])
@@ -655,54 +655,6 @@ def post_status_to_api(station_id: str, station_name: str, maintenance: bool, ht
             )
         
         return
-    
-# Create base csv data file
-def start_log():
-    path = Path("status_scraper/status_log.csv")
-    if not path.exists():
-        with path.open("w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerow([
-                "timestamp", "station_id", "station_name",
-                "status", "consecutive_offline",
-                "event_type", "message"
-            ])
-        print(f"\nCSV Log Created\n")
-
-def write_start(stations: list[dict]):
-    status_json_file = Path("status_scraper/status.json")
-
-    if not status_json_file.exists():
-        data = {}
-
-        for station in stations:
-            station_id = station["station_id"]
-            station_name = station["station_name"]
-            collect_enabled = station.get("collect_enabled", False)
-
-
-            data[station_id] = build_station_status(
-                station_id,
-                station_name,
-                collect_enabled
-            )
-
-
-        write_json_file(data)
-        print("\nJson Status File Created\n")
-
-# Create Report json file:
-def report_write_start(now: datetime):
-    report_json = Path("status_scraper/report.json")
-
-    if not report_json.exists():
-        
-        data = {
-            "last_report": None
-        }
-        
-        write_report_file(data)
-        print(f"\nReport File Created\n")
 
 # Base Status
 def build_station_status(station_id, station_name, collect_enabled):
@@ -722,12 +674,56 @@ def build_station_status(station_id, station_name, collect_enabled):
         "error": None,
     }
 
+# Create base csv data file
+def start_log():
+    path = Path("status_scraper/status_log.csv")
+    if not path.exists():
+        with path.open("w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow([
+                "timestamp", "station_id", "station_name",
+                "status", "consecutive_offline",
+                "event_type", "message"
+            ])
+        print(f"\nCSV Log Created\n")
+
+def write_start(stations: list[dict]):
+    status_json_file = Path("status_scraper/status.json")
+
+    if status_json_file.exists():
+        return
+
+    data = {}
+
+    for station in stations:
+        station_id = station["station_id"]
+        station_name = station["station_name"]
+        collect_enabled = station.get("collect_enabled", False)
+
+        data[station_id] = build_station_status(station_id, station_name, collect_enabled)
+
+    write_json_file(data)
+    print("\nJson Status File Created\n")
+
+# Create Report json file:
+def report_write_start(now: datetime):
+    report_json = Path("status_scraper/report.json")
+
+    if not report_json.exists():
+        
+        data = {
+            "last_report": None
+        }
+        
+        write_report_file(data)
+        print(f"\nReport File Created\n")
+
 # Exist?
-def ensure_station_exists(station_id, station_name):
+def ensure_station_exists(station_id, station_name, collect_enabled):
     data = read_json_file()
 
     if station_id not in data:
-        data[station_id] = build_station_status(station_id, station_name)
+        data[station_id] = build_station_status(station_id, station_name, collect_enabled)
         write_json_file(data)
         print(f"[STATUS INIT]: Added missing station {station_name} ({station_id})")
 
@@ -746,6 +742,7 @@ def sync_status_file(stations: list[dict]):
         if station_id not in data:
             data[station_id] = build_station_status(station_id, station_name, collect_enabled)
             changed = True
+            print(f"[STATUS SYNC]: Added {station_name} ({station_id})")
 
     if changed:
         write_json_file(data)
@@ -936,7 +933,7 @@ def get_alert_recipients(station_id: str) -> list[str]:
     station_recipient = station_recipients.get(station_id, [])
 
     recipients = station_recipient + global_recipients
-
+    
     return list(dict.fromkeys(recipients))
 #---Program---
 print("[SCRAPE]: Status Scrape Started...")

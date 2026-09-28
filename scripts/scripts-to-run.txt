@@ -5,9 +5,8 @@ sudo docker compose exec scraper cat /app/scripts/scraper.crontab
 sudo docker compose exec scraper /usr/local/bin/supercronic -test /app/scripts/scraper.crontab
 
 # Backup
-sudo docker compose exec db_backup env | sort
-sudo docker compose exec db_backup bash /app/scripts/backup-postgres.sh
-sudo docker compose exec db_backup bash /app/scripts/restore-backup-postgres.sh
+sudo docker compose exec db-backup env | sort
+sudo docker compose exec db-backup bash /app/scripts/backup.sh
 ls -lah /opt/mesonet-backups
 
 # Health Tests

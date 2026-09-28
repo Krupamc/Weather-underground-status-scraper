@@ -376,21 +376,21 @@
                             <div class="form_group">
                                 <label for="update_station_hardware">Station Hardware:</label>
                                 <p class="settings_help" style="margin: 0">Ex: Davis Vantage Pro2</p>
-                                <input type="text" value="{{ update_station.hardware if update_station else '' }}" id="update_station_hardware" name="hardware" class="graph_input" required>
+                                <input type="text" value="{{ update_station.hardware if update_station else '' }}" id="update_station_hardware" name="hardware" class="graph_input">
                             </div>
 
                             <!-- Latitude -->
                             <div class="form_group">
                                 <label for="update_station_latitude">Latitude:</label>
                                 <p class="settings_help" style="margin: 0">Ex: 39.8602</p>
-                                <input type="number" step="any" value="{{ update_station.latitude if update_station else '' }}" id="update_station_latitude" name="latitude" class="graph_input" required>
+                                <input type="number" step="any" value="{{ update_station.latitude if update_station else '' }}" id="update_station_latitude" name="latitude" class="graph_input">
                             </div>
 
                             <!-- Longitude -->
                             <div class="form_group">
                                 <label for="update_station_longitude">Longitude:</label>
                                 <p class="settings_help" style="margin: 0">Ex: -74.1089</p>
-                                <input type="number" step="any" value="{{ update_station.longitude if update_station else '' }}" id="update_station_longitude" name="longitude" class="graph_input" required>
+                                <input type="number" step="any" value="{{ update_station.longitude if update_station else '' }}" id="update_station_longitude" name="longitude" class="graph_input">
                             </div>
 
                             
