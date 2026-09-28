@@ -5,9 +5,9 @@ set -eu
 
 PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 
-# Get Variables
 BACKUP_FILE="/backups/last/mesonet-latest.sql.gz"
 MAX_AGE_SECONDS=93600
+SYSTEM_NAME=${SYSTEM_NAME:-"KrupamC's Mesonet"}
 
 # Look for Backup file
 if [ ! -s "$BACKUP_FILE" ]; then
