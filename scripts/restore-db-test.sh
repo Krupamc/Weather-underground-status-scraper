@@ -6,7 +6,7 @@ set -eu
 PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 LOG_DIR="/backups/logs"
 LOG_FILE="$LOG_DIR/monthly-restore-test-$(date '+%Y-%m-%d_%H%M%S').log"
-RESTORE_SCRIPT="$PROJECT_DIR/scripts/restore-db-test.sh"
+RESTORE_SCRIPT="$PROJECT_DIR/scripts/test-restore.sh"
 : "${SYSTEM_NAME:=Mesonet}"
 
 # Log everything to monthly file

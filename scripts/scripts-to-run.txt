@@ -2,6 +2,7 @@
 sudo docker compose exec scraper python /app/weather_scraper/scrape.py
 sudo docker compose exec scraper python /app/status_scraper/status.py
 sudo docker compose exec scraper cat /app/scripts/scraper.crontab
+sudo docker compose exec scraper /usr/local/bin/supercronic -test /app/scripts/scraper.crontab
 
 # Backup
 sudo docker compose exec db_backup env | sort
@@ -14,3 +15,4 @@ sudo docker compose exec health-tests python /app/scripts/send-alerts.py "Test S
 sudo docker compose exec health-tests bash /app/scripts/check-backup-health.sh
 sudo docker compose exec health-tests bash /app/scripts/restore-db-test.sh
 sudo docker compose exec health-tests bash /app/scripts/test-restore.sh
+sudo docker compose exec health-tests /usr/local/bin/supercronic -test /app/scripts/health.crontab
