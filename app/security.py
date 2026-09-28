@@ -1,7 +1,7 @@
 from pwdlib import PasswordHash
 import jwt
 from datetime import datetime, timedelta, timezone
-import web_config as cfg
+import config as cfg
 
 secret_key = cfg.secret_key
 algorithm = cfg.algorithm

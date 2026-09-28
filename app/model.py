@@ -2,7 +2,7 @@ from sqlmodel import Field, SQLModel
 from sqlalchemy import UniqueConstraint
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-import web_config as cfg
+import config as cfg
 import pytz
 from enum import Enum
 
