@@ -1,6 +1,6 @@
 # Web Server for Mesonet System
 from dotenv import load_dotenv, find_dotenv
-# Uncomment for developer mode (allows env variables in desktop) 
+# Developer mode (allows env variables in desktop) 
 load_dotenv(find_dotenv(), override=False)
 
 from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header, Form, Response

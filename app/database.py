@@ -6,12 +6,15 @@ import config as cfg
 # Engine of the DB:
 
 # SQLite
-#sqlite_file_name = "app/database.db"
-#sqlite_url = f"sqlite:///{sqlite_file_name}"
-#connect_args = {"check_same_thread": False}
-#engine = create_engine(sqlite_url, connect_args=connect_args)
+if cfg.develop:
+    sqlite_file_name = "app/database.db"
+    sqlite_url = f"sqlite:///{sqlite_file_name}"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_url, connect_args=connect_args)
 
-engine = create_engine(cfg.database_url, pool_pre_ping=True)
+# Postgres
+else:
+    engine = create_engine(cfg.database_url, pool_pre_ping=True)
 
 # Create table:
 def create_db_table():
