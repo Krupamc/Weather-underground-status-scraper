@@ -5,18 +5,20 @@ from email.message import EmailMessage
 # Get Config
 api_base = os.getenv("API_BASE", "http://web:8000")
 scraper_api_key = os.getenv("SCRAPER_API_KEY", "")
-smtp_host = os.getenv("SMTP_HOST", "")
-smtp_port = int(os.getenv("SMTP_PORT", "587"))
-smtp_username = os.getenv("SMTP_USERNAME", "")
-smtp_password = os.getenv("SMTP_PASSWORD", "")
-smtp_from_email = os.getenv("SMTP_FROM_EMAIL", "")
+smtp_host = os.getenv("SERVER", "")
+smtp_port = int(os.getenv("PORT", "587"))
+smtp_username = os.getenv("USERNAME", "")
+smtp_password = os.getenv("PASSWORD", "")
+smtp_from_email = os.getenv("FROM_EMAIL", "")
 
 # Get all admin/global emails
 def get_admin_recipients():
-    response = requests.get(f"{api_base}/scraper/recipients", headers={"x-api-key": scraper_api_key}, timeout=15)
-    response.raise_for_status()
+    r = requests.get(f"{api_base}/scraper/recipients", headers={"x-api-key": scraper_api_key}, timeout=15)
+    r.raise_for_status()
 
-    recipients = response.json()
+    print("status:", r.status_code)
+
+    recipients = r.json()
 
     # Only admin emails
     return [
@@ -51,6 +53,7 @@ def send_email(subject: str, body: str, recipients: list[str]):
 if len(sys.argv) < 3:
     print("[ERROR]: Arguments Missing.")
     print('"SUBJECT" "BODY"')
+    sys.exit(1)
 
 # Set Variables
 subject = sys.argv[1]

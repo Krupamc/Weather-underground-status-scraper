@@ -3,10 +3,11 @@
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBEFFERED=1
-ENV TZ={TIMEZONE}
-ENV SUPERCRONIC_VERSION=v0.2.33
+ENV PYTHONUNBUFFERED=1
 
+ENV SUPERCRONIC_VERSION=v0.2.33
+environment:
+    ENV TZ={TIMEZONE}
 
 WORKDIR /app
 
@@ -14,7 +15,7 @@ WORKDIR /app
 RUN apt-get update
 
 # Install Timezone info
-RUN apt-get install -y tzdata curl --no-install-recommends
+RUN apt-get install -y tzdata curl postgresql-client --no-install-recommends
 # Delete the apt lists to save space
 RUN rm -rf /var/lib/apt/lists*
 

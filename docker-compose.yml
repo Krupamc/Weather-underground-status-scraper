@@ -28,7 +28,7 @@ services:
   scraper:
     build:
       context: .
-    command: /usr/local/bin/supercronic /app/scripts/scraper.crontab --passthrough-logs # Run crontab
+    command: /usr/local/bin/supercronic --passthrough-logs /app/scripts/scraper.crontab  # Run crontab
     env_file:
       - .env
     volumes:
@@ -62,9 +62,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    enviroment:
+    environment:
       POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_DB: ${POSTGRES}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
@@ -91,7 +91,7 @@ services:
   health-tests:
     build:
       context: .
-    command: /usr/local/bin/supercronic /app/scripts/health.crontab --passthrough-logs # Run health checks
+    command: /usr/local/bin/supercronic --passthrough-logs /app/scripts/health.crontab  # Run health checks
     env_file:
       - .env
     volumes:

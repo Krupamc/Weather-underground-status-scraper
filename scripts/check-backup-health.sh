@@ -3,19 +3,11 @@ set -eu
 
 # Checks the age of the backups and if the system is taking backups
 
-# Get Variables
-BACKUP_FILE="backups/last/mesonet-latest.sql.gz"
-MAX_AGE_SECONDS=93600
+PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 
-# Get env file
-ENV_FILE="$PROJECT_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
-    echo "[RESTORE ERROR]: Missing environment file: $ENV_FILE"
-    exit 1
-fi
-set -a
-. "$ENV_FILE"
-set +a
+# Get Variables
+BACKUP_FILE="/backups/last/mesonet-latest.sql.gz"
+MAX_AGE_SECONDS=93600
 
 # Look for Backup file
 if [ ! -s "$BACKUP_FILE" ]; then

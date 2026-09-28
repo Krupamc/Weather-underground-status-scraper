@@ -1,0 +1,14 @@
+# Scraper
+docker compose exec scraper python /app/weather_scraper/scrape.py
+docker compose exec scraper python /app/status_scraper/status.py
+docker compose exec scraper cat /app/scripts/scraper.crontab
+
+# Backup
+docker compose exec db_backup env | sort
+ls -lah /opt/mesonet-backups
+
+# Health Tests
+docker compose exec health_tests python /app/scripts/send-alerts.py "Test Subject" "Test Body"
+docker compose exec health-tests bash /app/scripts/check-backup-health.sh
+docker compose exec health-tests bash /app/scripts/restore-db-test.sh
+docker compose exec health-tests bash /app/scripts/test-restore.sh

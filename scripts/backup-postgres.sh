@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+# Manual Backup
+
 # Project root
 PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 
@@ -20,6 +22,7 @@ set +a
 DB_SERVICE="db"
 DB_NAME=${POSTGRES_DB}
 DB_USER=${POSTGRES_USER}
+BACKUP_SERVICE="${BACKUP_SERVICE:-db_backup}"
 
 # Backup directory on the VM host
 BACKUP_DIR="/opt/mesonet-backups"
