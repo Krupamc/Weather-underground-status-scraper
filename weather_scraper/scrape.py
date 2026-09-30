@@ -1,5 +1,10 @@
 # Scraper for Weather Underground
 
+# Web Server for Mesonet System
+from dotenv import load_dotenv, find_dotenv
+# Developer mode (allows env variables in desktop) 
+load_dotenv(find_dotenv(), override=False)
+
 from bs4 import BeautifulSoup as bs 
 import requests
 from requests import RequestException
@@ -27,7 +32,14 @@ def empty_result(station_id, scrap_time):
         "precip_rate": None,
         "precip_accum": None,
         "uv": None,
-        "solar": None
+        "solar": None,
+        "lat": None,
+        "long": None,
+        "elevation": None,
+        "city": None,
+        "state": None,
+        "country": None,
+        "hardware": None
     } 
 
 # Make monthly csv
@@ -164,6 +176,52 @@ def scrape(station_id):
                 print(f"Solar Radiation: {solar}")
                 print()
 
+                #--Station Info--
+                info = soup.find("pws-info").find("ol")
+
+                for li in info.select("li"):
+                    label = li.select_one("span:nth-of-type(1)") # first Span
+                    value = li.select_one("span:nth-of-type(2)") # Second span 
+
+                    # Look for every value
+                    if label and value and label.get_text(strip=True) == "Latitude:":
+                        lat = value.get_text(strip=True)
+                        lat = float(lat.replace("°", "").replace("N", "").replace("S", "").strip())
+                        
+                    if label and value and label.get_text(strip=True) == "Longitude:":
+                        long = value.get_text(strip=True)
+                        cleaned_long = long.replace("°", "").strip()
+
+                        direction = cleaned_long[-1]
+                        long_num = float(cleaned_long.replace("W", "").replace("E", "").strip())
+                        if direction in ['S', 'W']:
+                            long =  -long_num
+
+                    if label and value and label.get_text(strip=True) == "Elevation:":
+                        elevation = value.get_text(strip=True)
+                        elevation = int(elevation.replace("ft", "").strip())
+
+                    if label and value and label.get_text(strip=True) == "City:":
+                        city = value.get_text(strip=True)
+                    
+                    if label and value and label.get_text(strip=True) == "State:":
+                        state = value.get_text(strip=True)
+
+                    if label and value and label.get_text(strip=True) == "Country:":
+                        country = value.get_text(strip=True)
+
+                    if label and value and label.get_text(strip=True) == "Hardware:":
+                        hardware = value.get_text(strip=True)
+
+                    print(f"Latitude: {lat}")
+                    print(f"Longitude: {long}")
+                    print(f"Elevation: {elevation}")
+                    print(f"City: {city}")
+                    print(f"State: {state}")
+                    print(f"Country: {country}")
+                    print(f"Hardware: {hardware}")
+                    print()
+
                 # Convert into floats
                 temp = cv.make_float(temp)
                 dew = cv.make_float(dew)
@@ -180,10 +238,12 @@ def scrape(station_id):
                 # Convert into metric
                 temp = cv.f_to_c(temp)
                 dew = cv.f_to_c(dew)
-
+                
                 wind_speed = cv.mph_to_knots(wind_speed)
                 wind_gust = cv.mph_to_knots(wind_gust)
-                
+
+                elevation = cv.ft_to_m
+
                 # Return a dict to be turned into json later
                 return {
                     "station_id": station_id,
@@ -198,7 +258,14 @@ def scrape(station_id):
                     "precip_rate": precip_rate,
                     "precip_accum": precip_accum,
                     "uv": uv,
-                    "solar": solar
+                    "solar": solar,
+                    "lat": lat,
+                    "long": long,
+                    "elevation": elevation,
+                    "city": city,
+                    "state": state,
+                    "country": country,
+                    "hardware": hardware
                 }
         
         # Error Protection and retrying

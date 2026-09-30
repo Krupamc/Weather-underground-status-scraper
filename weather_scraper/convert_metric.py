@@ -41,3 +41,14 @@ def knots_to_mph(wind_speed_knots: float):
 
     return round((wind_speed_knots * 1.15078), 2)
 
+def ft_to_m(length: float):
+    if length is None:
+        return None
+
+    return round(length / 3.281)
+
+def m_to_ft(length: float):
+    if length is None:
+        return None
+
+    return round(length * 3.281)

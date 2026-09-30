@@ -2908,6 +2908,39 @@ def scraper_station_recipients(session: db.SessionDep, x_api_key: Annotated[str,
 
     return emails
 
+# ---ArcGIS---
+# Return a list of stations with their coordinates
+@app.get("/gis/geojson")
+def get_coordinates(request: Request, session: db.SessionDep, ):
+    stations = session.exec(select(m.Station).where(m.Station.is_public == True, m.Station.latitude.is_not(None), m.Station.longitude.is_not(None))).all()
+    print(f"stations: {stations}")
+    features = []
+    for station in stations:
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [station.longitude, station.latitude]
+            },
+            "properties": {
+                "id": str(station.station_id),
+                "station_id": station.station_id,
+                "station_name": station.station_name,
+                "is_public": str(station.is_public), # GIS wants un string
+            }
+        })
+    
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
+@app.get("/map", response_class=HTMLResponse)
+def map_page(request: Request):
+    return templates.TemplateResponse(request, "map.html")
+
+# ---Forms---
+
 # Toggle maintenance with a form
 @app.post("/maintenance/{station_id}", response_class=HTMLResponse)
 def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
@@ -3415,6 +3448,8 @@ def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
     payload["is_public"] = is_public
     payload["is_in_maintenance"] = is_in_maintenance
     payload["collect_enabled"] = collect_enabled
+
+    print(f"payload: {payload}")
     
     if not payload:
         return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
@@ -3426,6 +3461,8 @@ def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
     session.add(station_db)
     session.commit()
     session.refresh(station_db)
+
+    print(f"db: {station_db}")
     return RedirectResponse(url="/settings?success=updated", status_code=303)
 
 #---Status---

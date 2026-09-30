@@ -73,6 +73,8 @@ class StationUpdate(SQLModel):
     is_public: bool | None = None
     collect_enabled: bool | None = None
     hardware: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 # ---Status---
 

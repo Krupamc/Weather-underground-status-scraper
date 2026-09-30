@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+
+{% block content %}     
+    <!-- ArcGIS Package 4.34 EOL planned 2028-->
+    <link rel="stylesheet" href="https://js.arcgis.com/4.34/esri/themes/light/main.css">
+    <script src="https://js.arcgis.com/4.34/"></script>
+
+    <!-- GIS window-->
+    <div id="mapLoading" class="loading_text" style="height: 70vh; padding-top: 200px;">Loading map...</div>
+    <div id="viewDiv" style="height: 70vh; padding-top: 200px;"></div>
+
+    <script>
+        require([
+            "esri/Map",
+            "esri/views/MapView",
+            "esri/layers/GeoJSONLayer",
+            "esri/renderers/SimpleRenderer",
+            "esri/symbols/SimpleMarkerSymbol"
+        ], function(Map, MapView, GeoJSONLayer, SimpleRenderer, SimpleMarkerSymbol) {
+                // Use SimpleRenderer to change look of the points
+                const renderer = new SimpleRenderer({
+                symbol: new SimpleMarkerSymbol({
+                    style: "circle",
+                    color: [0, 140, 255, 0.9],
+                    size: 10,
+                    outline: {
+                        color: [255, 255, 255, 0.95],
+                        width: 1.5
+                    }
+                })
+            });
+            
+            // Points
+            const layer = new GeoJSONLayer({
+            url: "/gis/geojson",
+            title: "Weather Stations",
+            outFields: ["station_id", "station_name", "is_public"],
+            renderer: renderer,
+            // Description of the station
+            popupTemplate: {
+                title: "{station_name}",
+                content: `
+                <b>Station ID:</b> {station_id}<br>
+                <a href="/stations/public{station_id}?units=imperial">Open dashboard</a>
+                `
+            }
+            });
+
+            const map = new Map({
+            basemap: "streets",
+            layers: [layer]
+            });
+
+            // Hide Map Loading page
+            layer.when(function () {
+                document.getElementById("mapLoading").style.display = "none";
+            });
+
+            
+
+            // View
+            const view = new MapView({
+            container: "viewDiv",
+            map: map,
+            center: [-74.2, 39.9],
+            zoom: 8
+            });
+        });
+    </script>
+{% endblock %}

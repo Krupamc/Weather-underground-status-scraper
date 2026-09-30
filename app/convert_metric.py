@@ -46,3 +46,15 @@ def in_to_mm(inch):
 
 def inhg_to_hpa(inhg):
     return round((inhg * 33.8639), 2)
+
+def ft_to_m(length: float):
+    if length is None:
+        return None
+
+    return round(length / 3.281)
+
+def m_to_ft(length: float):
+    if length is None:
+        return None
+
+    return round(length * 3.281)

@@ -38,3 +38,6 @@ def migrate_add_column():
                 text("ALTER TABLE station ADD COLUMN longitude FLOAT DEFAULT NULL")
             )
             session.commit()
+
+
+# Add the new station info stuff into tables and into db and into the weather pst route
