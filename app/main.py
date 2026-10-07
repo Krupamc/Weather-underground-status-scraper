@@ -543,8 +543,6 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, se
         "info": info
     })
 
-db.migrate_add_column()
-
 # Download CSV for Selected Date
 @app.get("/stations/weather/csv/{station_id}")
 def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial", selected_date: str | None = None):
@@ -3564,6 +3562,7 @@ def read_status_history(session: db.SessionDep, station_id: str, current_user: A
 @app.post("/weather/stations", response_model=m.WeatherPublic)
 def post_weather(session: db.SessionDep, x_api_key: Annotated[str, Header()], w_in: m.WeatherIn):
     current = session.exec(select(m.Weather).where(m.Weather.station_id == w_in.station_id)).first()
+    stats = session.exec(select(m.Station).where(m.Station.station_id == w_in.station_id)).first()
 
     # On first post
     if current is None:
@@ -3619,6 +3618,16 @@ def post_weather(session: db.SessionDep, x_api_key: Annotated[str, Header()], w_
     current.uv = w_in.uv
     current.solar = w_in.solar
     session.add(current)
+
+    # Add Stats to station
+    stats.elevation = w_in.elevation
+    stats.city = w_in.city
+    stats.state = w_in.state
+    stats.country = w_in.country
+    stats.hardware = w_in.hardware
+    stats.latitude = w_in.latitude
+    stats.longitude = w_in.longitude
+    session.add(stats)
 
     # Add to history
     history = m.WeatherHistory(

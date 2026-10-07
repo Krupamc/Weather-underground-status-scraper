@@ -178,16 +178,16 @@ def scrape(station_id):
 
                 #--Station Info--
                 info = soup.find("pws-info").find("ol")
+                #print(f"Info: {info}")
 
                 for li in info.select("li"):
                     label = li.select_one("span:nth-of-type(1)") # first Span
                     value = li.select_one("span:nth-of-type(2)") # Second span 
-
                     # Look for every value
                     if label and value and label.get_text(strip=True) == "Latitude:":
                         lat = value.get_text(strip=True)
                         lat = float(lat.replace("°", "").replace("N", "").replace("S", "").strip())
-                        
+                    
                     if label and value and label.get_text(strip=True) == "Longitude:":
                         long = value.get_text(strip=True)
                         cleaned_long = long.replace("°", "").strip()
@@ -199,7 +199,8 @@ def scrape(station_id):
 
                     if label and value and label.get_text(strip=True) == "Elevation:":
                         elevation = value.get_text(strip=True)
-                        elevation = int(elevation.replace("ft", "").strip())
+                        elevation = elevation.replace("ft", "").strip()
+                        elevation = float(elevation)
 
                     if label and value and label.get_text(strip=True) == "City:":
                         city = value.get_text(strip=True)
@@ -213,14 +214,14 @@ def scrape(station_id):
                     if label and value and label.get_text(strip=True) == "Hardware:":
                         hardware = value.get_text(strip=True)
 
-                    print(f"Latitude: {lat}")
-                    print(f"Longitude: {long}")
-                    print(f"Elevation: {elevation}")
-                    print(f"City: {city}")
-                    print(f"State: {state}")
-                    print(f"Country: {country}")
-                    print(f"Hardware: {hardware}")
-                    print()
+                print(f"Latitude: {lat}")
+                print(f"Longitude: {long}")
+                print(f"Elevation: {elevation}")
+                print(f"City: {city}")
+                print(f"State: {state}")
+                print(f"Country: {country}")
+                print(f"Hardware: {hardware}")
+                print()
 
                 # Convert into floats
                 temp = cv.make_float(temp)
@@ -242,7 +243,10 @@ def scrape(station_id):
                 wind_speed = cv.mph_to_knots(wind_speed)
                 wind_gust = cv.mph_to_knots(wind_gust)
 
-                elevation = cv.ft_to_m
+                if isinstance(elevation, float):
+                    elevation = cv.ft_to_m(elevation)
+                else:
+                    elevation = None
 
                 # Return a dict to be turned into json later
                 return {
@@ -259,8 +263,8 @@ def scrape(station_id):
                     "precip_accum": precip_accum,
                     "uv": uv,
                     "solar": solar,
-                    "lat": lat,
-                    "long": long,
+                    "latitude": lat,
+                    "longitude": long,
                     "elevation": elevation,
                     "city": city,
                     "state": state,
@@ -287,7 +291,10 @@ def scrape(station_id):
 def get_stations_list(http: requests.Session) -> list[dict]:
     for attempt in range(cfg.max_retries):
         try:
-            url = f"{cfg.api_base}/scraper/stations"
+            if cfg.develop == True:
+                url = "http://127.0.0.1:8000/scraper/stations"
+            else:
+                url = f"{cfg.api_base}/scraper/stations"
 
             # Get Json from API
             r = http.get(url, timeout=10)
@@ -335,6 +342,9 @@ for station in stations:
     save_data(results, now=results["observed_at"])
 
     print(f"Sending data...{results['station_id']}\n")
-    session_http.post(f"{cfg.api_base}{cfg.api_weather_post}", json=results)
+    if cfg.develop == True:
+        session_http.post(f"http://127.0.0.1:8000{cfg.api_weather_post}", json=results)
+    else:
+        session_http.post(f"{cfg.api_base}{cfg.api_weather_post}", json=results)
 
 print("Scraping Complete! All data Saved")

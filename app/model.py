@@ -53,7 +53,12 @@ class StationBase(SQLModel):
 
     collect_enabled: bool = Field(default=True)
 
+    elevation: float | None = Field(default="Unknown")
+    city: str | None = Field(default="Unknown")
+    state: str | None = Field(default="Unknown")
+    country: str | None = Field(default="Unknwon")
     hardware: str | None = Field(default="Unknown")
+
 
     latitude: float | None = None
     longitude: float | None = None
@@ -143,6 +148,15 @@ class WeatherIn(BaseModel):
     precip_accum: float | None = None
     uv: float | None = None
     solar: float | None = None
+
+    latitude: float | None = None
+    longitude: float | None = None
+
+    elevation: float | None = None
+    city: str | None = None
+    state: str | None = None
+    country: str | None = None
+    hardware: str | None = "Unknown"
 
 class WeatherBase(SQLModel):
     station_id: str = Field(index=True, unique=True, foreign_key="station.station_id")

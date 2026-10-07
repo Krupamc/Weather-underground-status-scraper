@@ -45,10 +45,10 @@ def ft_to_m(length: float):
     if length is None:
         return None
 
-    return round(length / 3.281)
+    return round(length / 3.281, 2)
 
 def m_to_ft(length: float):
     if length is None:
         return None
 
-    return round(length * 3.281)
+    return round(length * 3.281, 2)

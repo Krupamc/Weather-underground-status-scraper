@@ -35,7 +35,7 @@ def migrate_add_column():
 
         if "longitude" not in column_names:
             session.exec(
-                text("ALTER TABLE station ADD COLUMN elevation FLOAT DEFAULT NULL")
+                text("ALTER TABLE weatherIn ADD COLUMN longitude FLOAT DEFAULT NULL")
             )
             session.commit()
 
