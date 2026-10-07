@@ -6,7 +6,7 @@ import config as cfg
 # Engine of the DB:
 
 # SQLite
-if cfg.develop:
+if cfg.develop == True:
     sqlite_file_name = "app/database.db"
     sqlite_url = f"sqlite:///{sqlite_file_name}"
     connect_args = {"check_same_thread": False}
