@@ -200,7 +200,10 @@ def scrape(station_id):
                     if label and value and label.get_text(strip=True) == "Elevation:":
                         elevation = value.get_text(strip=True)
                         elevation = elevation.replace("ft", "").strip()
-                        elevation = float(elevation)
+                        # If page only says "ft"
+                        try:
+                            elevation = float(elevation)
+                        except: elevation = None
 
                     if label and value and label.get_text(strip=True) == "City:":
                         city = value.get_text(strip=True)
