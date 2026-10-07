@@ -543,6 +543,8 @@ def public_station(request: Request, session: db.SessionDep, station_id: str, se
         "info": info
     })
 
+db.migrate_add_column()
+
 # Download CSV for Selected Date
 @app.get("/stations/weather/csv/{station_id}")
 def stations_csv(station_id: str, session: db.SessionDep, units: str = "imperial", selected_date: str | None = None):

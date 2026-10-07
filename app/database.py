@@ -35,9 +35,16 @@ def migrate_add_column():
 
         if "longitude" not in column_names:
             session.exec(
-                text("ALTER TABLE station ADD COLUMN longitude FLOAT DEFAULT NULL")
+                text("ALTER TABLE station ADD COLUMN elevation FLOAT DEFAULT NULL")
             )
             session.commit()
 
+"""
+    "elevation": elevation,
+    "city": city,
+    "state": state,
+    "country": country,
+    "hardware": hardware
+"""
 
 # Add the new station info stuff into tables and into db and into the weather pst route
