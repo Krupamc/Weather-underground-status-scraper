@@ -2934,7 +2934,7 @@ def get_coordinates(request: Request, session: db.SessionDep, ):
         "type": "FeatureCollection",
         "features": features
     }
-db.migrate_add_column()
+
 @app.get("/map", response_class=HTMLResponse)
 def map_page(request: Request):
     return templates.TemplateResponse(request, "map.html")
