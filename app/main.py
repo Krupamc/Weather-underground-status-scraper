@@ -2913,23 +2913,24 @@ def scraper_station_recipients(session: db.SessionDep, x_api_key: Annotated[str,
 @app.get("/gis/geojson")
 def get_coordinates(request: Request, session: db.SessionDep, ):
     stations = session.exec(select(m.Station).where(m.Station.is_public == True, m.Station.latitude.is_not(None), m.Station.longitude.is_not(None))).all()
-    print(f"stations: {stations}")
+    
     features = []
-    for station in stations:
+    for i, station in enumerate(stations, start=1):
         features.append({
             "type": "Feature",
+            "id": i,
             "geometry": {
                 "type": "Point",
-                "coordinates": [station.longitude, station.latitude]
+                "coordinates": [station.longitude, station.latitude] # Longitude goes first for ArcGIS
             },
             "properties": {
-                "id": str(station.station_id),
+                "OBJECTID": i,
                 "station_id": station.station_id,
                 "station_name": station.station_name,
                 "is_public": str(station.is_public), # GIS wants un string
             }
         })
-    
+    print(features)
     return {
         "type": "FeatureCollection",
         "features": features

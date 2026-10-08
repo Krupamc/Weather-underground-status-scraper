@@ -37,12 +37,12 @@
             outFields: ["station_id", "station_name", "is_public"],
             renderer: renderer,
             // Description of the station
+            redirect: "https://usgs.gov",
             popupTemplate: {
                 title: "{station_name}",
-                content: `
-                <b>Station ID:</b> {station_id}<br>
-                <a href="/stations/public{station_id}?units=imperial">Open dashboard</a>
-                `
+                //content: `
+                //<a href="{redirect}" rel="noopener noreferrer">Open Dashboard</a>
+                //`
             }
             });
 
