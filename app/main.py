@@ -300,7 +300,7 @@ Allow: /
 @app.get("/stations", response_class=HTMLResponse)
 def stations(request: Request):
     with db.Session(db.engine) as session:
-        stations = session.exec(select(m.Station)).all()
+        stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
     return templates.TemplateResponse(request, "stations.html", context={"request": request, "title": "Weather Stations", "active_page": "stations", "stations": stations})
 
 # Stations owned
@@ -2930,12 +2930,11 @@ def get_coordinates(request: Request, session: db.SessionDep, ):
                 "is_public": str(station.is_public), # GIS wants un string
             }
         })
-    print(features)
     return {
         "type": "FeatureCollection",
         "features": features
     }
-
+db.migrate_add_column()
 @app.get("/map", response_class=HTMLResponse)
 def map_page(request: Request):
     return templates.TemplateResponse(request, "map.html")

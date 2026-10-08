@@ -33,9 +33,21 @@ def migrate_add_column():
         columns = session.exec(text("PRAGMA table_info(station)")).all()
         column_names = [col[1] for col in columns]
 
-        if "longitude" not in column_names:
+        if "hardware" not in column_names:
             session.exec(
-                text("ALTER TABLE weatherIn ADD COLUMN longitude FLOAT DEFAULT NULL")
+                text("ALTER TABLE station ADD COLUMN hardware VARCHAR(255) DEFAULT NULL")
+            )
+            session.commit()
+
+# SQlite delete
+def delete_column(table_name: str, column: str):
+    with Session(engine) as session:
+        columns = session.exec(text("PRAGMA table_info(station)")).all()
+        column_names = [col[1] for col in columns]
+
+        if column not in column_names:
+            session.exec(
+                text(f"ALTER TABLE {table_name} DROP {column} longitude")
             )
             session.commit()
 

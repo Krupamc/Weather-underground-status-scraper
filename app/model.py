@@ -53,11 +53,11 @@ class StationBase(SQLModel):
 
     collect_enabled: bool = Field(default=True)
 
-    elevation: float | None = Field(default="Unknown")
-    city: str | None = Field(default="Unknown")
-    state: str | None = Field(default="Unknown")
-    country: str | None = Field(default="Unknwon")
-    hardware: str | None = Field(default="Unknown")
+    elevation: float | None = None
+    city: str | None = None
+    state: str | None = None
+    country: str | None = None
+    hardware: str | None = None
 
 
     latitude: float | None = None

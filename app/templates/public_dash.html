@@ -23,6 +23,10 @@
     {% if info %}
     <div class="popup_overlay">
         <div class="popup_box">
+            <p>Elevation: {{ station.elevation }}</p>
+            <p>City: {{ station.city }}</p>
+            <p>State: {{ station.state }}</p>
+            <p>Country: {{ station.country }}</p>
             <p>Hardware: {{ station.hardware }}</p>
             
             <a href="/stations/public/{{ station_id }}" class="popup_close">OK</a>
