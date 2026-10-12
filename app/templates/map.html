@@ -16,7 +16,7 @@
             "esri/layers/GeoJSONLayer",
             "esri/renderers/SimpleRenderer",
             "esri/symbols/SimpleMarkerSymbol"
-        ], function(Map, MapView, GeoJSONLayer, SimpleRenderer, SimpleMarkerSymbol) {
+        ], async function(Map, MapView, GeoJSONLayer, SimpleRenderer, SimpleMarkerSymbol) {
                 // Use SimpleRenderer to change look of the points
                 const renderer = new SimpleRenderer({
                 symbol: new SimpleMarkerSymbol({
@@ -29,21 +29,54 @@
                     }
                 })
             });
+
+            // GeoJSON layer drops all other fields:
+            const res = await fetch("/gis/geojson");
+            const geojson = await res.json();
+
+            const stationLookup = {};
+            geojson.features.forEach(feature => {
+                const props = feature.properties || {};
+                if (props.station_name) {
+                    stationLookup[props.station_name] = props.station_id;
+                }
+            });
+
             
             // Points
             const layer = new GeoJSONLayer({
             url: "/gis/geojson",
             title: "Weather Stations",
             outFields: ["station_id", "station_name", "is_public"],
+            //outFields: ["*"],
             renderer: renderer,
             // Description of the station
-            redirect: "https://usgs.gov",
             popupTemplate: {
                 title: "{station_name}",
-                //content: `
-                //<a href="{redirect}" rel="noopener noreferrer">Open Dashboard</a>
-                //`
+                content: function(feature) {
+                    const graphic = feature.graphic || feature;
+                    const attrs = graphic.attributes || {};
+                    const stationName = attrs.station_name;
+                    const stationId = stationLookup[stationName];
+
+                    const div = document.createElement("div");
+                    div.innerHTML = `
+                        <b>Station ID:</b> ${stationId ?? "Missing"}<br>
+                    `;
+
+                    const link = document.createElement("a");
+                    link.href = stationId
+                        ? `/stations/public/${stationId}?units=imperial`
+                        : "/stations";
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    link.textContent = "Open dashboard";
+
+                    div.appendChild(link);
+                    return div;
+                }
             }
+
             });
 
             const map = new Map({
@@ -60,10 +93,30 @@
 
             // View
             const view = new MapView({
-            container: "viewDiv",
-            map: map,
-            center: [-74.2, 39.9],
-            zoom: 8
+                container: "viewDiv",
+                map: map,
+                constraints: {
+                    snapToZoom: false
+                },
+                padding: {
+                    top: 40,
+                    right: 40,
+                    bottom: 40,
+                    left: 40
+                }
+            });
+
+            view.when(() => {
+                layer.when(() => {
+                    layer.queryExtent({
+                        outSpatialReference: view.spatialReference
+                    }).then(async (response) => {
+                        if (response.extent) {
+                            await view.goTo(response.extent.clone().expand(2.2), { animate: false });
+                            view.scale = view.scale * 1.2;
+                        }
+                    });
+                });
             });
         });
     </script>

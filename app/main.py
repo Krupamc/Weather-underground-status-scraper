@@ -2915,6 +2915,8 @@ def get_coordinates(request: Request, session: db.SessionDep, ):
     stations = session.exec(select(m.Station).where(m.Station.is_public == True, m.Station.latitude.is_not(None), m.Station.longitude.is_not(None))).all()
     
     features = []
+    long = []
+    lat = []
     for i, station in enumerate(stations, start=1):
         features.append({
             "type": "Feature",
@@ -2930,6 +2932,22 @@ def get_coordinates(request: Request, session: db.SessionDep, ):
                 "is_public": str(station.is_public), # GIS wants un string
             }
         })
+        long.append(station.longitude)
+        lat.append(station.latitude)
+
+    # Add center point
+    center_long = round(sum(long) / len(long), 3)
+    center_lat = round(sum(lat) / len(lat), 3)
+
+    #features.append({
+    #    "type": "Feature",
+    #    "id": "center",
+    #    "geometry": {
+    #         "type": "Point",
+    #        "coordinates": [center_long, center_lat] # Longitude goes first for ArcGIS
+    #     }
+    # })
+    
     return {
         "type": "FeatureCollection",
         "features": features
