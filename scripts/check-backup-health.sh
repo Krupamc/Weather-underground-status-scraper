@@ -22,7 +22,7 @@ age="$((now - modified))"
 # If the file is older than _, Email
 if [ "$age" -gt "$MAX_AGE_SECONDS" ]; then
     echo "[BACKUP HEALTH ERROR]: Latest backup is ${age} seconds old"
-    python "$PROJECT_DIR/scripts/send-alerts.py" "[SQL Alert] Daily Backup Test Failed" "The daily PostgreSQL backup test failed. The latest backup is over $age long. Check: backup-health.log for more info ~ $SYSTEM_NAME Mesonet Notification System" || true
+    python "$PROJECT_DIR/scripts/send-alerts.py" "admin" "[SQL Alert] Daily Backup Test Failed" "The daily PostgreSQL backup test failed. The latest backup is over $age long. Check: backup-health.log for more info ~ $SYSTEM_NAME Mesonet Notification System" || true
     exit 1
 fi
 

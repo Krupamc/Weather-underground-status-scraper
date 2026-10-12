@@ -297,17 +297,19 @@ class StationRecipientUpdate(SQLModel):
     station_id: str | None = None
 
 # ---Weather Email List---
-class WeatherEmailListBase(SQLModel):
+class WeatherRecipientBase(SQLModel):
     email: str = Field(index=True)
     name: str = Field(index=True)
 
-#class WeatherEmailList(WeatherEmailListBase, Table = True): #Uncomment to make into table
-class WeatherEmailList(WeatherEmailListBase):
+class WeatherRecipient(WeatherRecipientBase, Table = True): #Uncomment to make into table
     id: int | None = Field(default=None, primary_key=True)
 
-class WeatherEmailListPublic(WeatherEmailListBase):
+class WeatherRecipientCreate(StationRecipientBase):
+    pass
+
+class WeatherRecipientPublic(WeatherRecipientBase):
     id: int
 
-class WeatherEmailListUpdate(SQLModel):
+class WeatherRecipientUpdate(SQLModel):
     email: EmailStr | None = None
     name: str | None = None

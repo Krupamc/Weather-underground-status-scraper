@@ -12,7 +12,7 @@ smtp_password = os.getenv("PASSWORD", "")
 smtp_from_email = os.getenv("FROM_EMAIL", "")
 
 # Get all admin/global emails
-def get_admin_recipients():
+def get_recipients():
     r = requests.get(f"{api_base}/scraper/recipients", headers={"x-api-key": scraper_api_key}, timeout=15)
     r.raise_for_status()
 
@@ -20,12 +20,21 @@ def get_admin_recipients():
 
     recipients = r.json()
 
+    
     # Only admin emails
-    return [
-        recipient["email"]
-        for recipient in recipients
-        if recipient["recipient_type"] == "admin"
-    ]
+    if email_type == "admin":
+        return [
+            recipient["email"]
+            for recipient in recipients
+            if recipient["recipient_type"] == "admin"
+        ]
+
+    elif email_type == "weather":
+        return [
+            recipient["email"]
+            for recipient in recipients
+            if recipient["recipient_type"] == ""
+        ]
 
 # Send email
 def send_email(subject: str, body: str, recipients: list[str]):
@@ -56,10 +65,11 @@ if len(sys.argv) < 3:
     sys.exit(1)
 
 # Set Variables
-subject = sys.argv[1]
-body = sys.argv[2]
+email_type = sys.argv[1]
+subject = sys.argv[2]
+body = sys.argv[3]
 
-recipients = get_admin_recipients()
+recipients = get_recipients(email_type)
 
 # Send Email
 send_email(subject=subject, body=body, recipients=recipients)

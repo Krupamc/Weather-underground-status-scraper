@@ -2897,6 +2897,16 @@ def scraper_email_recipients(session: db.SessionDep, x_api_key: Annotated[str, H
 
     return emails
 
+@app.get("/scraper/weather/recipients", response_model=list[m.WeatherRecipientPublic])
+def scraper_email_recipients(session: db.SessionDep, x_api_key: Annotated[str, Header()]):
+    # Check if api key is correct
+    if x_api_key != cfg.scraper_api_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    emails = session.exec(select(m.WeatherRecipient).order_by(m.WeatherRecipient.email)).all()
+
+    return emails
+
 # API Station Recipient Read
 @app.get("/scraper/owner/recipients", response_model=list[m.StationRecipientPublic])
 def scraper_station_recipients(session: db.SessionDep, x_api_key: Annotated[str, Header()]):
@@ -3818,7 +3828,7 @@ def create_owner_recipient(recipient: m.StationRecipientCreate, session: db.Sess
     return db_recipient
 
 # Create from form
-@app.post("/recipients/owners/create/form", response_model=m.StationRecipientPublic)
+@app.post("/recipients/owners/create/form")
 def create_owner_recipient_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email: EmailStr = Form(), station_id: str = Form()):
     # get from form
     payload = {
@@ -3912,6 +3922,124 @@ def delete_owner_recipients(session: db.SessionDep, email_id: int, current_user:
 @app.post("/recipients/owners/delete")
 def delete_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form()):
     recipient_db = session.exec(select(m.StationRecipient).where(m.StationRecipient.id == email_id)).first()
+    if not recipient_db:
+        return RedirectResponse(url=f"/settings?error=404", status_code=303)
+
+    session.delete(recipient_db)
+    session.commit()
+
+    username = recipient_db.email
+
+    return RedirectResponse(url=f"/settings?success=deleted&username={username}", status_code=status.HTTP_303_SEE_OTHER)
+
+# --- Weather Recipients ---
+# CRUD for weather update emails
+
+# Create from api
+@app.post("/recipients/weather/create", response_model=m.WeatherRecipientPublic)
+def create_weather_recipient(recipient: m.WeatherRecipientCreate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    db_recipient = m.WeatherRecipient.model_validate(recipient)
+
+    session.add(db_recipient)
+    session.commit()
+    session.refresh(db_recipient)
+    return db_recipient
+
+# Create from form
+@app.post("/recipients/weather/create/form")
+def create_weather_recipient_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email: EmailStr = Form(), station_id: str = Form()):
+    # get from form
+    payload = {
+        "email": str(email).strip(),
+        "station_id": station_id
+    }
+
+    if not payload:
+        return RedirectResponse(url="/settings?error=no_payload", status_code=303)
+
+    recipient = m.WeatherRecipientCreate(**payload)
+    recipient_db = m.WeatherRecipient.model_validate(recipient)
+
+    # Create
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+
+    return RedirectResponse(url=f"/settings?success=email_created&username={email}", status_code=303) 
+
+# Read per recip
+@app.get("/recipients/weather/read/{email_id}")
+def read_weather_recipients_specific(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int):
+    recipients = session.exec(select(m.WeatherRecipient).where(m.WeatherRecipient.id == email_id)).first()
+    if not recipients:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+
+    return recipients
+
+# Read /doc
+@app.get("/recipients/weather/read", response_model=list[m.WeatherRecipientPublic])
+def read_weather_recipients(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], offset: Annotated[int, Query(ge=0)], limit: Annotated[int, Query(gt=0, le=100)] = 100):
+    recipients = session.exec(select(m.WeatherRecipient).offset(offset).limit(limit)).all()
+    if not recipients:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+
+    return recipients
+
+# Update /doc
+@app.patch("/recipients/weather/update/{email_id}", response_model=m.WeatherRecipientPublic)
+def update_weather_recipients(email_id: int, recipient: m.WeatherRecipientUpdate, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    recipient_db = session.exec(select(m.WeatherRecipient).where(m.WeatherRecipient.id == email_id)).first()
+    if not recipient_db:
+        raise HTTPException(status_code=404, detail="Recipient Not Found")
+
+    data = recipient.model_dump(exclude_unset=True)
+    recipient_db.sqlmodel_update(data)
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+    return recipient_db
+
+# Update from form
+@app.post("/recipients/weather/update")
+def update_weather_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form(), new_email: EmailStr = Form(), station_id: str = Form()):
+    recipient_db = session.exec(select(m.WeatherRecipient).where(m.WeatherRecipient.id == email_id)).first()
+    if not recipient_db:
+        return RedirectResponse(url="/settings?error=404", status_code=303)
+
+    # Update
+    payload = {}
+    if new_email and str(new_email).strip():
+        payload["email"] = str(new_email).strip()
+    if station_id:
+        payload["station_id"] = station_id
+
+    if not payload:
+        return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
+
+    recipient = m.WeatherRecipientUpdate(**payload)
+    data = recipient.model_dump(exclude_unset=True)
+
+    recipient_db.sqlmodel_update(data)
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+    return RedirectResponse(url="/settings?success=updated", status_code=303)
+
+@app.delete("/recipients/weather/delete/{email_id}")
+def delete_weather_recipients(session: db.SessionDep, email_id: int, current_user: Annotated[m.User, Depends(require_admin)]):
+    recipient_db = session.exec(select(m.WeatherRecipient).where(m.WeatherRecipient.id == email_id)).first()
+    if not recipient_db:
+        raise HTTPException(status_code=404, detail="Owner Recipient Not Found")
+
+    # Delete from form
+    session.delete(recipient_db)
+    session.commit()
+    return {"ok": True, "Detail": f"{recipient_db.email} deleted"}
+
+# Delete from form
+@app.post("/recipients/weather/delete")
+def delete_weather_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form()):
+    recipient_db = session.exec(select(m.WeatherRecipient).where(m.WeatherRecipient.id == email_id)).first()
     if not recipient_db:
         return RedirectResponse(url=f"/settings?error=404", status_code=303)
 
