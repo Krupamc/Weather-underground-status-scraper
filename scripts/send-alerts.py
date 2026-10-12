@@ -12,8 +12,13 @@ smtp_password = os.getenv("PASSWORD", "")
 smtp_from_email = os.getenv("FROM_EMAIL", "")
 
 # Get all admin/global emails
-def get_recipients():
-    r = requests.get(f"{api_base}/scraper/recipients", headers={"x-api-key": scraper_api_key}, timeout=15)
+def get_recipients(email_type: str):
+    if email_type == "admin":
+        url=f"{api_base}/scraper/recipients"
+    elif email_type == "weather":
+        url=f"{api_base}/scraper/weather/recipients"
+
+    r = requests.get(url, headers={"x-api-key": scraper_api_key}, timeout=15)
     r.raise_for_status()
 
     print("status:", r.status_code)
@@ -45,7 +50,7 @@ def send_email(subject: str, body: str, recipients: list[str]):
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = smtp_from_email
-    msg["To"] = ", ".join(recipients)
+    msg["Bcc"] = ", ".join(recipients)
     msg.set_content(body)
 
     context = ssl.create_default_context()
