@@ -744,7 +744,7 @@ def logout():
 
 # Admin Settings
 @app.get("/settings", response_class=HTMLResponse)
-def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None, update_station_id: str | None = None, email_recipient_id: int | None = None, read_emails: bool | None = None, read_SR: bool | None = None, station_recipient_id: int | None = None):
+def website_settings(request: Request, session: db.SessionDep, required_user: Annotated[m.User, Depends(require_admin)], current_user: Annotated[m.User, Depends(get_current_user)], success: str | None = None, username: str | None = None, error: str | None = None, stations_user_id: int | None = None, access_station_id: str | None = None, read_stations: bool | None = None, update_station_id: str | None = None, email_recipient_id: int | None = None, read_emails: bool | None = None, read_SR: bool | None = None, station_recipient_id: int | None = None, read_WR: bool | None = None, weather_recipient_id: int | None = None):
     # If blank user:
     if stations_user_id == "":
         stations_user_id = None
@@ -757,14 +757,17 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
     stations = session.exec(select(m.Station).order_by(m.Station.station_name)).all()
     # List of emails
     emails = session.exec(select(m.EmailRecipient).order_by(m.EmailRecipient.email)).all()
-    # List of Station Recipient emails
     station_emails = session.exec(select(m.StationRecipient).order_by(m.StationRecipient.email)).all()
+    weather_emails = session.exec(select(m.WeatherRecipient).order_by(m.WeatherRecipient.email)).all()
 
     # Get Email
     email_recipient = None
+    weather_recipient = None
 
     if email_recipient_id is not None:
         email_recipient = session.get(m.EmailRecipient, email_recipient_id)
+    if weather_recipient_id is not None:
+        weather_recipient = session.get(m.WeatherRecipient, weather_recipient_id)
 
     # Get SR Email
     station_recipient = None
@@ -835,7 +838,11 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
         "station_emails": station_emails,
         "station_recipient": station_recipient,
         "station_recipient_id": station_recipient_id,
-        "read_SR": read_SR
+        "read_SR": read_SR,
+        "weather_emails": weather_emails,
+        "weather_recipient": weather_recipient,
+        "weather_recipient_id": weather_recipient_id,
+        "read_WR": read_WR,
     })
 
 # Owner dashboard for the station:
@@ -3947,11 +3954,11 @@ def create_weather_recipient(recipient: m.WeatherRecipientCreate, session: db.Se
 
 # Create from form
 @app.post("/recipients/weather/create/form")
-def create_weather_recipient_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email: EmailStr = Form(), station_id: str = Form()):
+def create_weather_recipient_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email: EmailStr = Form(), name: str = Form()):
     # get from form
     payload = {
         "email": str(email).strip(),
-        "station_id": station_id
+        "name": name
     }
 
     if not payload:
@@ -4001,7 +4008,7 @@ def update_weather_recipients(email_id: int, recipient: m.WeatherRecipientUpdate
 
 # Update from form
 @app.post("/recipients/weather/update")
-def update_weather_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form(), new_email: EmailStr = Form(), station_id: str = Form()):
+def update_weather_recipients_from_form(session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], email_id: int = Form(), new_email: EmailStr = Form(), new_name: str = Form()):
     recipient_db = session.exec(select(m.WeatherRecipient).where(m.WeatherRecipient.id == email_id)).first()
     if not recipient_db:
         return RedirectResponse(url="/settings?error=404", status_code=303)
@@ -4010,8 +4017,8 @@ def update_weather_recipients_from_form(session: db.SessionDep, current_user: An
     payload = {}
     if new_email and str(new_email).strip():
         payload["email"] = str(new_email).strip()
-    if station_id:
-        payload["station_id"] = station_id
+    if new_name:
+        payload["name"] = new_name.strip()
 
     if not payload:
         return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)

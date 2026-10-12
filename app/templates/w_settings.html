@@ -809,9 +809,134 @@
                     </div>
                 </div>
 
-                </div>
             </section>
             
+            <!-- Weather EMAILS-->
+            <section class="settings_section">
+                <div class="settings_section_head">
+                    <h2>Weather Recipient Email List Management</h2>
+                    <p>Manage Weather Email List</p>
+                </div>
+
+                <div class="settings_grid">
+
+                    <!--Modify Email-->
+                    <div class="settings_card">
+                        <h3>Modify Weather Recipient Email List</h3>
+                        <p class="settings_help">Select an email recipient, then update its email address or station.</p>
+
+                        <!-- Get OG values -->
+                        <form method="get" action="/settings" class="settings_form">
+                            <div class="form_group">
+                                <label for="weather_recipient_id">Email:</label>
+                                <select name="weather_recipient_id" id="weather_recipient_id" class="graph_select" onchange="if (this.value) this.form.submit();" required>
+                                    <option value="">Choose an Email</option>
+                                    {% for email in weather_emails %}
+                                    <option value="{{ email.id }}" {% if weather_recipient_id == email.id %}selected{% endif %}>
+                                        {{ email.email }} - {{ email.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+
+                        <!-- New values -->
+                        <form method="post" action="/recipients/weather/update" class="settings_form">
+                            {% if weather_recipient %}
+                            <input type="hidden" name="email_id" value="{{ weather_recipient.id }}">
+                            {% endif %}
+
+                            <!-- Email -->
+                            <div class="form_group">
+                                <label for="update_weather_recipient_email">Email:</label>
+                                <input type="email" value="{{ weather_recipient.email if weather_recipient else '' }}" id="update_weather_recipient_email" name="new_email" class="graph_input" required>
+                            </div>
+
+                            <!-- Name -->
+                            <div class="form_group">
+                                <label for="update_weather_recipient_name">Name:</label>
+                                <input type="text" value="{{ weather_recipient.name if weather_recipient else '' }}" id="update_weather_recipient_name" name="new_name" class="graph_input" required>
+                            </div>
+
+                            <button type="submit" class="graph_submit_button" {% if not weather_recipient %}disabled{% endif %}>Modify Weather Recipient Email</button>
+                        </form>
+                    </div>
+
+                    <!-- Create Email -->
+                    <div class="settings_card">
+                        <h3>Append Email to List</h3>
+                        <p class="settings_help">Create an email entry.</p>
+
+                        <form method="post" action="/recipients/weather/create/form" class="settings_form">
+                            <!-- Email -->
+                            <div class="form_group">
+                                <label for="create_weather_email_address">Email address:</label>
+                                <input type="email" placeholder="Enter email address" id="create_weather_email_address" name="email" class="graph_input" required>
+                            </div>
+
+                            <!-- Station ID -->
+                            <div class="form_group">
+                                <label for="create_weather_name">Station:</label>
+                                <input type="text" placeholder="Enter Person Name" id="create_weather_email_name" name="name" class="graph_input" required>
+                            </div>
+
+                            <button type="submit" class="graph_submit_button">Append Email</button>
+                        </form>
+                    </div>
+
+                    <!-- Delete email -->
+                    <div class="settings_card">
+                        <h3>Delete Email from List</h3>
+                        <p class="settings_help">Create an email entry. This action is permanent, proceed with caution.</p>
+
+                        <form action="/recipients/weather/delete" method="post" class="settings_form">
+                            <div class="form_group">
+                                <!-- Email -->
+                                <label for="delete_weather_email_id">Email:</label>
+                                <select name="email_id" id="delete_weather_email_id" class="graph_select" required>
+                                    <option value="">Choose an Email</option>
+                                    {% for email in weather_emails %}
+                                    <option value="{{ email.id }}" {% if weather_recipient_id == email.id %}selected{% endif %}>
+                                        {{ email.email }} - {{ email.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button type="submit" class="graph_clear_button">Delete Email Entry</button>
+                        </form>
+                    </div>
+
+                    <!-- Read emails -->
+                    <div class="settings_card">
+                        <h3>Read Emails</h3>
+                        <p class="settings_help">Lists all emails.</p>
+
+                        <a href="/settings?read_WR=true" class="graph_submit_button">Read Emails</a>
+                    
+                        <!-- Results -->
+                        {% if read_WR %}
+                            <div class="settings_results">
+                                <h4>Emails:</h4>
+
+                                <div class="settings_table_wrap">
+                                    <div class="settings_table">
+                                        {% for row in weather_emails %}
+                                        <div class="station_access_row">
+                                            <strong>{{ row.email }} - {{ row.name }}</strong>
+                                        </div>
+                                        {% endfor %}  
+                                    </div>
+                                    
+                                </div>
+                                <p></p>
+                                <a href="/settings" class="graph_submit_button">Close Emails</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </section>
 
         </div>
     </div>

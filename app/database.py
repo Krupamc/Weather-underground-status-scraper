@@ -39,7 +39,7 @@ def migrate_add_column():
             )
             session.commit()
 
-# SQlite delete
+# SQlite delete columns
 def delete_column(table_name: str, column: str):
     with Session(engine) as session:
         columns = session.exec(text("PRAGMA table_info(station)")).all()
@@ -50,6 +50,16 @@ def delete_column(table_name: str, column: str):
                 text(f"ALTER TABLE {table_name} DROP {column} longitude")
             )
             session.commit()
+
+# SQlite delete columns
+def delete_table(table_name: str):
+    with Session(engine) as session:
+        columns = session.exec(text("PRAGMA table_info(station)")).all()
+
+        session.exec(
+            text(f"DROP TABLE {table_name}")
+        )
+        session.commit()
 
 """
     "elevation": elevation,
