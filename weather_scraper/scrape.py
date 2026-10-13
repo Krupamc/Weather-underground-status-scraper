@@ -121,17 +121,15 @@ def scrape(station_id):
                 #---Data Collection---
                 
                 #--Air--
-                air = soup.find("temp-widget-view")
-                
+                air = soup.find("temp-widget-view")           
                 temp = air.get('data-temp')
                 print(f"Temp: {temp}")
 
-                dew = air.get("data-dew-point")
+                dew_air = soup.find("humidity-widget-view")
+                dew = dew_air.get("data-dew-point")
                 print(f"Dew: {dew}")
-
-                humd = air.get("data-humidity")
+                humd = dew_air.get("data-humidity")
                 print(f"Humidity: {humd}")
-
                 print()
 
                 #--Wind--

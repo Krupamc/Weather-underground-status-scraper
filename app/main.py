@@ -1,7 +1,9 @@
 # Web Server for Mesonet System
 from dotenv import load_dotenv, find_dotenv
-# Developer mode (allows env variables in desktop) 
-load_dotenv(find_dotenv(), override=False)
+import config as cfg
+# Developer mode (allows env variables in desktop)
+if cfg.develop == True:
+    load_dotenv(find_dotenv(), override=False)
 
 from fastapi import FastAPI, Cookie, HTTPException, Query, Depends, status, Request, Header, Form, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -18,7 +20,7 @@ from sqlmodel import select
 from contextlib import asynccontextmanager
 import database as db
 import model as m
-import config as cfg
+
 import security as s
 import pytz, csv, io, jwt, statistics
 from jwt import InvalidTokenError
