@@ -67,14 +67,17 @@
 
         <div id="top-menu-bar" class="top_menu_bar">
 
-            <nav class="menu_bar">
-                
+            <nav class="menu_bar" aria-label="Main navigation">
+                <!-- Logo link -->
+                <a href="/" class="logo_link">
+                    <img src="{{ url_for('static', path='/icons/logo.png') }}" alt="{{ system_name }}" width="225" class="logo_link">
+                </a>
+
+                <!-- Mobile toggle-->
                 <!-- Menu Bar -->
-                <div class="nav_links">
-                    <!-- Logo link -->
-                    <a href="/" class="logo_link">
-                        <img src="{{ url_for('static', path='/icons/logo.png') }}" alt="logo" width="225" class="logo_link">
-                    </a>
+                <div class="nav_links" id="main-nav-links" >
+                    
+                    <button type="button" class="mobile_nav_toggle" id="mobile-nav-toggle" aria-controls="main-nav-links" aria-expanded="false" aria-label="Open Navigation"><span aria-hidden="true">☰</span></button>
                     <a href="/stations" class="nav_item {% if active_page == 'stations' %}active{% endif %}">WEATHER STATIONS ▼</a>
                     <a href="/map" class="nav_item {% if active_page == 'map' %}active{% endif%}">MAP ▼</a>
                     <a href="/graph" class="nav_item {% if active_page == 'graph' %}active{% endif %}">GRAPHING AND ANALYSIS ▼</a>
@@ -103,6 +106,61 @@
                 </div>
             </nav>
         </div>
+        
+        <!-- Hamburger menu for phone -->
+        <script>
+            (() => {
+                const button = document.getElementById("mobile-nav-toggle");
+                const navigation = document.getElementById("main-nav-links");
+                const mobileScreen = window.matchMedia("(max-width: 900px)");
+
+                if (!button || !navigation) return;
+
+                function setMenuOpen(open) {
+                    navigation.classList.toggle("is_open", open);
+                    button.setAttribute("aria-expanded", String(open));
+                    button.setAttribute(
+                        "aria-label",
+                        open ? "Close navigation" : "Open navigation"
+                    );
+                    button.querySelector("span").textContent = open ? "✕" : "☰";
+                }
+
+                button.addEventListener("click", () => {
+                    const open = button.getAttribute("aria-expanded") === "true";
+                    setMenuOpen(!open);
+                });
+
+                navigation.addEventListener("click", (event) => {
+                    if (event.target.closest("a[href]")) {
+                        setMenuOpen(false);
+                    }
+                });
+
+                document.addEventListener("keydown", (event) => {
+                    if (
+                        event.key === "Escape" &&
+                        button.getAttribute("aria-expanded") === "true"
+                    ) {
+                        setMenuOpen(false);
+                        button.focus();
+                    }
+                });
+
+                document.addEventListener("click", (event) => {
+                    if (
+                        !navigation.contains(event.target) &&
+                        !button.contains(event.target)
+                    ) {
+                        setMenuOpen(false);
+                    }
+                });
+
+                mobileScreen.addEventListener("change", () => {
+                    setMenuOpen(false);
+                });
+            })();
+        </script>
 
         <!-- Where the other files input -->
         <div>

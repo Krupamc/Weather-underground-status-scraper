@@ -315,6 +315,9 @@ def send_report(now: datetime, period_start, period_end, stations_with_outages, 
     report["last_report"] = now.isoformat()
     write_report_file(report)
 
+def send_weather(now: datetime):
+    report = 
+
 def write_report(now: datetime, stations: list[dict]):
     period_start, period_end = get_previous_month_period(now)
     stats, station_summary = compute_monthly_stats(period_start, period_end, stations)
@@ -335,7 +338,7 @@ def write_report(now: datetime, stations: list[dict]):
         longest_station_name = longest_station["station_name"]
 
 
-
+    send_weather(now)
     send_report(now, period_start.date(), period_end.date(), stations_with_outages, longest_station_name, longest_hour, station_summary, stations)
 
 def get_previous_month_period(now: datetime):
@@ -551,6 +554,7 @@ def test_all_emails():
 
     else:
         print(f"\n[EMAIL TEST]: Finished. Sent {len(sent_to)} separate test email(s).\n")
+
 # Log the data
 def log_data(now: str, station_id, station_name, status, consec_offline, event_type: str, message: str):
     path = Path("status_scraper/status_log.csv")
@@ -561,7 +565,6 @@ def log_data(now: str, station_id, station_name, status, consec_offline, event_t
             status, consec_offline,
             event_type, message
         ])
-
 
 # Read/write to file
 
