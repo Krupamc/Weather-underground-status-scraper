@@ -12,6 +12,7 @@
 - [System Website](#system-website)
   - [Types of Users](#types-of-users)
   - [Public Dashboards](#public-dashboards)
+  - [Map](#map)
   - [Admin Dashboards](#admin-dashboards)
   - [Graphing and Analysis](#graphing-and-analysis)
     - [Graphing](#graphing)
@@ -52,7 +53,7 @@ The public-facing website. It presents the station data in a clear, user-friendl
 ---
 
 ## Weather Scraper:
-Scrapes the weather values for all stations and converts them to metric values and the collected time into UTC before posting it to the backend API. The values are also stored in monthly CSVs. Only stations that have the `collect_enabled` value in the database are scraped. Only the latest weather reading is kept in the live table; every reading is also appended to WeatherHistory.
+Scrapes the weather values for all stations and converts them to metric values and the collected time into UTC before posting it to the backend API. The values are also stored in monthly CSVs. Only stations that have the `collect_enabled` value in the database are scraped. Only the latest weather reading is kept in the live table; every reading is also appended to WeatherHistory. Station metadata (elevation, longitude, town, etc) is also collected and stored in the Station table.
 
 ## Status Scraper Monitoring and Notifications:
 Scrapes the stations for their status and converted the collected time into UTC and posts it to the backend API. The values are stored in a csv. When the backend receives it, it is used in the Status column (rewritten every new status) and only saved to the StatusHistory column when the status changes. Only stations that have the `collect_enabled` value in the database are scraped.
@@ -131,6 +132,9 @@ Graphs are shown of the last 24 hours of data. These include:
 #### Table:
 The table at the bottom shows all variables (if they are available) and all their values for that day. Using the `Next Day` and `Previous Day`, you can easily navigate between data. You can also navigate to a specific day with a date input and `Go` button. All data can be downloaded as a CSV.
 <img width="2447" height="1277" alt="image" src="https://github.com/user-attachments/assets/9b256683-59f4-4212-9b3e-077afb1ce4e2" />
+
+### Map:
+There is a ArcGIS JS map that uses the longitude and latitude of the stations to plot the stations. The map is centered around the stations. This is very cool :D
 
 ### Admin Dashboards:
 Contains all features (except for the data table) in the [Public dashboard](#public-dashboards) as well as some extras.
