@@ -315,8 +315,103 @@ def send_report(now: datetime, period_start, period_end, stations_with_outages, 
     report["last_report"] = now.isoformat()
     write_report_file(report)
 
-def send_weather(now: datetime):
-    report = 
+def send_weather(now: datetime, http: requests.Session, units: str = "imperial", test_recipient: str | None = None,) -> bool:
+    is_test = test_recipient is not None
+    
+    recipients = http.get(f"{cfg.api_base}/scraper/weather/recipients", headers={"x-api-key": cfg.api_key}, timeout=30)
+    recipients.raise_for_status()
+    recipients = recipients.json()
+    if not recipients:
+        print("[WEATHER EMAIL SKIPPED]: No report recipients configured")
+        return False
+
+    # Get summaries from backend
+    response = http.get(f"{cfg.api_base}/scraper/weather/monthly-stats", params={"units": units}, headers={"x-api-key": cfg.api_key}, timeout=30)
+    response.raise_for_status()
+
+    rows = response.json()
+
+    if not isinstance(rows, list):
+        raise ValueError("Weather summary API did not return a list")
+    if not rows:
+        raise ValueError("No weather summaries were returned")
+    if not all(isinstance(row, dict) for row in rows):
+        raise ValueError("Weather summary API returned invalid station rows")
+    
+    def format_value(value, unit):
+        if value is None:
+            return "N/A"
+        return f"{round(value, 2)} {unit}"
+
+    lines = [cfg.w_body.format(generated_at=now.isoformat(), row_len=len(rows)), ""]
+
+    for row in rows:
+        labels = row["labels"]
+
+        lines.extend([
+            f"{row['station_name']} ({row['station_id']})",
+            f"Range: {row['range_title']}",
+            f"From: {row['start_dt']}",
+            f"To: {row['end_dt']}",
+            (
+                "Highest temperature: "
+                + format_value(row.get("high_temp"), labels["temp"])
+            ),
+            (
+                "Lowest temperature: "
+                + format_value(row.get("low_temp"), labels["temp"])
+            ),
+            (
+                "Average temperature: "
+                + format_value(row.get("avg_temp"), labels["temp"])
+            ),
+            (
+                "Average dew point: "
+                + format_value(row.get("avg_dewpoint"), labels["temp"])
+            ),
+            (
+                "Precipitation: "
+                + format_value(
+                    row.get("precipitation"),
+                    labels["precipitation"],
+                )
+            ),
+            (
+                "Average wind speed: "
+                + format_value(row.get("avg_wind"), labels["wind"])
+            ),
+            (
+                "Maximum wind gust: "
+                + format_value(row.get("max_wind_gust"), labels["wind"])
+            ),
+            "",
+            "-" * 45,
+            "",
+            
+        ])
+    lines.append(f"~ {cfg.system_name} Mesonet Notification System")
+
+    subject = cfg.w_subject.format(month = now.strftime("%B %Y"))
+    if is_test:
+        subject = f"[TEST] {subject}"
+
+    email(
+        subject=subject,
+        body="\n".join(lines),
+        recipients=recipients
+    )
+
+    if not is_test:
+        report = read_report_file()
+        report["last_weather_report"] = now.isoformat()
+        write_report_file(report)
+
+    print(f"[WEATHER EMAIL {'TEST' if is_test else 'SENT'}]: ")
+    print(f"Included {len(rows)} stations; sent to {', '.join(recipients)}")
+    
+    return True
+
+
 
 def write_report(now: datetime, stations: list[dict]):
     period_start, period_end = get_previous_month_period(now)
@@ -337,8 +432,6 @@ def write_report(now: datetime, stations: list[dict]):
         longest_hour = longest_duration.total_seconds() / 3600.0
         longest_station_name = longest_station["station_name"]
 
-
-    send_weather(now)
     send_report(now, period_start.date(), period_end.date(), stations_with_outages, longest_station_name, longest_hour, station_summary, stations)
 
 def get_previous_month_period(now: datetime):
@@ -462,7 +555,7 @@ def email(subject: str, body: str, recipients: list[str]) -> None:
         server.send_message(msg)
         
 # Test all email recipients from API
-def test_all_emails():
+def test_all_emails(now, http):
     print("\n[EMAIL TEST]: Starting API recipient email test\n")
 
     sent_to = set()
@@ -548,6 +641,7 @@ def test_all_emails():
             sent_to.add(recipient)
             print(f"[EMAIL TEST SENT]: Station {station_id} -> {recipient}")
 
+    send_weather(now, http, "krupampatel710@gmail.com")
 
     if not sent_to:
         print("[EMAIL TEST]: No recipients were returned by the API")
@@ -763,23 +857,23 @@ def alert_cooldown_write_start():
 
 # Check if we should send a reminder
 def should_send_reminder(station, now):
-    last_reminder = station["last_reminder_sent"]
-
     if not station["alert_sent"]:
         return False
 
     if station["last_status"] != "OFFLINE":
         return False
 
-    if last_reminder is None:
-        return True
+    last_sent = (
+        station.get("last_reminder_sent")
+        or station.get("since_first_alert")
+    )
 
-    last_reminder = datetime.fromisoformat(last_reminder)
-    if (now - last_reminder) >= timedelta(days=cfg.days_before_remind):
-        return True
-    
-    else:
+    if not last_sent:
         return False
+
+    last_sent_dt = datetime.fromisoformat(last_sent)
+
+    return (now - last_sent_dt >= timedelta(days=cfg.days_before_remind))
 
 # Check if send alert
 def should_send_cooldown_alert(key: str, cooldown_minutes: int = cfg.error_email_cooldown) -> bool:
@@ -824,13 +918,35 @@ def should_send_report(now: datetime):
    
     try:
       last_dt = datetime.fromisoformat(last_report)
-    except ValueError:
+    except (TypeError, ValueError):
         return True
 
     return not (last_dt.year == now.year and last_dt.month == now.month)
 
+def should_send_weather_report(now: datetime) -> bool:
+    # Use the same scheduled day/hour as the status report.
+    if not check_if_report_day(now):
+        return False
+
+    report = read_report_file()
+    last_report = report.get("last_weather_report")
+
+    if last_report is None:
+        return True
+
+    try:
+        last_dt = datetime.fromisoformat(last_report)
+    except (TypeError, ValueError):
+        return True
+
+    return not (
+        last_dt.year == now.year
+        and last_dt.month == now.month
+    )
+
 # Get Stations
 def get_stations_list(http: requests.Session) -> list[dict]:
+    last_error = "No station API request completed"
     for attempt in range(cfg.max_retries):
         try:
             url = f"{cfg.api_base}/scraper/stations"
@@ -866,6 +982,13 @@ def get_stations_list(http: requests.Session) -> list[dict]:
             subject=cfg.api_e_subject,
             body=cfg.e_body.format(err=last_error),
             recipients=admin_recipients
+        )
+
+    if admin_recipients and should_send_cooldown_alert("station_api_error", 60):
+        email(
+            subject=cfg.api_e_subject,
+            body=cfg.e_body.format(err=last_error),
+            recipients=admin_recipients,
         )
     return []
 
@@ -941,6 +1064,17 @@ def get_alert_recipients(station_id: str) -> list[str]:
 #---Program---
 print("[SCRAPE]: Status Scrape Started...")
 
+print("[SCRAPE]: Status Scrape Started...")
+# Intializers
+ensure_data_dir()
+start_log()
+alert_cooldown_write_start()
+
+admin_recipients = []
+global_recipients = []
+report_recipients = []
+station_recipients = {}
+
 # Single Session Request
 session_http = requests.Session()
 session_http.headers.update({"x-api-key": cfg.api_key})
@@ -952,16 +1086,7 @@ if not stations:
     print("[STOPPED]: No stations were returned by the API")
     raise SystemExit(1)
 
-# Intializers
-ensure_data_dir()
-alert_cooldown_write_start()
 write_start(stations)
-start_log()
-admin_recipients = []
-global_recipients = []
-report_recipients = []
-station_recipients = {}
-
 
 emails = get_email_recipients(session_http)
 station_emails = get_station_recipients(session_http)
@@ -998,14 +1123,13 @@ for recipient in station_emails:
 
     station_recipients[station_id].append(recipient["email"])
 
-#Test every API-configured email recipient
-#test_all_emails()
-
-
 # Time
 now = get_time("Report", "Report", False)
 if now is not None:
     report_write_start(now)
+
+#Test every API-configured email recipient
+test_all_emails(now, session_http)
 
 print("Start of Status Check")
 
@@ -1014,9 +1138,29 @@ for station in stations:
     if station.get("collect_enabled", False):
         check_station(station["station_id"], station, session_http)
     
-# Monthy Report
-if should_send_report(now):
-    write_report(now, stations)
+# Refresh the time after checking all stations.
+now = get_time("Report", "Report", False)
+
+if now is not None:
+    report_write_start(now)
+
+    # Monthly station-status/outage report.
+    if should_send_report(now):
+        try:
+            write_report(now, stations)
+        except Exception as exc:
+            print(f"[MONTHLY STATUS REPORT ERROR]: {exc}")
+
+    # Weather summary, using the same schedule.
+    if should_send_weather_report(now):
+        try:
+            send_weather(
+                now=now,
+                http=session_http,
+                units="imperial",
+            )
+        except Exception as exc:
+            print(f"[MONTHLY WEATHER REPORT ERROR]: {exc}")
 
 
 # Print everything

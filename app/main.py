@@ -1970,7 +1970,6 @@ def build_all_station_monthly_stats(session: db.SessionDep, units: str = "imperi
 @app.get("/graph/analysis/month")
 def monthly_summary_page(request: Request, session: db.SessionDep, units: str = "imperial"):
     rows = build_all_station_monthly_stats(session=session, units=units, public_only=True)
-
     labels = {
         "temp": "°F" if units == "imperial" else "°C",
         "precipitation": "in" if units == "imperial" else "mm",
@@ -1980,6 +1979,49 @@ def monthly_summary_page(request: Request, session: db.SessionDep, units: str = 
 
     return templates.TemplateResponse(request, "monthly_summary.html", {"request": request, "title": "Monthly Summary", "active_page": "analysis", "timezone": cfg.time_zone_name, "rows": rows, "units": units, "labels": labels})
 
+@app.get("/graph/analysis/month/csv")
+def monthly_summary_csv(request: Request, session: db.SessionDep, units: str = "impperial"):
+
+    rows = build_all_station_monthly_stats(session=session, units=units, public_only=True)
+    if not rows:
+        raise HTTPException(status_code=404, detail="No Exportable Data Found")
+
+    fieldnames = [
+        "station_id",
+        "station_name",
+        "range_title",
+        "start_dt",
+        "end_dt",
+        "high_temp",
+        "low_temp",
+        "avg_temp",
+        "avg_dewpoint",
+        "precipitation",
+        "avg_wind",
+        "max_wind_gust",
+        "temp_unit",
+        "precipitation_unit",
+        "wind_unit",
+    ]
+    
+    with io.StringIO(newline="") as output:
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for row in rows:
+            # Select the summary fields
+            csv_row = {field: row.get(field) for field in fieldnames}
+            csv_row["temp_unit"] = row["labels"]["temp"]
+            csv_row["precipitation_unit"] = row["labels"]["precipitation"]
+            csv_row["wind_unit"] = row["labels"]["wind"]
+
+            writer.writerow(csv_row)
+
+        csv_data = output.getvalue()
+    
+    filename = f"station_summary_past_30_days_{units}.csv"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return Response(content=csv_data, media_type="text/csv", headers=headers)
 #---TESTS---
 
 # HTML Page
@@ -3021,7 +3063,7 @@ def scraper_email_recipients(session: db.SessionDep, x_api_key: Annotated[str, H
     return emails
 
 @app.get("/scraper/weather/recipients", response_model=list[m.WeatherRecipientPublic])
-def scraper_email_recipients(session: db.SessionDep, x_api_key: Annotated[str, Header()]):
+def scraper_weather_email_recipients(session: db.SessionDep, x_api_key: Annotated[str, Header()]):
     # Check if api key is correct
     if x_api_key != cfg.scraper_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -3040,6 +3082,14 @@ def scraper_station_recipients(session: db.SessionDep, x_api_key: Annotated[str,
     emails = session.exec(select(m.StationRecipient).order_by(m.StationRecipient.email)).all()
 
     return emails
+
+# API Weather Email Stats
+@app.get("/scraper/weather/monthly-stats")
+def scraper_monthly_weather_stats(session: db.SessionDep, x_api_key: Annotated[str, Header()], units: str = "imperial"):
+    if x_api_key != cfg.scraper_api_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    return build_all_station_monthly_stats(session=session, units=units, public_only=True)
 
 # ---ArcGIS---
 # Return a list of stations with their coordinates
