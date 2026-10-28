@@ -4,7 +4,7 @@
     <head>
         
         <!-- Preconnect for fonts and style -->
-        <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v=mobile-2"> <!-- When I need to force a re-cashe do "?v=Blank"-->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         
@@ -42,9 +42,7 @@
 
         <!-- Web App Manifest-->
         <link rel="manifest" href="{{ url_for('static', path='/site.webmanifest') }}">
-
-    </head>
-    <body>
+        
         <!-- Broswer title -->
         <title>
             {% if title %}
@@ -53,6 +51,10 @@
                 {{system_name}} Mesonet System
             {% endif %}
         </title>
+
+    </head>
+    <body>
+        
 
         <!-- Red Bar on top with title-->
         <div id="top-red-bar" class="top_red_bar" >
@@ -70,14 +72,14 @@
             <nav class="menu_bar" aria-label="Main navigation">
                 <!-- Logo link -->
                 <a href="/" class="logo_link">
-                    <img src="{{ url_for('static', path='/icons/logo.png') }}" alt="{{ system_name }}" width="225" class="logo_link">
+                    <img src="{{ url_for('static', path='/icons/logo.png') }}" alt="{{ system_name }}" width="225">
                 </a>
 
                 <!-- Mobile toggle-->
+                <button type="button" class="mobile_nav_toggle" id="mobile-nav-toggle" aria-controls="main-nav-links" aria-expanded="false" aria-label="Open Navigation"><span aria-hidden="true">☰</span></button>
+                
                 <!-- Menu Bar -->
-                <div class="nav_links" id="main-nav-links" >
-                    
-                    <button type="button" class="mobile_nav_toggle" id="mobile-nav-toggle" aria-controls="main-nav-links" aria-expanded="false" aria-label="Open Navigation"><span aria-hidden="true">☰</span></button>
+                <div class="nav_links" id="main-nav-links">
                     <a href="/stations" class="nav_item {% if active_page == 'stations' %}active{% endif %}">WEATHER STATIONS ▼</a>
                     <a href="/map" class="nav_item {% if active_page == 'map' %}active{% endif%}">MAP ▼</a>
                     <a href="/graph" class="nav_item {% if active_page == 'graph' %}active{% endif %}">GRAPHING AND ANALYSIS ▼</a>

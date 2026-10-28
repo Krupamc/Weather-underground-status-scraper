@@ -1925,9 +1925,9 @@ def build_monthly_analysis_stats(session: db.SessionDep, station_id: str, units:
     wind_unit = "mph" if units == "imperial" else "knots"
 
     return {
-        "range_title": "Past Month",
-        "start_dt": cutoff_start.isoformat(),
-        "end_dt": cutoff_end.isoformat(),
+        "range_title": "Past 30 Days",
+        "start_dt": cutoff_start.strftime("%I:%M %p"),
+        "end_dt": cutoff_end.strftime("%I:%M %p"),
         "high_temp": round(max(temps), 2) if temps else None,
         "low_temp": round(min(temps), 2) if temps else None,
         "avg_temp": round(statistics.mean(temps), 2) if temps else None,
@@ -1937,10 +1937,8 @@ def build_monthly_analysis_stats(session: db.SessionDep, station_id: str, units:
         "max_wind_gust": round(max(wind_gusts), 2) if wind_gusts else None,
         "labels": {
             "temp": temp_unit,
-            "dewpoint": temp_unit,
             "precipitation": precip_unit,
             "wind": wind_unit,
-            "wind_gust": wind_unit,
         }
     }
 
@@ -1952,35 +1950,35 @@ def build_all_station_monthly_stats(session: db.SessionDep, units: str = "imperi
         search = search.where(m.Station.is_public == True)
 
     stations = session.exec(search.order_by(m.Station.station_name)).all()
-
     rows = []
     for station in stations:
-        stats = build_monthly_analysis_stats(station_id=station.station_id, units=units)
-
-        if stats is None:
+        try:
+            stats = build_monthly_analysis_stats(session=session, station_id=station.station_id, units=units)
+        except HTTPException:
             continue
 
-        rows.append[{
+        if not stats:
+            continue
+
+        rows.append({
             "station_id": station.station_id,
             "station_name": station.station_name,
             **stats
-        }]
+        })
+    return rows
 
 @app.get("/graph/analysis/month")
-def monthly_summary_page(request: Request, session: db.SessionDep, units: str = "imperial", current_user: Annotated[m.User, Depends(get_current_user)] = None):
-    rows = build_all_station_monthly_stats(units=units, public_only=True, )
+def monthly_summary_page(request: Request, session: db.SessionDep, units: str = "imperial"):
+    rows = build_all_station_monthly_stats(session=session, units=units, public_only=True)
 
     labels = {
         "temp": "°F" if units == "imperial" else "°C",
         "precipitation": "in" if units == "imperial" else "mm",
         "wind": "mph" if units == "imperial" else "knots",
     }
+    stations = session.exec(select(m.Station).order_by(m.Station.station_name).where(m.Station.is_public == True))
 
-    return templates.TemplateResponse(request, "monthly_summary.html", {"request": request, "title": "Monthly Summary", "active_page": "analysis", "rows": rows, "units": units, "labels": labels})
-
-#@app.get("/analysis", response_class=HTMLResponse)
-#def monthly_analysis_page(request: Request, session: db.SessionDep):
-#    return
+    return templates.TemplateResponse(request, "monthly_summary.html", {"request": request, "title": "Monthly Summary", "active_page": "analysis", "timezone": cfg.time_zone_name, "rows": rows, "units": units, "labels": labels})
 
 #---TESTS---
 

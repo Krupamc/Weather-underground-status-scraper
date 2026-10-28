@@ -1,0 +1,82 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="main_page">
+        <div class="main_p_container" style="padding-top: 220px">
+            <h1>Data Summary:</h1>
+            <div class="dashboard_table_card">
+                <div class="dashboard_table_header">
+
+                </div>
+                <div class="dashboard_table_wrap">
+                    <table class="dashboard_table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                {% for row in rows %}
+                                    <th>{{ row.station_name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <tr>
+                                <th>Time Start ({{ timezone }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.start_dt }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>Time End ({{ timezone }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.end_dt }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>High Temperature ({{ labels.temp }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.high_temp }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>Low Temperature ({{ labels.temp }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.low_temp }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>Average Temperature ({{ labels.temp }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.avg_temp }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>Average Dew Point ({{ labels.temp }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.avg_dewpoint }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>Precipitation ({{ labels.precipitation }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.precipitation }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>Average Wind ({{ labels.wind }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.avg_wind }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>Max Wind Gust ({{ labels.temp }}):</th>
+                                {% for row in rows %}
+                                    <td>{{ row.max_wind_gust }}</td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+        </div>
+    </div>
+{% endblock %}

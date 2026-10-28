@@ -1635,7 +1635,6 @@
     font-size: 0.9rem;
 }
 
-
 /* Mobile */
 @media (max-width: 900px) {
     .main_page .main_p_side_by {
@@ -1693,7 +1692,6 @@
 }
 
 @media (max-width: 900px) {
-    /* Keep the red bar at its existing 60px height. */
     .top_red_bar_text {
         font-size: clamp(18px, 4.5vw, 26px);
         line-height: 1.15;
@@ -1701,7 +1699,6 @@
         padding: 0 12px;
     }
 
-    /* Keep the white bar at its existing 120px height. */
     .top_menu_bar {
         box-sizing: border-box;
         padding-right: 16px;
@@ -1778,6 +1775,37 @@
 
     .top_menu_bar .nav_item:hover {
         transform: none;
+    }
+}
+
+/* Header layout */
+.top_menu_bar .menu_bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+}
+
+.top_menu_bar .logo_link {
+    flex-shrink: 0;
+}
+
+.top_menu_bar .nav_profile {
+    gap: 8px;
+}
+
+@media (max-width: 900px) {
+    .top_menu_bar {
+        z-index: 1100;
+    }
+}
+
+/* Desktop nav center */
+@media (min-width: 901px) {
+    .top_menu_bar .menu_bar {
+        justify-content: flex-start;
+        gap: 18px;
     }
 }
 
