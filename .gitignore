@@ -25,3 +25,5 @@ app/__pycache__/model.cpython-313.pyc
 app/database.py
 status_scraper/report.json
 
+status_scraper/status_log.csv
+status_scraper/status.json
