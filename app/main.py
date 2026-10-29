@@ -3142,6 +3142,24 @@ def map_page(request: Request):
 
 # ---Forms---
 
+# Toggle registration with form
+@app.post("/maintenance/registration/form")
+def toggle_registration(request: Request, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)]):
+    settings = session.exec(select(m.SiteSettings).where(m.SiteSettings.id == 1)).first()
+
+    if settings is None:
+        settings = m.SiteSettings(id=1, registration_enabled=False)
+    
+    enabled = not settings.registration_enabled
+    settings.registration_enabled = enabled
+
+    session.add(settings)
+    session.commit()
+
+    success = "register" if enabled else "noregister"
+
+    return RedirectResponse(url=f"/settings?success={success}", status_code=303)
+
 # Toggle maintenance with a form
 @app.post("/maintenance/{station_id}", response_class=HTMLResponse)
 def toggle_maintenance(request: Request, session: db.SessionDep, station_id: str, current_user: Annotated[m.User, Depends(get_current_user)]):
@@ -3219,13 +3237,22 @@ def toggle_public(request: Request, session: db.SessionDep, station_id: str, cur
 def load_register_no():
     return {"message": "Please Register Man or Woman. Or person. Or Apache attack helicopter. If you are not one of those I give up. Computers don't judge"}
 
+def registration_enabled(session: db.SessionDep) -> bool:
+    settings = session.get(m.SiteSettings, 1)
+    return (settings.registration_enabled if settings is not None else False)
+
 @app.get("/register", response_class=HTMLResponse)
-def load_register(request: Request):
+def load_register(session: db.SessionDep, request: Request):
+    if not registration_enabled(session):
+        raise HTTPException(status_code=403, detail="Public registration is currently disabled.")
     return templates.TemplateResponse(request, "register.html", {"request": request, "title": "Register", "active_page": "register"})
 
 # Form Response for register
 @app.post("/register")
 def register(request: Request, session: db.SessionDep, username: str = Form(), password: str = Form()): #make this require admin later
+    if not registration_enabled(session):
+        raise HTTPException(status_code=403, detail="Public registration is currently disabled.")
+    
     # Check for existing user:
     existing_user = session.exec(select(m.User).where(m.User.username == username)).first()
 

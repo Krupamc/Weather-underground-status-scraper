@@ -313,3 +313,8 @@ class WeatherRecipientPublic(WeatherRecipientBase):
 class WeatherRecipientUpdate(SQLModel):
     email: EmailStr | None = None
     name: str | None = None
+
+# Site Sitings
+class SiteSettings(SQLModel, table=True):
+    id: int = Field(default=1, primary_key=True)
+    registration_enabled: bool = Field(default=True)

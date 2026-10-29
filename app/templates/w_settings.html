@@ -24,6 +24,10 @@
                     <p>Email <b>{{username if username else ""}}</b> appended successfully.</p>
                 {% elif success == "station_deleted"%}
                     <p>Station deleted successfully.</p>
+                {% elif success == "register"%}
+                    <p>Registration turned on.</p>
+                {% elif success == "noregister"%}
+                    <p>Registration turned off</p>
                 {% else %}
                     <p>Action completed successfully.</p>
                 {% endif %}
@@ -51,6 +55,25 @@
                 <p class="settings_subtitle">Configure the Mesonet System</p>
             </div>
             
+            <!--SITE SETTINGS-->
+            <section class="settings_section">
+                <div class="settings_section_head">
+                    <h2>Site Settings</h2>
+                    <p>Manage webpages and registration</p>
+                </div>
+                
+                <div class="settings_grid">
+                    <div class="settings_card">
+                        <h3>Toggle Registration</h3>
+                        <p class="settings_help">Toggle the ability for the public to register (default is off)</p>
+                        <form method="post" action="/maintenance/registration/form" class="settings_form">
+                            <button type="submit" class="graph_submit_button">Registration</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+
             <!-----USERS----->
             <section class="settings_section">
                 <div class="settings_section_head">
@@ -137,8 +160,8 @@
                             <div class="form_group">
                                 <!-- Users-->
                                 <label for="delete_user_id">User:</label>
-                                <select name="user_id" id="delete_user_id" class="graph_select">
-                                    <option value="">Choose A User to Delete</option>
+                                <select name="user_id" id="delete_user_id" class="graph_select" required>
+                                    <option value="" disabled>Choose A User to Delete</option>
                                     {% for user in users %}
                                         <option value="{{ user.id }}">{{ user.username }} - {{ user.role.capitalize() }}</option>
                                     {% endfor %}
