@@ -317,12 +317,30 @@ def send_report(now: datetime, period_start, period_end, stations_with_outages, 
 
 def send_weather(now: datetime, http: requests.Session, units: str = "imperial", test_recipient: str | None = None,) -> bool:
     is_test = test_recipient is not None
-    
-    recipients = http.get(f"{cfg.api_base}/scraper/weather/recipients", headers={"x-api-key": cfg.api_key}, timeout=30)
-    recipients.raise_for_status()
-    recipients = recipients.json()
+
+    if is_test:
+        # Test emails only go to supplied email:
+        recipients = [test_recipient]
+    else:
+        recipient_response = http.get(
+            f"{cfg.api_base.rstrip('/')}/scraper/weather/recipients",
+            headers={"x-api-key": cfg.api_key},
+            timeout=30,
+        )
+        recipient_response.raise_for_status()
+
+        recipient_rows = recipient_response.json()
+
+        if not isinstance(recipient_rows, list):
+            raise ValueError("Weather recipient API did not return a list")
+        if not all(isinstance(row, dict) and isinstance(row.get("email"), str) and row["email"].strip() for row in recipient_rows):
+            raise ValueError("Each weather recipient must contain a nonempty 'email' string")
+
+        # Extract the email addresses and remove duplicates.
+        recipients = list(dict.fromkeys(row["email"].strip() for row in recipient_rows))
+
     if not recipients:
-        print("[WEATHER EMAIL SKIPPED]: No report recipients configured")
+        print("[WEATHER EMAIL SKIPPED]: No weather recipients configured")
         return False
 
     # Get summaries from backend
@@ -640,8 +658,6 @@ def test_all_emails(now, http):
 
             sent_to.add(recipient)
             print(f"[EMAIL TEST SENT]: Station {station_id} -> {recipient}")
-
-    send_weather(now, http, "krupampatel710@gmail.com")
 
     if not sent_to:
         print("[EMAIL TEST]: No recipients were returned by the API")
@@ -1129,7 +1145,9 @@ if now is not None:
     report_write_start(now)
 
 #Test every API-configured email recipient
-test_all_emails(now, session_http)
+#test_all_emails(now, session_http)
+send_weather(now=now, http=session_http, test_recipient="krupampatel710@gmail.com")
+
 
 print("Start of Status Check")
 
