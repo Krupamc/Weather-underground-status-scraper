@@ -396,11 +396,11 @@ Thank you to Jermal Smith for taking a look at my code and for providing helpful
 - Download/Clone the repository (if in Linux "git clone https://github.com/Krupamc/portfolio_website") 
 
 ### Docker (linux)
-- Make sure docker is installed (this is not a docker guide. Check out their [https://docs.docker.com/engine/install/](docs)).
+- Make sure docker is installed (this is not a docker guide. Check out their [docs](https://docs.docker.com/engine/install/)).
 - Open folder
   - Rename the `example.env` to `.env` and change all the values that apply. Some examples include:
     - System name
-    - Bootstrap Registration (first account becomes a admin.) Turn off after first account created and then reload system.
+    - Bootstrap Registration (first account becomes an admin.) Turn off after first account created and then reload system.
     - Website url (where you host)
     - Secret Key (password hashing)
     - postgres password (encryption. Save this password)
@@ -421,16 +421,15 @@ Thank you to Jermal Smith for taking a look at my code and for providing helpful
     - days before reminder
     - developing mode (uses SQlite DB and dotenv)
     - Bunch of random stuff :D
-  - 
-<img width="1105" height="135" alt="image" src="https://github.com/user-attachments/assets/c9f94908-0da2-4b80-ad19-374937d18eaa" />
-
+- Open `status_scraper` folder
+  - Rename `ex.config.py` to `config.py` and replace words/rewrite the email messages to fit your system.
 -Run docker compose up -d (-d flag is for detached mode or running in background. To watch for any errors, run without flag) 
   - If it does not work, try running it with "sudo in front of it.
   - To turn off, run docker compose down (-v flag will delete all of the containers fully. Does not delete the repo folder) 
 <img width="1458" height="240" alt="image" src="https://github.com/user-attachments/assets/31c2365b-c8d9-421e-b2ab-635f9f4e94f9" />
-- Navigate to your browser and then to http://127.0.0.1:8001 (or change the port or the numbers after the colon)
-- TADA you are now running the website. (I would question why you would want to run a website of me, but you do you ig).
-
+- Navigate to your browser and then to http://127.0.0.1:8000 (or change the port or the numbers after the colon)
+- TADA You are all done.
+- To put the website on the internet, I reccomend getting your own domain using cloudflare and using a tunnel with a nginx proxy manager.
 
 ---
 
