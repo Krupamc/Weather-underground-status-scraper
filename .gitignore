@@ -24,3 +24,4 @@ app/__pycache__/convert_metric.cpython-313.pyc
 app/__pycache__/model.cpython-313.pyc
 app/database.py
 status_scraper/report.json
+
