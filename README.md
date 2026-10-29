@@ -30,7 +30,7 @@
 - [Nerdy Features](#nerdy-features)
 - [Future Work](#future-work)
 - [Notes](#notes)
-- [AI Disclosure](#ai-disclosure
+- [AI Disclosure](#ai-disclosure)
 - [Setup](#setup)
 ---
 
