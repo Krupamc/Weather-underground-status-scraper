@@ -12,6 +12,7 @@
 - [System Website](#system-website)
   - [Types of Users](#types-of-users)
   - [Public Dashboards](#public-dashboards)
+  - [Weather Email Service](#monthly-weather-emails)
   - [Map](#map)
   - [Admin Dashboards](#admin-dashboards)
   - [Graphing and Analysis](#graphing-and-analysis)
@@ -302,7 +303,7 @@ HTML form that allows the user to input their username and password and press si
 <img width="1247" height="873" alt="image" src="https://github.com/user-attachments/assets/5f30430a-22c6-47be-9e8d-76b58d5b68c4" />
 
 ### Register (page disapears from the bar once logged in):
-Enter your username and password. A public account will be created and the user will be forwarded to the `My Stations` page. I might disable this for the time being and allow only users to be created in the [admin settings page](#settings-page-if-admin) until I make features for a public account user to use. The first account created is an admin account.
+Enter your username and password. A public account will be created and the user will be forwarded to the `My Stations` page. I might disable this for the time being and allow only users to be created in the [admin settings page](#settings-page-if-admin) until I make features for a public account user to use. The first account created is an admin account through the bootstrap mode (after first install, turn this mode off in the .env). The page is disabled by default after the bootstrap mode is off. You can turn it on in the admin settings page. 
 
 #### Username Safety:
 - Min length: 3
@@ -391,11 +392,45 @@ This is my first time ever using FastAPI, Jinja, HTML (properly), CSS, and JS. I
 Thank you to Jermal Smith for taking a look at my code and for providing helpful advise. He left a few issues and was able to be me a direct pull request for me for all the requirements.
 
 # Setup
-## This system is fairly straight forward, create a venv with the packages (insert link to below packages), make a cron job (or similar scheduler) to run `scrape.py` and `status.py` in that venv every `5` mins or so (up to you).
-- `python -m venv venv`
-- `source venv/bin/activate   # or venv\Scripts\activate on Windows`
+## Installation:
+- Download/Clone the repository (if in Linux "git clone https://github.com/Krupamc/portfolio_website") 
 
-(Picture tutorial coming soon)
+### Docker (linux)
+- Make sure docker is installed (this is not a docker guide. Check out their [docs](https://docs.docker.com/engine/install/)).
+- Open folder
+  - Rename the `example.env` to `.env` and change all the values that apply. Some examples include:
+    - System name
+    - Bootstrap Registration (first account becomes an admin.) Turn off after first account created and then reload system.
+    - Website url (where you host)
+    - Secret Key (password hashing)
+    - postgres password (encryption. Save this password)
+    - Api Key and Scraper Api key (make these the same)
+    - Scraper intervals (seconds
+      - Status (default is `900` or 15 minutes. Three scrapes send a offline email.)
+      - Weather (default is `300` or 5 minutes)
+    - If you want to change how many backups are stored, change the `BACKUP_KEEP`...
+    - Email Setup (smtplib)
+      - Server
+      - Port (usually `587`)
+      - Username (usually the email)
+      - Password (App Password if using google)
+      - From Email (where the email says its coming from)
+    - Time zone (tz database ormat)
+    - Scraping retry login/email barrier
+    - monthly email time/day
+    - days before reminder
+    - developing mode (uses SQlite DB and dotenv)
+    - Bunch of random stuff :D
+- Open `status_scraper` folder
+  - Rename `ex.config.py` to `config.py` and replace words/rewrite the email messages to fit your system.
+-Run docker compose up -d (-d flag is for detached mode or running in background. To watch for any errors, run without flag) 
+  - If it does not work, try running it with "sudo in front of it.
+  - To turn off, run docker compose down (-v flag will delete all of the containers fully. Does not delete the repo folder) 
+<img width="1458" height="240" alt="image" src="https://github.com/user-attachments/assets/31c2365b-c8d9-421e-b2ab-635f9f4e94f9" />
+- Navigate to your browser and then to http://127.0.0.1:8000 (or change the port or the numbers after the colon)
+- TADA You are all done.
+- To put the website on the internet, I reccomend getting your own domain using cloudflare and using a tunnel with a nginx proxy manager.
+
 ---
 
 ### Packages used:
