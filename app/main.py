@@ -52,7 +52,7 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 FONTS_DIR = STATIC_DIR / "fonts"
 
 # Turn off docs
-#app = FastAPI(title="SBB Mesonet Notification System", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="SBB Mesonet Notification System", docs_url=None, redoc_url=None, openapi_url=None)
 
 # Graph text
 roboto_path = f"{STATIC_DIR}/fonts/Roboto-Regular.ttf"
@@ -130,7 +130,7 @@ def template_context(request: Request):
             current_user = None
 
     
-    return {"current_user": current_user, "system_name": cfg.system_name}
+    return {"current_user": current_user, "system_name": cfg.system_name, "admin_email": cfg.admin_email}
 
 # Check what user
 def get_current_user(session: db.SessionDep, access_token: str | None = Cookie(default=None)):
