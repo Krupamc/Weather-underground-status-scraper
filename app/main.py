@@ -3241,16 +3241,26 @@ def registration_enabled(session: db.SessionDep) -> bool:
     settings = session.get(m.SiteSettings, 1)
     return (settings.registration_enabled if settings is not None else False)
 
+# Allow inital admin account 
+def first_account_setup_allowed(session: db.SessionDep) -> bool:
+    if not cfg.bootstrap_registration:
+        return False
+    existing_user = session.exec(select(m.User)).first()
+    return existing_user is None
+
 @app.get("/register", response_class=HTMLResponse)
 def load_register(session: db.SessionDep, request: Request):
-    if not registration_enabled(session):
+    bootstrap = first_account_setup_allowed(session) # 
+    
+    if not bootstrap and not registration_enabled(session):
         raise HTTPException(status_code=403, detail="Public registration is currently disabled.")
-    return templates.TemplateResponse(request, "register.html", {"request": request, "title": "Register", "active_page": "register"})
+    return templates.TemplateResponse(request, "register.html", {"request": request, "title": "Create First Admin" if bootstrap else "Register", "active_page": "register"})
 
 # Form Response for register
 @app.post("/register")
-def register(request: Request, session: db.SessionDep, username: str = Form(), password: str = Form()): #make this require admin later
-    if not registration_enabled(session):
+def register(request: Request, session: db.SessionDep, username: str = Form(), password: str = Form()):
+    bootstrap = first_account_setup_allowed(session)
+    if not bootstrap and not registration_enabled(session):
         raise HTTPException(status_code=403, detail="Public registration is currently disabled.")
     
     # Check for existing user:
@@ -3262,7 +3272,7 @@ def register(request: Request, session: db.SessionDep, username: str = Form(), p
     # Table Entry
     db_user = m.User(
         username=username,
-        role="public",
+        role="admin" if bootstrap else "public",
         password_hash=s.hash_password(password),
     )
     # Save to db
@@ -3270,18 +3280,11 @@ def register(request: Request, session: db.SessionDep, username: str = Form(), p
     session.commit()
     session.refresh(db_user)
 
-    # First account is A admin account
-    if db_user.id == 1:
-        db_user.role = "admin"
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
-
     return templates.TemplateResponse(request, "login.html", {"request": request, "title": "Login", "active_page": "login"})
 
 # Form Response for register
 @app.post("/settings/register")
-def register(request: Request, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], username: str = Form(), password: str = Form()): #make this require admin later
+def admin_register_user(request: Request, session: db.SessionDep, current_user: Annotated[m.User, Depends(require_admin)], username: str = Form(), password: str = Form()): #make this require admin later
     # Check for existing user:
     existing_user = session.exec(select(m.User).where(m.User.username == username)).first()
 
@@ -3297,14 +3300,6 @@ def register(request: Request, session: db.SessionDep, current_user: Annotated[m
     # Save to db
     session.add(db_user)
     session.commit()
-    session.refresh(db_user)
-
-    # First account is A admin account
-    if db_user.id == 1:
-        db_user.role = "admin"
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
 
     return RedirectResponse(url="/settings?success=registered", status_code=303)
 
