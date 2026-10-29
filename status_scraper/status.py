@@ -311,9 +311,12 @@ def send_report(now: datetime, period_start, period_end, stations_with_outages, 
             ),
         recipients=recipients
     )
-
+    print(f"[REPORT EMAIL SENT]: ")
+    print(f"Included {len(recipients)} stations; sent to {', '.join(recipients)}")
     report["last_report"] = now.isoformat()
+    
     write_report_file(report)
+
 
 def send_weather(now: datetime, http: requests.Session, units: str = "imperial", test_recipient: str | None = None,) -> bool:
     is_test = test_recipient is not None
@@ -563,7 +566,8 @@ def email(subject: str, body: str, recipients: list[str]) -> None:
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = cfg.from_email
-    msg["To"] = ", ".join(recipients)
+    msg["To"] = "undisclosed-recipients:;"
+    msg["Bcc"] = ", ".join(recipients)
     msg.set_content(body)
 
     context = ssl.create_default_context()
@@ -911,19 +915,30 @@ def should_send_cooldown_alert(key: str, cooldown_minutes: int = cfg.error_email
     return True
 
 # Check if it it is the report day
-def check_if_report_day(now: datetime):
-    # Email send on the first of the month at 8 AM
-    if now.day == cfg.monthly_email_day:
-        if now.hour == cfg.monthly_email_hour:
-            return True
-        else:
-            return False
-    else:
-        return False
+def check_if_report_day(now: datetime) -> bool:
+    now = now.astimezone(pytz.UTC)
+
+    scheduled_time = now.replace(
+        day=cfg.monthly_email_day,
+        hour=cfg.monthly_email_hour,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+
+    due = now >= scheduled_time
+
+    print(f"[REPORT CHECK] Current UTC: {now.isoformat()}")
+    print(f"[REPORT CHECK] Scheduled UTC: {scheduled_time.isoformat()}")
+    print(f"[REPORT CHECK] Due: {due}")
+
+    return due
             
 # Check if we had sent a report lately
 def should_send_report(now: datetime):
+    print("Checking if report day...")
     if not check_if_report_day(now):
+        print("Not report day")
         return False
     
     report = read_report_file()
@@ -1146,7 +1161,7 @@ if now is not None:
 
 #Test every API-configured email recipient
 #test_all_emails(now, session_http)
-send_weather(now=now, http=session_http, test_recipient="krupampatel710@gmail.com")
+#send_weather(now=now, http=session_http, test_recipient="krupampatel710@gmail.com")
 
 
 print("Start of Status Check")
