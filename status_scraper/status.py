@@ -365,6 +365,14 @@ def send_weather(now: datetime, http: requests.Session, units: str = "imperial",
         return f"{round(value, 2)} {unit}"
 
     lines = [cfg.w_body.format(generated_at=now.isoformat(), row_len=len(rows)), ""]
+    lines.append("Results may be truncated. Look for a option to open/expand the email at the bottom.")
+    lines.append("")
+    lines.append(f"View the data table! (Both links will pull the latest data) {cfg.website_url}{cfg.monthly_weather_url}")
+    lines.append(f"Download the data table! {cfg.website_url}{cfg.monthly_weather_url}/csv")
+    lines.append("(These links will pull the latest data. The data will change tomorrow.)")
+    lines.append("")
+    lines.append("-" * 45)
+    lines.append("")
 
     for row in rows:
         labels = row["labels"]

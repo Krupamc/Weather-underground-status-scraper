@@ -1,6 +1,22 @@
 {% extends "layout.html" %}
 
 {% block content %}
+    <!-- Pop ups -->
+    {% if success %}
+    <div class="popup_overlay">
+        <div class="popup_box">
+            {% if success %}
+                <h3>Signed Up Successfully!</h3>
+                {% if success == "created" %}
+                    <p><b>{{ name if name else "" }}</b> was added to the Weather Email List!</p>
+                {% endif %}
+            
+            {% endif %}
+            <a href="/graph/analysis/month" class="graph_submit_button">Close</a>
+        </div>
+    {% endif %}
+    
+    {% if not success %}
     <div class="main_page">
         <div class="main_p_container" style="padding-top: 220px">
             <h1>Data Summary:</h1>
@@ -78,6 +94,29 @@
                     </table>
                 </div>
             <a href="/graph/analysis/month/csv" class="graph_submit_button" title="Download CSV">Download Table CSV</a>
+        
         </div>
+        <div style="display: flex; padding-top: 25px;">
+            <div class="login_card">
+                <h1>Weather Emails</h1>
+                <h3>Would you like to sign up for monthly weather summary emails? Includes all data above.</h3>
+
+                <!-- If there is any error, mention it-->
+                {% if error %}
+                    <p class="login_error">{{ error }}</p>
+                {% endif %}
+
+                <form action="/recipients/user/weather/create/form" method="post" class="login_form">
+                    <label for="email">Email:</label>
+                    <input type="email" placeholder="Enter Email" id="email" name="email" required autocomplete="email" spellcheck="false">
+
+                    <label for="name">Name:</label>
+                    <input type="text" placeholder="Enter Name" id="name" name="name" autocomplete="given-name">
+                    <button type="submit">Register</button>
+                </form>
+            </div>
+        </div>
+
     </div>
+    {% endif %}
 {% endblock %}

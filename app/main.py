@@ -1968,7 +1968,7 @@ def build_all_station_monthly_stats(session: db.SessionDep, units: str = "imperi
     return rows
 
 @app.get("/graph/analysis/month")
-def monthly_summary_page(request: Request, session: db.SessionDep, units: str = "imperial"):
+def monthly_summary_page(request: Request, session: db.SessionDep, units: str = "imperial", success: str | None = None, name: str | None = None):
     rows = build_all_station_monthly_stats(session=session, units=units, public_only=True)
     labels = {
         "temp": "°F" if units == "imperial" else "°C",
@@ -4138,7 +4138,30 @@ def create_weather_recipient_form(session: db.SessionDep, current_user: Annotate
     session.commit()
     session.refresh(recipient_db)
 
-    return RedirectResponse(url=f"/settings?success=email_created&username={email}", status_code=303) 
+    return RedirectResponse(url=f"/settings?success=email_created&username={email}", status_code=303)
+
+# Create from form user side
+@app.post("/recipients/user/weather/create/form")
+def create_weather_recipient_form(request: Request, session: db.SessionDep, email: EmailStr = Form(), name: str = Form()):
+    # get from form
+    payload = {
+        "email": str(email).strip(),
+        "name": name
+    }
+
+    if not payload:
+        return RedirectResponse(url="/settings?error=no_payload", status_code=303)
+
+    recipient = m.WeatherRecipientCreate(**payload)
+    recipient_db = m.WeatherRecipient.model_validate(recipient)
+
+    # Create
+    session.add(recipient_db)
+    session.commit()
+    session.refresh(recipient_db)
+
+    return templates.TemplateResponse(request, "monthly_summary.html", {"request": request, "title": "Monthly Summary", "active_page": "analysis", "success": "created", "name": name})
+    
 
 # Read per recip
 @app.get("/recipients/weather/read/{email_id}")
