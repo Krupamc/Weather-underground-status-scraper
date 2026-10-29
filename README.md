@@ -30,6 +30,7 @@
 - [Nerdy Features](#nerdy-features)
 - [Future Work](#future-work)
 - [Notes](#notes)
+- [AI Disclosure](#ai-disclosure
 - [Setup](#setup)
 ---
 
@@ -387,6 +388,8 @@ A blank profile (generic empty user) shows up next to your username. Pressing it
 
 ## Notes:
 This is my first time ever using FastAPI, Jinja, HTML (properly), CSS, and JS. I apologise for any bugs/weird behavior :D.
+## AI Disclosure: 
+I Used AI for Bug Finding, help with Docker, and logic issues.
 
 ## Acknowledgements:
 Thank you to Jermal Smith for taking a look at my code and for providing helpful advise. He left a few issues and was able to be me a direct pull request for me for all the requirements.
