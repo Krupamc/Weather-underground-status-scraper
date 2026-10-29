@@ -3601,18 +3601,10 @@ def delete_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
     if not station:
         return RedirectResponse(url="/settings?error=404", status_code=303)
 
-    # Delete
-    payload = {}
-    payload["collect_enabled"] = False
-    
-    if not payload:
-        return RedirectResponse(url=f"/settings?error=no_payload", status_code=303)
-    
-    station = m.StationUpdate(**payload)
-    station_data = station.model_dump(exclude_unset=True)
-    session.add(station)
+    if not station:
+        raise HTTPException(status_code=404, detail="No Station to Delete")
+    session.delete(station)
     session.commit()
-    session.refresh(station)
     return RedirectResponse(url="/settings?success=station_deleted", status_code=303)
 
 

@@ -421,8 +421,6 @@ def send_weather(now: datetime, http: requests.Session, units: str = "imperial",
     lines.append(f"~ {cfg.system_name} Mesonet Notification System")
 
     subject = cfg.w_subject.format(month = now.strftime("%B %Y"))
-    if is_test:
-        subject = f"[TEST] {subject}"
 
     email(
         subject=subject,
