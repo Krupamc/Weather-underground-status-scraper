@@ -68,16 +68,20 @@ Scrapes the stations for their status and converted the collected time into UTC 
 
 ### Emails:
 #### Recipients:
+Emails are sent with BCC (Blind-Carbon-Copies) so email addresses are kept secure. Reports are sent based on if they were past due or on the configured time. All email services have a testing option commented out in the code.
 - Admin: Email(s) configured to receive only system error emails
 - Global Recipients: Email(s) configured to receive all emails sent by system concerning status.
 - Report Recipients: Email(s) configured to receive monthly emails. E.g. Mesonet maintainers
 - Station Recipients: Email(s) configured separately for each station. E.g. station owners.
+- Weather Recipients: Email(s) who sign up for a monthly email service of weather station stats.
+
 
 #### Types:
 - Offline: Sent after a station is recorded off `3` (default) times in a row.
 - Recovery: Sent once a station is detected to be online after being considered `offline`
 - Reminder: Sent after `7` days (default) to remind of the status.
 - Monthly Reports: Sent at the `first of the month at 8 AM` (default) with statistics such as which stations had outages, the station with longest, uptime percentage for each station, etc.
+- Weather Reports: Sent at the same time, with weather stats for each station for the last month. [Read more.](#monthly-weather-emails)
 - System Errors: Sent to system `admins` for any errors detected, HTTP, Requests, Time, etc.
 <img width="1022" height="752" alt="image" src="https://github.com/user-attachments/assets/651f0da9-a089-4827-828e-20b80f98c84d" />
 
@@ -132,6 +136,12 @@ Graphs are shown of the last 24 hours of data. These include:
 #### Table:
 The table at the bottom shows all variables (if they are available) and all their values for that day. Using the `Next Day` and `Previous Day`, you can easily navigate between data. You can also navigate to a specific day with a date input and `Go` button. All data can be downloaded as a CSV.
 <img width="2447" height="1277" alt="image" src="https://github.com/user-attachments/assets/9b256683-59f4-4212-9b3e-077afb1ce4e2" />
+
+### Monthly Weather Emails:
+Every month on the first at 8 AM (configurable), anyone signed up for the Weather Email (separate SQL table that has CRUD in the admin settings page) will receive an email with the data window, links to the updated table/download links, high/low temperature, average temperature, average dew point, precipitation, average wind speed, and maximum wind gusts for each station. All of this data is displayed on the monthly summary webpage with a downloadable csv of the data. On this page, you can sign up for the weather emailing service.
+<img width="1263" height="1030" alt="image" src="https://github.com/user-attachments/assets/1a63b5e2-db3c-412a-9b4a-6f10b46db447" />
+<img width="1477" height="1062" alt="image" src="https://github.com/user-attachments/assets/84d728c0-3e67-46ae-9545-b954eabb927d" />
+
 
 ### Map:
 There is a ArcGIS JS map that uses the longitude and latitude of the stations to plot the stations. The map is centered around the stations. This is very cool :D
@@ -326,10 +336,19 @@ These Functions include:
 - Grant User Access: Choose a user, and give them access to a station. This is view only by default
 - Revoke Access: Remove User access to a specific station. On reload after choosing a user it shows any assigned stations
 - Update User Access: Choose a user, on reload it shows all available stations and when selected, shows what access it has. You then check/uncheck the access you want it to have and submit.
-- Modify Station: Currently only allows to change station name.
+- Modify Station: Change Station name, hardware, latitude, longitude (these values update every time weather is scraped), `is_public` (If station public dashboard is displayed), maintenance mode (if emails are silenced), and `is_collection_on` (If station weather collection on)
 - Create Station: Enter new id and name as well as options to be public and in maintenance mode (default off).
-- Delete Station: Deletes station only from the current stations. Does not delete data. I need to rewrite this to make it so it stops collecting data instead. The feature is designed but not finished.
+- Delete Station: Deletes station from the table. This is PERMANENT. 
 - Read all Stations: Lists all stations and if they are in maintenance or not.
+- Modify Email recipients list: Choose a email and change the email and type (global, admin, report)
+- Append Email to list: Email address and type (global, admin, report)
+- Delete email from list
+- Read email list
+- Station Recpiient Email List (same CRUD but with station dropdown instead of type)
+- Weather Recipient modify: Choose email and change the email and name.
+- Append email to list: Email Address and Station
+- Delete email from list
+- Read emails
 <img width="1242" height="983" alt="image" src="https://github.com/user-attachments/assets/dbaf9b41-a71c-40e5-a934-10221c4c94d6" />
 <img width="1275" height="858" alt="image" src="https://github.com/user-attachments/assets/63a38782-193b-481b-816b-5cff977e74c9" />
 <img width="1318" height="782" alt="image" src="https://github.com/user-attachments/assets/71419a5a-bd88-4ca1-a9ba-b6f96f30dce4" />
@@ -353,7 +372,7 @@ A blank profile (generic empty user) shows up next to your username. Pressing it
 - SQLite Database with autogenerated database.db
 - Auto-synced new stations into `status.json` by calling backend API.
 - Retry and backoff logic for all scraping calls.
-- When scraping, all values are converted into metric values before being converted back based on the situation.
+- When scraping, values are converted into none uniformly SI metric values before being converted back based on the situation.
 - The database has all times as UTC due to SQLite not storing Z data.
 - Find the easter egg(s) I have littered around...
 - The Seed endpoint creates stations based on the config file. It creates any not already in the database.
@@ -363,11 +382,6 @@ A blank profile (generic empty user) shows up next to your username. Pressing it
 - Can view and can toggle maintenance are seperate permissions for a user having access for a station.
 ## Future Work:
 - More notification types. Ex: SMS
-- Make Mobile Site Easier to navigate
-- Docker container/compose deployment
-- Get status and weather scrapers to use enviroment variables
-- Right now, the config is used as the source of truth, will transition into the database being this.
-- Create a Mailing list to send out weather reports
 - Role is currently a plain string field, not a strict enum.
 
 ## Notes:
