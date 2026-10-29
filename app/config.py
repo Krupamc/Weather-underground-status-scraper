@@ -48,6 +48,7 @@ def get_json(name: str, default):
 
 # System Name:
 system_name = os.getenv("SYSTEM_NAME", "KrupamC's")
+bootstrap_registration = get_bool("BOOTSTRAP_REGISTRATION", False)
 
 # DB:
 postgres_db = os.getenv("POSTGRES_DB", "mesonet")

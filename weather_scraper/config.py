@@ -19,7 +19,7 @@ def get_int(name: str, default: int) -> int:
 
     return int(value)
 
-def get_float(name: str, default: float) -> int:
+def get_float(name: str, default: float) -> float:
     value = os.getenv(name)
 
     if value is None:
@@ -34,6 +34,9 @@ def get_required_env(name: str):
         raise RuntimeError(f"Missing required enviromental variable: {name}")
 
     return value
+
+# Devloping Mode
+develop = get_bool("DEVELOP", False)
 
 # API:
 api_post_url = get_required_env("API_POST_URL")

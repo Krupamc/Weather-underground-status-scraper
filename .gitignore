@@ -1,5 +1,4 @@
 __pycache__/json.cpython-313.pyc
-config.py
 __pycache__/config.cpython-313.pyc
 web_server/__pycache__/config.cpython-313.pyc
 web_server/__pycache__/database.cpython-313.pyc
@@ -9,7 +8,7 @@ web_server/database.db
 web_server/web_app_plan.txt
 web_server/__pycache__/web_config.cpython-313.pyc
 web_server/__pycache__/main.cpython-313.pyc
-
+status_scraper/config.py
 .env
 .env.*
 !.env.example
