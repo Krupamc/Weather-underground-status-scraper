@@ -32,6 +32,7 @@
 - [Notes](#notes)
 - [AI Disclosure](#ai-disclosure)
 - [Setup](#setup)
+- [Credits](#credits)
 ---
 
 ## Why did I create this?
@@ -436,9 +437,5 @@ Thank you to Jermal Smith for taking a look at my code and for providing helpful
 
 ---
 
-### Packages used:
-- Check requirements.txt
-
-#### Commands for packages:
-Install Packages:
-- `pip install -r requirements.txt`
+## Credits:
+Thank you to Jermal Smith who took a look at my repo and gave me some tips and created a couple of issues for me to go an fix. He also helped me create my requirements.txt.
