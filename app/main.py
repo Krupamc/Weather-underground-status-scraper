@@ -3636,6 +3636,11 @@ def update_station(station_id: str, station: m.StationUpdate, session: db.Sessio
     if not station_db:
         raise HTTPException(status_code=404, detail="Station Not Found")
     station_data = station.model_dump(exclude_unset=True)
+
+    # Keep existing coordinates when the submitted value is None.
+    for field in ("longitude", "latitude"):
+        if station_data.get(field) is None:
+            station_data.pop(field, None)
     station_db.sqlmodel_update(station_data)
     session.commit()
     session.refresh(station_db)
@@ -3657,8 +3662,10 @@ def update_station_from_form(session: db.SessionDep, current_user: Annotated[m.U
     if hardware and hardware.strip():
         payload["hardware"] = hardware.strip()
 
-    payload["latitude"] = latitude
-    payload["longitude"] = longitude
+    if latitude is not None:
+        payload["latitude"] = latitude
+    if latitude is not None:
+        payload["longitude"] = longitude
     payload["is_public"] = is_public
     payload["is_in_maintenance"] = is_in_maintenance
     payload["collect_enabled"] = collect_enabled
@@ -3839,8 +3846,10 @@ def post_weather(session: db.SessionDep, x_api_key: Annotated[str, Header()], w_
     stats.state = w_in.state
     stats.country = w_in.country
     stats.hardware = w_in.hardware
-    stats.latitude = w_in.latitude
-    stats.longitude = w_in.longitude
+    if stats.latitude is not None:
+        stats.latitude = w_in.latitude
+    if stats.longitude is not None:
+        stats.longitude = w_in.longitude
     session.add(stats)
 
     # Add to history
