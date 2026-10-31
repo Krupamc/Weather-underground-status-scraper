@@ -30,7 +30,9 @@
 - [Nerdy Features](#nerdy-features)
 - [Future Work](#future-work)
 - [Notes](#notes)
+- [AI Disclosure](#ai-disclosure)
 - [Setup](#setup)
+- [Credits](#credits)
 ---
 
 ## Why did I create this?
@@ -387,6 +389,8 @@ A blank profile (generic empty user) shows up next to your username. Pressing it
 
 ## Notes:
 This is my first time ever using FastAPI, Jinja, HTML (properly), CSS, and JS. I apologise for any bugs/weird behavior :D.
+## AI Disclosure: 
+I Used AI for Bug Finding, help with Docker, and logic issues.
 
 ## Acknowledgements:
 Thank you to Jermal Smith for taking a look at my code and for providing helpful advise. He left a few issues and was able to be me a direct pull request for me for all the requirements.
@@ -433,9 +437,5 @@ Thank you to Jermal Smith for taking a look at my code and for providing helpful
 
 ---
 
-### Packages used:
-- Check requirements.txt
-
-#### Commands for packages:
-Install Packages:
-- `pip install -r requirements.txt`
+## Credits:
+Thank you to Jermal Smith who took a look at my repo and gave me some tips and created a couple of issues for me to go an fix. He also helped me create my requirements.txt.
