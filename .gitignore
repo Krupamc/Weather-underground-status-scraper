@@ -26,3 +26,4 @@ status_scraper/report.json
 
 status_scraper/status_log.csv
 status_scraper/status.json
+secrets.txt

@@ -813,7 +813,6 @@ def website_settings(request: Request, session: db.SessionDep, required_user: An
     if update_station_id:
         update_station = session.exec(select(m.Station).where(m.Station.station_id == update_station_id)).first()
 
-
     return templates.TemplateResponse(request, "w_settings.html", {
         "request": request,
         "title": "Settings",
@@ -3318,7 +3317,7 @@ def read_users(session: db.SessionDep, offset: Annotated[int, Query(ge=0)], curr
     result = []
 
     for user in users:
-        result.append({"role": user.role, "username": user.username})
+        result.append({"id": user.id, "role": user.role, "username": user.username})
     
     return result
 
