@@ -293,7 +293,7 @@ def get_stations_list(http: requests.Session) -> list[dict]:
     for attempt in range(cfg.max_retries):
         try:
             if cfg.develop == True:
-                url = "http://127.0.0.1:8000/scraper/stations"
+                url = "http://127.0.0.1:8002/scraper/stations"
             else:
                 url = f"{cfg.api_base}/scraper/stations"
 
@@ -344,7 +344,7 @@ for station in stations:
 
     print(f"Sending data...{results['station_id']}\n")
     if cfg.develop == True:
-        session_http.post(f"http://127.0.0.1:8000{cfg.api_weather_post}", json=results)
+        session_http.post(f"http://127.0.0.1:8002{cfg.api_weather_post}", json=results)
     else:
         session_http.post(f"{cfg.api_base}{cfg.api_weather_post}", json=results)
 

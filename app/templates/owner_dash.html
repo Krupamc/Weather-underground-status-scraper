@@ -310,7 +310,7 @@
             {% endif %}
             <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Pressure&variables=pressure" alt="Pressure Graph" class="graph_border">
             <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Wind Infomation&variables=wind_speed&variables=wind_gust" alt="Wind Graph" class="graph_border">
-            {% if converted.precip_a > 0.0 %}
+            {% if converted.precip_a %}
                 <img src="{{ url_for('graph_variables', station_id=station.station_id)}}?units={{ units }}&title=Precipitation&variables=precip_rate&variables=precip_accum" alt="Precipitation Graph" class="graph_border">
             {% endif %}
         {% endif %}

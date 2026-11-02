@@ -89,36 +89,42 @@
                 document.getElementById("mapLoading").style.display = "none";
             });
 
-            
-
             // View
             const view = new MapView({
-                container: "viewDiv",
-                map: map,
-                constraints: {
-                    snapToZoom: false
-                },
-                padding: {
-                    top: 40,
-                    right: 40,
-                    bottom: 40,
-                    left: 40
-                }
+            container: "viewDiv",
+            map: map,
+            center: [-74.2, 39.9],
+            zoom: 8
             });
 
-            // Automatic Zoom
-            view.when(() => {
-                layer.when(() => {
-                    layer.queryExtent({
-                        outSpatialReference: view.spatialReference
-                    }).then(async (response) => {
-                        if (response.extent) {
-                            await view.goTo(response.extent.clone().expand(2.2), { animate: false });
-                            view.scale = view.scale * 1.2;
-                        }
-                    });
-                });
-            });
+            // // View
+            // const view = new MapView({
+            //     container: "viewDiv",
+            //     map: map,
+            //     constraints: {
+            //         snapToZoom: false
+            //     },
+            //     padding: {
+            //         top: 40,
+            //         right: 40,
+            //         bottom: 40,
+            //         left: 40
+            //     }
+            // });
+
+            // // Automatic Zoom
+            // view.when(() => {
+            //     layer.when(() => {
+            //         layer.queryExtent({
+            //             outSpatialReference: view.spatialReference
+            //         }).then(async (response) => {
+            //             if (response.extent) {
+            //                 await view.goTo(response.extent.clone().expand(2.2), { animate: false });
+            //                 view.scale = view.scale * 1.2;
+            //             }
+            //         });
+            //     });
+            // });
         });
     </script>
 {% endblock %}

@@ -20,6 +20,7 @@ from sqlmodel import select
 from contextlib import asynccontextmanager
 import database as db
 import model as m
+import math
 
 import security as s
 import pytz, csv, io, jwt, statistics
@@ -3097,15 +3098,22 @@ def get_coordinates(request: Request, session: db.SessionDep, ):
     stations = session.exec(select(m.Station).where(m.Station.is_public == True, m.Station.latitude.is_not(None), m.Station.longitude.is_not(None))).all()
     
     features = []
-    long = []
-    lat = []
     for i, station in enumerate(stations, start=1):
+        try:
+            longitude = float(station.longitude)
+            latitude = float(station.latitude)
+        except (TypeError, ValueError):
+            continue
+
+        if not (math.isfinite(longitude) and math.isfinite(latitude) and -180 <= longitude <= 180 and -90 < latitude < 90):
+            continue
+
         features.append({
             "type": "Feature",
             "id": i,
             "geometry": {
                 "type": "Point",
-                "coordinates": [station.longitude, station.latitude] # Longitude goes first for ArcGIS
+                "coordinates": [longitude, latitude] # Longitude goes first for ArcGIS
             },
             "properties": {
                 "OBJECTID": i,
@@ -3114,21 +3122,6 @@ def get_coordinates(request: Request, session: db.SessionDep, ):
                 "is_public": str(station.is_public), # GIS wants un string
             }
         })
-        long.append(station.longitude)
-        lat.append(station.latitude)
-
-    # Add center point
-    center_long = round(sum(long) / len(long), 3)
-    center_lat = round(sum(lat) / len(lat), 3)
-
-    #features.append({
-    #    "type": "Feature",
-    #    "id": "center",
-    #    "geometry": {
-    #         "type": "Point",
-    #        "coordinates": [center_long, center_lat] # Longitude goes first for ArcGIS
-    #     }
-    # })
     
     return {
         "type": "FeatureCollection",
@@ -3784,7 +3777,18 @@ def read_status_history(session: db.SessionDep, station_id: str, current_user: A
 def post_weather(session: db.SessionDep, x_api_key: Annotated[str, Header()], w_in: m.WeatherIn):
     current = session.exec(select(m.Weather).where(m.Weather.station_id == w_in.station_id)).first()
     stats = session.exec(select(m.Station).where(m.Station.station_id == w_in.station_id)).first()
+    
+    if stats is None:
+        raise HTTPException(status_code=404, detail="Station Not Found")
 
+    # Update station metadata. Ignore incoming None values so failed scrapes do not erase metadata.
+    for field in ("elevation", "city", "state", "country", "hardware", "latitude", "longitude"):
+        value = getattr(w_in, field)
+        if value is not None:
+            setattr(stats, field, value)
+
+    session.add(stats)
+    
     # On first post
     if current is None:
         current = m.Weather(
@@ -3846,9 +3850,9 @@ def post_weather(session: db.SessionDep, x_api_key: Annotated[str, Header()], w_
     stats.state = w_in.state
     stats.country = w_in.country
     stats.hardware = w_in.hardware
-    if stats.latitude is not None:
+    if w_in.latitude is not None:
         stats.latitude = w_in.latitude
-    if stats.longitude is not None:
+    if w_in.longitude is not None:
         stats.longitude = w_in.longitude
     session.add(stats)
 
