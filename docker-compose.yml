@@ -33,6 +33,9 @@ services:
       - .env
     volumes:
       - scraper_data:/app/status_scraper
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     depends_on: # When web starts
       web:
         condition: service_healthy
