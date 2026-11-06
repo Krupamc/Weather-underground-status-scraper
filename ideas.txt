@@ -1,0 +1,10 @@
+- No reload for getting station stats
+- Station not available should send you back to the station list instead of the home page
+- Weather station data table should stop you from going into the future
+- Variable buttons on the graphing page should be able to be clicked anywhere on the button, not just the checkbox and the text
+- graph will truncate your title
+- Maybe let the user set the size of the graph?
+- the station may not be available, but the data is still accessable through graphing
+- "Contact example@example.com to have your password reset." 
+- Tell the user not to have a space in their username instead of just doing nothing.
+- Make the password requirements visible instead of having of aria-hover box
