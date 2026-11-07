@@ -9,9 +9,9 @@
     {% if not station.is_public or station.is_in_maintenance or not status or status.last_status == "OFFLINE" %}
         <div class="p_station_content" style="padding-top: 280px; justify-content: center">
             <div style="border: 3px solid #d3cfcf; background: white; border-radius: 16px; padding: 20px 18px; gap: 28px;">
-                <h1>Station not Available</h1>
+                <h1>Station not Available. It is Offline.</h1>
                 <div class="error_page">
-                    <a href="/">Go Back Home</a>
+                    <a href="/stations">Go Back to Stations</a>
                 </div>
             </div>
         </div>
